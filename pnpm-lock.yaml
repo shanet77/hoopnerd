@@ -239,6 +239,46 @@ importers:
         specifier: 5.5.4
         version: 5.5.4
 
+  packages/logic:
+    dependencies:
+      '@repo/database':
+        specifier: workspace:*
+        version: link:../database
+      '@repo/types':
+        specifier: workspace:*
+        version: link:../types
+      pg:
+        specifier: ^8.11.3
+        version: 8.17.1
+    devDependencies:
+      '@jest/globals':
+        specifier: ^29.7.0
+        version: 29.7.0
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@repo/jest-presets':
+        specifier: workspace:*
+        version: link:../jest-presets
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^20.11.24
+        version: 20.19.30
+      '@types/pg':
+        specifier: ^8.10.9
+        version: 8.16.0
+      eslint:
+        specifier: ^8.57.0
+        version: 8.57.1
+      jest:
+        specifier: ^29.7.0
+        version: 29.7.0(@types/node@20.19.30)
+      typescript:
+        specifier: 5.5.4
+        version: 5.5.4
+
   packages/types:
     dependencies:
       '@types/pg':

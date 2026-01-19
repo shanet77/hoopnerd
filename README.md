@@ -1,18 +1,79 @@
-# Turborepo Docker starter
+# HoopNerd
+A real-time, multiplayer basketball trivia game where players connect athletes based on shared team-seasons.
 
-This is a community-maintained example. If you experience a problem, please submit a pull request with a fix. GitHub Issues will be closed.
+## High-Level Architecture
+- **Monorepo:** Managed via Turborepo.
+- **Frontend (`apps/web`):** Next.js (App Router), Tailwind CSS, Socket.io-client.
+- **Backend (`apps/server`):** Node.js/Express, Socket.io, PostgreSQL.
+- **Shared (`packages/types`):** Single source of truth for TypeScript interfaces.
 
-## Using this example
+## Key Logic & Domain Concepts
+1. **The Graph:** Players are nodes. A "shared season" (same team, same year) is the edge.
+2. **Move Validation:** Must happen server-side. A move is valid if `Player B` played with `Player A` in any year.
+3. **No Auth:** Games are session-based. Multiplayer uses unique Room IDs in the URL.
+4. **No Coaches:** The current scope is strictly NBA players.
 
-Run the following command:
+## Database Schema
+CREATE TABLE teams (
+    id SERIAL PRIMARY KEY,
+    team_name VARCHAR(100) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    abbreviation CHAR(3) UNIQUE -- Useful for searching/filtering (e.g., 'LAL', 'GSW')
+);
 
-```sh
-npx create-turbo@latest -e with-docker
-```
+CREATE TABLE players (
+    id SERIAL PRIMARY KEY,
+    player_name VARCHAR(150) NOT NULL,
+    -- Using a flat string for now, but consider an ENUM later
+    position VARCHAR(50), 
+);
 
-## What's inside?
+CREATE TABLE rosters (
+    player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    season_year INTEGER NOT NULL, -- e.g., 2024 for the 2023-24 season
+    
+    PRIMARY KEY (player_id, team_id, season_year)
+);
 
-This Turborepo includes the following:
+## Tech Stack Guidelines
+- **Strict Typing:** Always use the shared `@repo/types` for WebSocket events.
+- **State:** Server is the source of truth for game state (timers, move history).
+- **Communication:** Use WebSockets for real-time play; REST for initial data/search.
+
+## Development Commands
+- `pnpm dev`: Starts both frontend and backend in parallel.
+- `pnpm build`: Builds all apps and shared packages.
+- `pnpm lint`: Runs linting across the entire monorepo.
+
+## Boundaries
+- Never modify the database schema without updating `@repo/types`.
+- Avoid hardcoding player data; everything must be queried from the `db` package.
+
+## Directory Structure
+Connectaball/
+├── apps/
+│   ├── web/
+│   │   ├── Dockerfile             # Multi-stage build for Next.js
+│   │   ├── next.config.js
+│   │   └── src/
+│   └── server/
+│       ├── Dockerfile             # Multi-stage build for Node/Express
+│       └── src/
+├── packages/
+│   ├── database/                  # seed scripts for postgres
+│   ├── types/                     # Shared TS interfaces
+│   ├── logic/                     # Shared game validator
+│   └── config/                    # Shared eslint/tsconfig
+├── scripts/                       # Optional: CI/CD or database migration scripts
+├── .dockerignore                  # Prevents sending node_modules to Docker daemon
+├── Caddyfile                      # Reverse proxy configuration
+├── docker-compose.yaml            # Local & VPS orchestration
+├── turbo.json
+├── package.json
+├── pnpm-workspace.yaml
+└── AGENTS.md
+
 
 ### Apps and Packages
 
@@ -24,52 +85,3 @@ This Turborepo includes the following:
 - `@repo/typescript-config`: tsconfig.json's used throughout the monorepo
 - `@repo/jest-presets`: Jest configurations
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Docker
-
-This repo is configured to be built with Docker, and Docker compose. To build all apps in this repo:
-
-```
-# Install dependencies
-yarn install
-
-# Create a network, which allows containers to communicate
-# with each other, by using their container name as a hostname
-docker network create app_network
-
-# Build prod using new BuildKit engine
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml build
-
-# Start prod in detached mode
-docker-compose -f docker-compose.yml up -d
-```
-
-Open http://localhost:3000.
-
-To shutdown all running containers:
-
-```
-# Stop running containers started by docker-compse
- docker-compose -f docker-compose.yml down
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-This example includes optional remote caching. In the Dockerfiles of the apps, uncomment the build arguments for `TURBO_TEAM` and `TURBO_TOKEN`. Then, pass these build arguments to your Docker build.
-
-You can test this behavior using a command like:
-
-`docker build -f apps/web/Dockerfile . --build-arg TURBO_TEAM=“your-team-name” --build-arg TURBO_TOKEN=“your-token“ --no-cache`
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Jest](https://jestjs.io) test runner for all things JavaScript
-- [Prettier](https://prettier.io) for code formatting
