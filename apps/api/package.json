@@ -14,6 +14,7 @@
     "preset": "@repo/jest-presets/node"
   },
   "dependencies": {
+    "@repo/database": "workspace:*",
     "@repo/logger": "workspace:*",
     "@types/pg": "^8.16.0",
     "body-parser": "^2.2.2",

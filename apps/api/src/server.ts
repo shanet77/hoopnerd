@@ -1,18 +1,11 @@
 import express, { type Express, Request, Response } from "express";
 import cors from "cors";
-import { PlayerService, DatabaseService } from "@repo/types";
-import { Pool } from 'pg';
+import { PlayerService } from "@repo/types";
+import databasePool from "@repo/database";
 
 
-export const createServer = (db?: DatabaseService): Express => {
-  const databaseService = db || new Pool({
-    connectionString: process.env.DATABASE_URL,
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-  });
-
-  const playerService = new PlayerService(databaseService);
+export const createServer = (): Express => {
+  const playerService = new PlayerService(databasePool);
 
   const app = express();
 

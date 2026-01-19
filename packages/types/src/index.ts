@@ -1,8 +1,6 @@
-import { QueryResult } from 'pg';
+import { Pool, QueryResult } from 'pg';
 
-export interface DatabaseService {
-  query(text: string, params?: unknown[]): Promise<QueryResult<any>>;
-}
+export type DatabaseService = Pool;
 
 export interface Player {
   id: number;

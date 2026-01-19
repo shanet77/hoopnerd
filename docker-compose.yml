@@ -18,6 +18,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app_network
 
   db-seed:
     build:
@@ -34,6 +36,8 @@ services:
       DB_PASSWORD: postgres
     volumes:
       - ./datasets:/app/datasets
+    networks:
+      - app_network
 
   web:
     container_name: web
@@ -43,8 +47,8 @@ services:
     restart: always
     ports:
       - 3000:3000
-    # networks:
-    #   - app_network
+    networks:
+      - app_network
   api:
     container_name: api
     build:
@@ -53,13 +57,23 @@ services:
     restart: always
     ports:
       - 3001:3001
-    # networks:
-    #   - app_network
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/connectaball_dev
+      DB_HOST: postgres
+      DB_NAME: connectaball_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_PORT: 5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
 
 # Define a network, which allows containers to communicate
 # with each other, by using their container name as a hostname
 volumes:
   postgres_data:
-# networks:
-#   app_network:
-#     external: true
+networks:
+  app_network:
+    driver: bridge
