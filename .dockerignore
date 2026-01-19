@@ -1,1 +1,7 @@
 node_modules
+.next
+dist
+.turbo
+out
+*.log
+.env*node_modules

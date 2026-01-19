@@ -1,0 +1,36 @@
+{
+  "name": "@repo/database",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "dev": "tsc src/index.ts",
+    "seed": "node src/seed.ts",
+    "migrate": "node src/migrate.ts",
+    "lint": "eslint \"src/**/*.ts*\" --max-warnings 0",
+    "test": "jest"
+  },
+  "jest": {
+    "preset": "@repo/jest-presets/node"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.2.0",
+    "@repo/eslint-config": "workspace:*",
+    "@repo/jest-presets": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^25.0.9",
+    "@types/pg": "^8.16.0",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^17.2.3",
+    "eslint": "^9.39.2",
+    "jest": "^30.2.0",
+    "pg": "^8.17.1",
+    "typescript": "5.9.3"
+  }
+}

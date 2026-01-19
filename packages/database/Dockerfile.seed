@@ -1,0 +1,23 @@
+FROM node:24-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy the entire project
+COPY . .
+
+# Install dependencies
+RUN pnpm install
+
+# Build the database package
+RUN pnpm --filter @repo/database build
+
+WORKDIR /app/packages/database
+
+# Run the seed script (which now includes migrations)
+CMD ["pnpm", "node", "dist/seed.js"]

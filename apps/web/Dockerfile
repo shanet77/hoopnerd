@@ -1,4 +1,4 @@
-ARG NODE_VERSION=24.11.1
+ARG NODE_VERSION=24
 FROM node:${NODE_VERSION}-slim AS base
 
 # This Dockerfile is copy-pasted into our main docs at /docs/handbook/deploying-with-docker.
@@ -10,7 +10,8 @@ WORKDIR /app
 
 # ---
 FROM base AS prepare
-RUN yarn global add turbo
+RUN npm i -g pnpm
+RUN npm i -g turbo
 COPY . .
 # Add lockfile and package.json's of isolated subworkspace
 RUN turbo prune web --docker
@@ -19,7 +20,9 @@ RUN turbo prune web --docker
 FROM base AS builder
 # First install the dependencies (as they change less often)
 COPY --from=prepare /app/out/json/ .
-RUN yarn install
+RUN npm i -g pnpm
+RUN npm i -g turbo
+RUN pnpm install
 # Build the project
 COPY --from=prepare /app/out/full/ .
 
@@ -30,7 +33,7 @@ COPY --from=prepare /app/out/full/ .
 # ARG TURBO_TOKEN
 # ENV TURBO_TOKEN=$TURBO_TOKEN
 
-RUN yarn turbo build
+RUN pnpm turbo build
 
 # ---
 FROM node:${NODE_VERSION}-alpine AS runner

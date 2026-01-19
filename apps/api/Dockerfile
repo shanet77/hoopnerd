@@ -1,4 +1,4 @@
-ARG NODE_VERSION=24.11.1
+ARG NODE_VERSION=24
 FROM node:${NODE_VERSION}-slim AS base
 
 # The web Dockerfile is copy-pasted into our main docs at /docs/handbook/deploying-with-docker.
@@ -8,17 +8,20 @@ FROM base AS prepare
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 # Set working directory
 WORKDIR /app
-RUN yarn global add turbo
+RUN npm i -g pnpm
+RUN npm i -g turbo
 COPY . .
 RUN turbo prune api --docker
 
 # Add lockfile and package.json's of isolated subworkspace
 FROM base AS builder
 WORKDIR /app
+RUN npm i -g pnpm
+RUN npm i -g turbo
 
 # First install dependencies (as they change less often)
 COPY --from=prepare /app/out/json/ .
-RUN yarn install
+RUN pnpm install
 
 # Build the project and its dependencies
 COPY --from=prepare /app/out/full/ .
@@ -30,7 +33,7 @@ COPY --from=prepare /app/out/full/ .
 # ARG TURBO_TOKEN
 # ENV TURBO_TOKEN=$TURBO_TOKEN
 
-RUN yarn turbo build
+RUN pnpm turbo build
 
 FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
