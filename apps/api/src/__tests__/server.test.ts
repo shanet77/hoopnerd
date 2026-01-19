@@ -3,21 +3,23 @@ import { describe, it, expect } from "@jest/globals";
 import { createServer } from "../server";
 
 describe("server", () => {
-  it("status check returns 200", async () => {
-    await supertest(createServer())
-      .get("/status")
+  it("health check returns 200", async () => {
+    const { app } = createServer();
+    await supertest(app)
+      .get("/health")
       .expect(200)
       .then((res) => {
-        expect(res.body.ok).toBe(true);
+        expect(res.body.status).toBe('OK');
       });
   });
 
-  it("message endpoint says hello", async () => {
-    await supertest(createServer())
-      .get("/message/jared")
+  it("player search endpoint works", async () => {
+    const { app } = createServer();
+    await supertest(app)
+      .get("/api/players/search?q=test")
       .expect(200)
       .then((res) => {
-        expect(res.body.message).toBe("hello jared");
+        expect(Array.isArray(res.body)).toBe(true);
       });
   });
 });

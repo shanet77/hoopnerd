@@ -16,19 +16,22 @@
   "dependencies": {
     "@repo/database": "workspace:*",
     "@repo/logger": "workspace:*",
+    "@repo/logic": "workspace:*",
     "@types/pg": "^8.16.0",
     "body-parser": "^2.2.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "http": "0.0.1-security",
     "morgan": "^1.10.1",
-    "pg": "^8.17.1"
+    "pg": "^8.17.1",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "@jest/globals": "^30.2.0",
-    "@repo/types": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "@repo/jest-presets": "workspace:*",
+    "@repo/types": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/body-parser": "^1.19.6",
     "@types/cors": "^2.8.19",

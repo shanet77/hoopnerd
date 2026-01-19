@@ -8,6 +8,70 @@ export interface Player {
   position: string;
 }
 
+// WebSocket Event Types
+export interface PlayerMove {
+  playerId: number;
+  playerName: string;
+  position: string;
+}
+
+export interface GameRoomState {
+  roomId: string;
+  players: Player[];
+  moves: PlayerMove[];
+  currentPlayerIndex: number;
+  gameStarted: boolean;
+  gameCompleted: boolean;
+  winner?: Player | null;
+}
+
+export interface JoinRoomRequest {
+  roomId: string;
+  playerName: string;
+}
+
+export interface JoinRoomResponse {
+  success: boolean;
+  message: string;
+  roomState?: GameRoomState;
+}
+
+export interface SubmitMoveRequest {
+  roomId: string;
+  player: Player;
+  connectedPlayer: Player;
+}
+
+export interface SubmitMoveResponse {
+  success: boolean;
+  message: string;
+  roomState?: GameRoomState;
+  validated: boolean;
+}
+
+export interface CreateRoomResponse {
+  success: boolean;
+  message: string;
+  roomId: string;
+}
+
+export interface WebSocketEvents {
+  // Client to Server events
+  join_room: (data: JoinRoomRequest) => void;
+  create_room: () => void;
+  leave_room: (roomId: string) => void;
+  submit_move: (data: SubmitMoveRequest) => void;
+
+  // Server to Client events
+  room_joined: (data: JoinRoomResponse) => void;
+  room_created: (data: CreateRoomResponse) => void;
+  move_submitted: (data: SubmitMoveResponse) => void;
+  player_connected: (player: Player) => void;
+  player_disconnected: (playerName: string) => void;
+  game_error: (error: string) => void;
+  room_updated: (roomState: GameRoomState) => void;
+}
+
 export class PlayerService {
   constructor(private db: DatabaseService) { }
 
