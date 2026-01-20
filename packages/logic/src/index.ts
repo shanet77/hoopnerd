@@ -1,18 +1,33 @@
 import { DatabaseService } from '@repo/types';
 
 /**
- * Validates if two players ever played together on the same team in the same season.
+ * Validates a move in the game.
+ * If only playerAId is provided, it's considered the first move and validates if the player exists.
+ * If playerBId is also provided, it validates if the two players ever played together on the same team in the same season.
  *
  * @param db - Database service instance
  * @param playerAId - ID of the first player
- * @param playerBId - ID of the second player
- * @returns boolean indicating if the players ever played together
+ * @param playerBId - ID of the second player (optional)
+ * @returns boolean indicating if the move is valid
  */
 export async function validateMove(
   db: DatabaseService,
   playerAId: number,
-  playerBId: number
+  playerBId?: number
 ): Promise<boolean> {
+  // If playerBId is not provided, this is the first move.
+  // Validate that playerA exists.
+  if (playerBId === undefined) {
+    const playerCheckQuery = `
+      SELECT COUNT(*) as count
+      FROM players
+      WHERE id = $1
+    `;
+
+    const playerCheckResult = await db.query(playerCheckQuery, [playerAId]);
+
+    return parseInt(playerCheckResult.rows[0].count) === 1;
+  }
 
   const playersCheckQuery = `
     SELECT COUNT(*) as count
