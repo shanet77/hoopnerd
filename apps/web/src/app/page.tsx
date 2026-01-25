@@ -123,6 +123,7 @@ function LobbyPage() {
           <form onSubmit={handleJoinRoom} className="space-y-4">
             <Input
               id="roomId"
+              className="text-sm text-gray-600 mb-4"
               label="Room ID"
               value={roomId}
               onChange={(e) => setRoomId(e.target.value)}
@@ -131,6 +132,7 @@ function LobbyPage() {
             />
             <Input
               id="playerName"
+              className="text-sm text-gray-600 mb-4"
               label="Your Name"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}

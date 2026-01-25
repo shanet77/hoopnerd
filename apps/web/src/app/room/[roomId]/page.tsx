@@ -311,7 +311,7 @@ function GamePage() {
                     </div>
                     <div className="text-2xl font-mono">{timeRemaining}s</div>
                   </div>
-                  
+
                   {roomState.startingPlayer && (
                     <div className="flex items-center justify-center gap-4 text-sm">
                       <div className="flex items-center gap-2">
@@ -329,7 +329,7 @@ function GamePage() {
                       )}
                     </div>
                   )}
-                  
+
                   {!isMyTurn && (
                     <p className="text-center text-gray-600">
                       Wait for {activePlayer?.name}'s turn
@@ -357,9 +357,9 @@ function GamePage() {
             {roomState.gameStarted && (
               <div className="mb-6">
                 <h3 className="font-medium mb-2">Player Chain</h3>
-                <PlayerGraph 
-                  startingPlayer={roomState.startingPlayer} 
-                  connections={roomState.connections} 
+                <PlayerGraph
+                  startingPlayer={roomState.startingPlayer}
+                  connections={roomState.connections}
                 />
               </div>
             )}
@@ -391,11 +391,11 @@ function GamePage() {
                 <div>
                   <Input
                     type="text"
-                    label="Select Player to Connect"
+                    label="Latest Connected Player"
                     value={connectedPlayer?.name || ""}
                     readOnly
                     placeholder="Search and select a player..."
-                    className="bg-gray-100"
+                    className="bg-gray-100 text-gray-600"
                   />
                 </div>
 
@@ -407,7 +407,7 @@ function GamePage() {
                     value={searchQuery}
                     onChange={handleSearchChange}
                     placeholder="Start typing a player name..."
-                    className="text-gray-900"
+                    className="text-gray-600"
                   />
 
                   {searchResults.length > 0 && (
