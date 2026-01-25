@@ -8,7 +8,9 @@ import {
   WebSocketEvents,
   JoinRoomRequest,
   SubmitMoveRequest,
-  GameRoomState
+  GameRoomState,
+  JoinMatchmakingRequest,
+  JoinMatchmakingResponse
 } from "@repo/types";
 import { validateMove, getConnectionDetails, getPlayerById } from "@repo/logic";
 import databasePool from "@repo/database";
@@ -19,7 +21,7 @@ const roomTimers: Map<string, NodeJS.Timeout> = new Map();
 
 const playerService = new PlayerService(databasePool);
 
-const createGameRoom = (roomId: string): GameRoomState => ({
+const createGameRoom = (roomId: string, friendsOnly: boolean = false): GameRoomState => ({
   roomId,
   players: [],
   moves: [],
@@ -30,6 +32,7 @@ const createGameRoom = (roomId: string): GameRoomState => ({
   startingPlayer: null,
   connections: [],
   lastConnectedPlayer: null,
+  friendsOnly,
 });
 
 const getPlayerByName = (room: GameRoomState, playerName: string) => {
@@ -119,11 +122,53 @@ export const createServer = (): { app: Express; server: HttpServer } => {
   io.on('connection', (socket: Socket) => {
     console.log(`User connected: ${socket.id}`);
 
-    socket.on('create_room', () => {
+    socket.on('create_room', (friendsOnly: boolean = false) => {
       const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
       socket.join(roomId);
-      gameRooms.set(roomId, createGameRoom(roomId));
+      gameRooms.set(roomId, createGameRoom(roomId, friendsOnly));
       socket.emit('room_created', { success: true, message: `Room ${roomId} created successfully`, roomId });
+    });
+
+    socket.on('join_matchmaking', (data: JoinMatchmakingRequest) => {
+      const { playerName, friendsOnly = false } = data;
+
+      let selectedRoomId: string | null = null;
+      let joinedExisting = false;
+
+      if (!friendsOnly) {
+        for (const [roomId, room] of gameRooms.entries()) {
+          if (!room.friendsOnly && room.players.length < 2 && !room.gameStarted) {
+            selectedRoomId = roomId;
+            joinedExisting = true;
+            break;
+          }
+        }
+      }
+
+      if (!selectedRoomId) {
+        selectedRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+        gameRooms.set(selectedRoomId, createGameRoom(selectedRoomId, friendsOnly));
+      }
+
+      const room = gameRooms.get(selectedRoomId)!;
+      socket.join(selectedRoomId);
+
+      const player: Player = { id: Date.now(), name: playerName, position: 'G', socketId: socket.id };
+      room.players.push(player);
+      io.to(selectedRoomId).emit('player_connected', player);
+      io.to(selectedRoomId).emit('room_updated', room);
+
+      const response: JoinMatchmakingResponse = {
+        success: true,
+        message: joinedExisting
+          ? `Joined existing room ${selectedRoomId}`
+          : `Created and joined room ${selectedRoomId}`,
+        roomId: selectedRoomId,
+        roomState: room,
+        joinedExisting
+      };
+
+      socket.emit('matchmaking_result', response);
     });
 
     socket.on('join_room', async (data: JoinRoomRequest) => {

@@ -422,7 +422,7 @@ function GamePage() {
                             setSearchResults([]);
                           }}
                         >
-                          <span className="font-medium text-gray-900">{player.name}</span>{" "}
+                          <span className="font-medium text-gray-600">{player.name}</span>{" "}
                           <span className="text-gray-700">
                             ({player.position})
                           </span>

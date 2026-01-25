@@ -2,11 +2,23 @@ import { Pool, QueryResult } from 'pg';
 
 export type DatabaseService = Pool;
 
+export interface User {
+  id: string;
+  username: string;
+  friendIds: string[];
+}
+
+export interface FriendRelationship {
+  userId: string;
+  friendId: string;
+  createdAt: Date;
+}
+
 export interface Player {
   id: number;
   name: string;
   position: string;
-  socketId?: string; // Add this line
+  socketId?: string;
 }
 
 // WebSocket Event Types
@@ -34,6 +46,7 @@ export interface GameRoomState {
   startingPlayer?: Player | null;
   connections: PlayerConnection[];
   lastConnectedPlayer?: Player | null;
+  friendsOnly: boolean;
 }
 
 export interface JoinRoomRequest {
@@ -66,15 +79,30 @@ export interface CreateRoomResponse {
   roomId: string;
 }
 
+export interface JoinMatchmakingRequest {
+  playerName: string;
+  friendsOnly?: boolean;
+}
+
+export interface JoinMatchmakingResponse {
+  success: boolean;
+  message: string;
+  roomId?: string;
+  roomState?: GameRoomState;
+  joinedExisting: boolean;
+}
+
 export interface WebSocketEvents {
   // Client to Server events
   join_room: (data: JoinRoomRequest) => void;
-  create_room: () => void;
+  join_matchmaking: (data: JoinMatchmakingRequest) => void;
+  create_room: (friendsOnly?: boolean) => void;
   leave_room: (roomId: string) => void;
   submit_move: (data: SubmitMoveRequest) => void;
 
   // Server to Client events
   room_joined: (data: JoinRoomResponse) => void;
+  matchmaking_result: (data: JoinMatchmakingResponse) => void;
   room_created: (data: CreateRoomResponse) => void;
   move_submitted: (data: SubmitMoveResponse) => void;
   player_connected: (player: Player) => void;

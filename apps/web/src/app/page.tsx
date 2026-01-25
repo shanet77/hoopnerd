@@ -6,7 +6,7 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/card";
 import { Badge } from "@repo/ui/badge";
-import { SocketProvider, useSocket, createRoom, joinRoom } from "./lib/socket";
+import { SocketProvider, useSocket, createRoom, joinRoom, joinMatchmaking } from "./lib/socket";
 import ClientOnly from "../components/ClientOnly";
 
 // Wrap the main component with SocketProvider
@@ -31,6 +31,7 @@ function LobbyPage() {
   const [roomId, setRoomId] = useState<string>("");
   const [playerName, setPlayerName] = useState<string>("");
   const [feedbackMessage, setFeedbackMessage] = useState<string>("");
+  const [isMatchmaking, setIsMatchmaking] = useState(false);
   const router = useRouter();
 
   // Create a new room
@@ -40,16 +41,76 @@ function LobbyPage() {
       return;
     }
 
+    if (!playerName) {
+      setFeedbackMessage("Please enter your name first.");
+      return;
+    }
+
     try {
-      const response = await createRoom(socket);
+      const response = await createRoom(socket, false);
       if (response.success) {
-        router.push(`/room/${response.roomId}`);
+        router.push(`/room/${response.roomId}?playerName=${playerName}`);
       } else {
         setFeedbackMessage(`Failed to create room: ${response.message}`);
       }
     } catch (error) {
       console.error("Error creating room:", error);
       setFeedbackMessage("An error occurred while creating the room.");
+    }
+  };
+
+  // Create a friends-only room
+  const handleCreateFriendsRoom = async () => {
+    if (!socket) {
+      setFeedbackMessage("Please wait for the connection to be established.");
+      return;
+    }
+
+    if (!playerName) {
+      setFeedbackMessage("Please enter your name first.");
+      return;
+    }
+
+    try {
+      const response = await createRoom(socket, true);
+      if (response.success) {
+        router.push(`/room/${response.roomId}?playerName=${playerName}&friendsOnly=true`);
+      } else {
+        setFeedbackMessage(`Failed to create room: ${response.message}`);
+      }
+    } catch (error) {
+      console.error("Error creating friends room:", error);
+      setFeedbackMessage("An error occurred while creating the friends room.");
+    }
+  };
+
+  // Join matchmaking for random game
+  const handleJoinMatchmaking = async () => {
+    if (!socket) {
+      setFeedbackMessage("Please wait for the connection to be established.");
+      return;
+    }
+
+    if (!playerName) {
+      setFeedbackMessage("Please enter your name first.");
+      return;
+    }
+
+    setIsMatchmaking(true);
+    setFeedbackMessage("Searching for a game...");
+
+    try {
+      const response = await joinMatchmaking(socket, { playerName, friendsOnly: false });
+      if (response.success) {
+        router.push(`/room/${response.roomId}?playerName=${playerName}`);
+      } else {
+        setFeedbackMessage(`Matchmaking failed: ${response.message}`);
+      }
+    } catch (error) {
+      console.error("Error joining matchmaking:", error);
+      setFeedbackMessage("An error occurred during matchmaking.");
+    } finally {
+      setIsMatchmaking(false);
     }
   };
 
@@ -95,20 +156,63 @@ function LobbyPage() {
         </CardContent>
       </Card>
 
-      {/* Create Room Section */}
+      {/* Player Name Input */}
       <Card className="mb-6">
         <CardHeader className="text-center">
-          <CardTitle>Create a New Game Room</CardTitle>
+          <CardTitle>Your Name</CardTitle>
         </CardHeader>
         <CardContent>
+          <Input
+            id="playerName"
+            className="text-sm text-gray-600"
+            label="Your Name"
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value)}
+            placeholder="Enter your name"
+            required
+          />
+        </CardContent>
+      </Card>
+
+      {/* Quick Play Matchmaking */}
+      <Card className="mb-6">
+        <CardHeader className="text-center">
+          <CardTitle>Quick Play</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600 mb-4 text-center">
+            Automatically match with a random player looking for a game
+          </p>
           <div className="flex justify-center">
             <Button
-              onClick={handleCreateRoom}
-              disabled={!isConnected}
+              onClick={handleJoinMatchmaking}
+              disabled={!isConnected || isMatchmaking || !playerName}
               variant="primary"
               className="w-full"
             >
-              Create Room
+              {isMatchmaking ? "Searching..." : "Find Match"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Create Room Section */}
+      <Card className="mb-6">
+        <CardHeader className="text-center">
+          <CardTitle>Create a Private Game</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600 text-center">
+            Create a room and share the code with friends to play together
+          </p>
+          <div className="flex justify-center">
+            <Button
+              onClick={handleCreateFriendsRoom}
+              disabled={!isConnected || !playerName}
+              variant="secondary"
+              className="w-full"
+            >
+              Create Friends Room
             </Button>
           </div>
         </CardContent>
@@ -117,32 +221,23 @@ function LobbyPage() {
       {/* Join Room Section */}
       <Card>
         <CardHeader className="text-center">
-          <CardTitle>Join an Existing Room</CardTitle>
+          <CardTitle>Join with Code</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleJoinRoom} className="space-y-4">
             <Input
               id="roomId"
               className="text-sm text-gray-600 mb-4"
-              label="Room ID"
+              label="Room Code"
               value={roomId}
               onChange={(e) => setRoomId(e.target.value)}
-              placeholder="Enter room ID"
-              required
-            />
-            <Input
-              id="playerName"
-              className="text-sm text-gray-600 mb-4"
-              label="Your Name"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="Enter your name"
+              placeholder="Enter room code"
               required
             />
             <Button
               type="submit"
-              disabled={!isConnected}
-              variant="primary"
+              disabled={!isConnected || !playerName}
+              variant="outline"
               className="w-full"
             >
               Join Room

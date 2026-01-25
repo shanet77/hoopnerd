@@ -8,7 +8,9 @@ import {
   SubmitMoveRequest, 
   GameRoomState,
   JoinRoomResponse,
-  SubmitMoveResponse
+  SubmitMoveResponse,
+  JoinMatchmakingRequest,
+  JoinMatchmakingResponse
 } from '@repo/types';
 
 // Define a type for our socket context value
@@ -87,10 +89,19 @@ export const submitMove = (socket: Socket<WebSocketEvents, WebSocketEvents>, dat
   });
 };
 
-export const createRoom = (socket: Socket<WebSocketEvents, WebSocketEvents>) => {
+export const createRoom = (socket: Socket<WebSocketEvents, WebSocketEvents>, friendsOnly: boolean = false) => {
   return new Promise<{ success: boolean; message: string; roomId: string }>((resolve) => {
-    socket.emit('create_room');
+    socket.emit('create_room', friendsOnly);
     socket.once('room_created', (response) => {
+      resolve(response);
+    });
+  });
+};
+
+export const joinMatchmaking = (socket: Socket<WebSocketEvents, WebSocketEvents>, data: JoinMatchmakingRequest) => {
+  return new Promise<JoinMatchmakingResponse>((resolve) => {
+    socket.emit('join_matchmaking', data);
+    socket.once('matchmaking_result', (response: JoinMatchmakingResponse) => {
       resolve(response);
     });
   });
