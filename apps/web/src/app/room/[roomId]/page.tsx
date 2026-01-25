@@ -26,6 +26,7 @@ import {
   SubmitMoveRequest,
 } from "@repo/types";
 import ClientOnly from "../../../components/ClientOnly";
+import { PlayerGraph } from "../../../components/game/PlayerGraph";
 
 // Wrap the main component with SocketProvider
 export default function Room() {
@@ -56,7 +57,6 @@ function GamePage() {
   const [winner, setWinner] = useState<Player | null>(null);
   const [winReason, setWinReason] = useState<string>("");
 
-  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
   const [connectedPlayer, setConnectedPlayer] = useState<Player | null>(null);
   const [roomState, setRoomState] = useState<GameRoomState | null>(null);
   const [searchResults, setSearchResults] = useState<Player[]>([]);
@@ -117,9 +117,10 @@ function GamePage() {
       );
 
       socket.on("move_submitted", (data) => {
-        setGameMessage(
-          data.success ? data.message : `Move rejected: ${data.message}`,
-        );
+        if (data.roomState) {
+          setRoomState(data.roomState);
+        }
+        setGameMessage(data.message);
       });
 
       socket.on("player_connected", (player: Player) => {
@@ -215,16 +216,16 @@ function GamePage() {
   const handleSubmitMove = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!roomState || !currentPlayer || !connectedPlayer || !socket) {
+    if (!roomState || !connectedPlayer || !socket) {
       setGameMessage(
-        "Please select both players for the move and wait for socket connection",
+        "Please select a player to connect and wait for socket connection",
       );
       return;
     }
 
     const moveData: SubmitMoveRequest = {
       roomId: roomState.roomId,
-      player: currentPlayer,
+      player: roomState.lastConnectedPlayer || roomState.startingPlayer!,
       connectedPlayer: connectedPlayer,
     };
 
@@ -233,13 +234,11 @@ function GamePage() {
 
       if (response.success) {
         setGameMessage(response.message);
-        // Clear the selected players after a successful move
-        setCurrentPlayer(null);
         setConnectedPlayer(null);
         setSearchQuery("");
         setSearchResults([]);
       } else {
-        setGameMessage(`Move rejected: ${response.message}`);
+        setGameMessage(response.message);
       }
     } catch (error) {
       console.error("Error submitting move:", error);
@@ -304,17 +303,66 @@ function GamePage() {
                   {winner.name} wins! {winReason}
                 </div>
               ) : roomState.gameStarted ? (
-                <div className="text-center">
-                  <p className="text-xl">
-                    Turn:{" "}
-                    <span className="font-bold">{activePlayer?.name}</span>
-                  </p>
-                  <p className="text-2xl font-mono">{timeRemaining}s</p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center gap-4">
+                    <div className={`px-4 py-2 rounded-lg ${isMyTurn ? 'bg-indigo-100 border-2 border-indigo-500' : 'bg-gray-100'}`}>
+                      <p className="text-sm text-gray-600">Current Turn</p>
+                      <p className="text-xl font-bold">{activePlayer?.name}</p>
+                    </div>
+                    <div className="text-2xl font-mono">{timeRemaining}s</div>
+                  </div>
+                  
+                  {roomState.startingPlayer && (
+                    <div className="flex items-center justify-center gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span>Starting: <strong>{roomState.startingPlayer.name}</strong></span>
+                      </div>
+                      {roomState.lastConnectedPlayer && (
+                        <>
+                          <span>→</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                            <span>Last: <strong>{roomState.lastConnectedPlayer.name}</strong></span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  
+                  {!isMyTurn && (
+                    <p className="text-center text-gray-600">
+                      Wait for {activePlayer?.name}'s turn
+                    </p>
+                  )}
                 </div>
               ) : (
                 <p className="text-center">Waiting for players...</p>
               )}
             </div>
+
+            {/* Error Message Display */}
+            {gameMessage && (gameMessage.includes('Invalid') || gameMessage.includes('Invalid connection') || gameMessage.includes('not play with')) && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
+                    <span className="text-white text-sm font-bold">×</span>
+                  </div>
+                  <p className="text-red-800 font-medium">{gameMessage}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Player Graph Visualization */}
+            {roomState.gameStarted && (
+              <div className="mb-6">
+                <h3 className="font-medium mb-2">Player Chain</h3>
+                <PlayerGraph 
+                  startingPlayer={roomState.startingPlayer} 
+                  connections={roomState.connections} 
+                />
+              </div>
+            )}
 
             {/* Current Players in Room */}
             <div className="mb-6">
@@ -335,31 +383,18 @@ function GamePage() {
             <div className="mb-6">
               <h3 className="font-medium mb-2">Submit a Move</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Select two players who played together on the same team in the
-                same season
+                Connect a player to <strong>{roomState.lastConnectedPlayer?.name || 'the starting player'}</strong> who played with them on the same team in the same season.
               </p>
 
               <form onSubmit={handleSubmitMove} className="space-y-4">
-                {/* Current Player Selection */}
-                <div>
-                  <Input
-                    type="text"
-                    label="Select Current Player"
-                    value={currentPlayer?.name || ""}
-                    readOnly
-                    placeholder="Click on a player from search results"
-                    className="bg-gray-100"
-                  />
-                </div>
-
                 {/* Connected Player Selection */}
                 <div>
                   <Input
                     type="text"
-                    label="Select Connected Player"
+                    label="Select Player to Connect"
                     value={connectedPlayer?.name || ""}
                     readOnly
-                    placeholder="Click on a player from search results"
+                    placeholder="Search and select a player..."
                     className="bg-gray-100"
                   />
                 </div>
@@ -382,21 +417,7 @@ function GamePage() {
                           key={player.id}
                           className="p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors"
                           onClick={() => {
-                            // If no current player selected, set as current player
-                            if (!currentPlayer) {
-                              setCurrentPlayer(player);
-                            }
-                            // If current player is selected but no connected player, set as connected player
-                            else if (currentPlayer && !connectedPlayer) {
-                              setConnectedPlayer(player);
-                            }
-                            // If both are selected, reset and set as current player
-                            else {
-                              setCurrentPlayer(player);
-                              setConnectedPlayer(null);
-                            }
-
-                            // Clear search
+                            setConnectedPlayer(player);
                             setSearchQuery("");
                             setSearchResults([]);
                           }}
@@ -413,7 +434,7 @@ function GamePage() {
 
                 <Button
                   type="submit"
-                  disabled={!isMyTurn || !currentPlayer || !connectedPlayer}
+                  disabled={!isMyTurn || !connectedPlayer}
                   variant="primary"
                   className="w-full"
                 >

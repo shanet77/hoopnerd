@@ -16,6 +16,13 @@ export interface PlayerMove {
   position: string;
 }
 
+export interface PlayerConnection {
+  fromPlayer: Player;
+  toPlayer: Player;
+  seasonYear?: number;
+  teamName?: string;
+}
+
 export interface GameRoomState {
   roomId: string;
   players: Player[];
@@ -24,6 +31,9 @@ export interface GameRoomState {
   gameStarted: boolean;
   gameCompleted: boolean;
   winner?: Player | null;
+  startingPlayer?: Player | null;
+  connections: PlayerConnection[];
+  lastConnectedPlayer?: Player | null;
 }
 
 export interface JoinRoomRequest {
@@ -92,5 +102,17 @@ export class PlayerService {
 
     const result = await this.db.query(sql, [searchTerm]);
     return result.rows;
+  }
+
+  async getRandomPlayer(): Promise<Player | null> {
+    const sql = `
+      SELECT id, player_name AS name, position
+      FROM players
+      ORDER BY RANDOM()
+      LIMIT 1
+    `;
+
+    const result = await this.db.query(sql);
+    return result.rows.length > 0 ? result.rows[0] : null;
   }
 }

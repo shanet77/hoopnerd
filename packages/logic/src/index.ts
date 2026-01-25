@@ -1,4 +1,4 @@
-import { DatabaseService } from '@repo/types';
+import { DatabaseService, Player, PlayerConnection } from '@repo/types';
 
 /**
  * Validates a move in the game.
@@ -43,13 +43,87 @@ export async function validateMove(
 
   // Check if the players shared a team in any season
   const query = `
-    SELECT r1.season_year, r1.team_id
+    SELECT r1.season_year, r1.team_id, t.team_name
     FROM rosters r1
     JOIN rosters r2 ON r1.team_id = r2.team_id AND r1.season_year = r2.season_year
+    JOIN teams t ON r1.team_id = t.id
     WHERE r1.player_id = $1 AND r2.player_id = $2
+    LIMIT 1
   `;
 
   const result = await db.query(query, [playerAId, playerBId]);
 
   return result.rows.length > 0;
+}
+
+/**
+ * Gets connection details between two players who played together.
+ *
+ * @param db - Database service instance
+ * @param playerAId - ID of the first player
+ * @param playerBId - ID of the second player
+ * @returns PlayerConnection object or null if no connection exists
+ */
+export async function getConnectionDetails(
+  db: DatabaseService,
+  playerAId: number,
+  playerBId: number
+): Promise<PlayerConnection | null> {
+  const query = `
+    SELECT 
+      p1.id as from_id, p1.player_name as from_name, p1.position as from_position,
+      p2.id as to_id, p2.player_name as to_name, p2.position as to_position,
+      r1.season_year,
+      t.team_name
+    FROM rosters r1
+    JOIN rosters r2 ON r1.team_id = r2.team_id AND r1.season_year = r2.season_year
+    JOIN teams t ON r1.team_id = t.id
+    JOIN players p1 ON r1.player_id = p1.id
+    JOIN players p2 ON r2.player_id = p2.id
+    WHERE r1.player_id = $1 AND r2.player_id = $2
+    LIMIT 1
+  `;
+
+  const result = await db.query(query, [playerAId, playerBId]);
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  const row = result.rows[0];
+  return {
+    fromPlayer: {
+      id: row.from_id,
+      name: row.from_name,
+      position: row.from_position,
+    },
+    toPlayer: {
+      id: row.to_id,
+      name: row.to_name,
+      position: row.to_position,
+    },
+    seasonYear: row.season_year,
+    teamName: row.team_name,
+  };
+}
+
+/**
+ * Gets player details by ID.
+ *
+ * @param db - Database service instance
+ * @param playerId - ID of the player
+ * @returns Player object or null if not found
+ */
+export async function getPlayerById(
+  db: DatabaseService,
+  playerId: number
+): Promise<Player | null> {
+  const query = `
+    SELECT id, player_name AS name, position
+    FROM players
+    WHERE id = $1
+  `;
+
+  const result = await db.query(query, [playerId]);
+  return result.rows.length > 0 ? result.rows[0] : null;
 }

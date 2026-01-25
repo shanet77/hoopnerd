@@ -10,7 +10,7 @@ import {
   SubmitMoveRequest,
   GameRoomState
 } from "@repo/types";
-import { validateMove } from "@repo/logic";
+import { validateMove, getConnectionDetails, getPlayerById } from "@repo/logic";
 import databasePool from "@repo/database";
 
 // In-memory storage for game rooms (in production, you might use Redis)
@@ -27,6 +27,9 @@ const createGameRoom = (roomId: string): GameRoomState => ({
   gameStarted: false,
   gameCompleted: false,
   winner: null,
+  startingPlayer: null,
+  connections: [],
+  lastConnectedPlayer: null,
 });
 
 const getPlayerByName = (room: GameRoomState, playerName: string) => {
@@ -59,11 +62,13 @@ const startTurnTimer = (io: SocketIOServer, roomId: string) => {
   roomTimers.set(roomId, timer);
 };
 
-const startGame = (io: SocketIOServer, roomId: string) => {
+const startGame = async (io: SocketIOServer, roomId: string) => {
   const room = gameRooms.get(roomId);
   if (room && room.players.length >= 2 && !room.gameStarted) {
     room.gameStarted = true;
     room.currentPlayerIndex = Math.floor(Math.random() * room.players.length);
+    room.startingPlayer = await playerService.getRandomPlayer();
+    room.lastConnectedPlayer = room.startingPlayer;
     io.to(roomId).emit('game_started', room);
     startTurnTimer(io, roomId);
   }
@@ -91,6 +96,16 @@ export const createServer = (): { app: Express; server: HttpServer } => {
 
     try {
       res.json(await playerService.searchPlayers(q));
+    } catch (error) {
+      console.error('Database query error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/players/random', async (req: Request, res: Response) => {
+    try {
+      const player = await playerService.getRandomPlayer();
+      res.json(player);
     } catch (error) {
       console.error('Database query error:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -144,34 +159,60 @@ export const createServer = (): { app: Express; server: HttpServer } => {
 
       if (!room || room.gameCompleted) {
         socket.emit('game_error', 'Game is not active.');
+        io.to(roomId).emit('game_error', 'Game is not active.');
         return;
       }
 
       const currentPlayerTurn = room.players[room.currentPlayerIndex];
-      // Only allow the current player to submit a move
       if (currentPlayerTurn.socketId !== socket.id) {
           socket.emit('game_error', 'Not your turn.');
+          io.to(roomId).emit('game_error', `${currentPlayerTurn.name}'s turn.`);
           return;
       }
 
-      try {
-        const isValidMove = await validateMove(databasePool, player.id, connectedPlayer.id);
-        const response = {
-          success: isValidMove,
-          message: isValidMove ? 'Move accepted' : 'Move rejected - players did not play together',
-        };
+      if (!room.startingPlayer) {
+        socket.emit('game_error', 'Game not properly initialized.');
+        io.to(roomId).emit('game_error', 'Game not properly initialized.');
+        return;
+      }
 
-        if (isValidMove) {
-          room.moves.push({ playerId: connectedPlayer.id, playerName: connectedPlayer.name, position: connectedPlayer.position });
-          io.to(roomId).emit('move_submitted', { ...response, roomState: room });
-          io.to(roomId).emit('room_updated', room);
-          switchTurn(io, room);
-        } else {
-          socket.emit('move_submitted', response);
+      try {
+        if (room.lastConnectedPlayer) {
+          const isValidMove = await validateMove(databasePool, room.lastConnectedPlayer.id, connectedPlayer.id);
+          
+          if (!isValidMove) {
+            const errorMsg = `Invalid connection! ${connectedPlayer.name} did not play with ${room.lastConnectedPlayer.name}`;
+            socket.emit('move_submitted', { success: false, message: errorMsg });
+            io.to(roomId).emit('move_submitted', { 
+              success: false, 
+              message: errorMsg,
+              errorPlayer: connectedPlayer.name,
+              expectedPlayer: room.lastConnectedPlayer.name
+            });
+            io.to(roomId).emit('room_updated', room);
+            return;
+          }
+
+          const connection = await getConnectionDetails(databasePool, room.lastConnectedPlayer.id, connectedPlayer.id);
+          if (connection) {
+            room.connections.push(connection);
+          }
         }
+
+        room.moves.push({ playerId: connectedPlayer.id, playerName: connectedPlayer.name, position: connectedPlayer.position });
+        room.lastConnectedPlayer = connectedPlayer;
+        
+        io.to(roomId).emit('move_submitted', { 
+          success: true, 
+          message: `${connectedPlayer.name} connected to ${room.lastConnectedPlayer ? 'chain' : 'start'}!`,
+          roomState: room 
+        });
+        io.to(roomId).emit('room_updated', room);
+        switchTurn(io, room);
       } catch (error) {
         console.error('Error validating move:', error);
         socket.emit('game_error', 'Error validating move');
+        io.to(roomId).emit('game_error', 'Error validating move');
       }
     });
 
