@@ -58,6 +58,7 @@ const startTurnTimer = (io: SocketIOServer, roomId: string) => {
       const winner = room.players[(room.currentPlayerIndex + 1) % room.players.length];
       room.winner = winner;
       room.gameCompleted = true;
+      roomTimers.delete(roomId);
       io.to(roomId).emit('game_over', { winner, reason: 'Opponent timed out.' });
     }
   }, 25000);
@@ -270,6 +271,15 @@ export const createServer = (): { app: Express; server: HttpServer } => {
               const playerName = room.players[playerIndex].name;
               room.players.splice(playerIndex, 1);
               io.to(roomId).emit('player_disconnected', playerName);
+              if (room.gameStarted && !room.gameCompleted && room.players.length < 2) {
+                room.gameCompleted = true;
+                room.winner = room.players[0] || null;
+                if (roomTimers.has(roomId)) {
+                  clearTimeout(roomTimers.get(roomId)!);
+                  roomTimers.delete(roomId);
+                }
+                io.to(roomId).emit('game_over', { winner: room.winner, reason: 'Opponent left the room.' });
+              }
               io.to(roomId).emit('room_updated', room);
           }
       }
@@ -285,7 +295,11 @@ export const createServer = (): { app: Express; server: HttpServer } => {
           io.to(roomId).emit('player_disconnected', disconnectedPlayer.name);
           if (room.gameStarted && !room.gameCompleted && room.players.length < 2) {
             room.gameCompleted = true;
-            room.winner = room.players[0] || null; // The remaining player wins
+            room.winner = room.players[0] || null;
+            if (roomTimers.has(roomId)) {
+              clearTimeout(roomTimers.get(roomId)!);
+              roomTimers.delete(roomId);
+            }
             io.to(roomId).emit('game_over', { winner: room.winner, reason: 'Opponent disconnected.' });
           }
           io.to(roomId).emit('room_updated', room);
