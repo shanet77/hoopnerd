@@ -2,7 +2,10 @@
   "name": "@repo/ui",
   "version": "0.0.0",
   "exports": {
-    "./button": "./src/button.tsx"
+    "./button": "./src/button.tsx",
+    "./input": "./src/input.tsx",
+    "./card": "./src/card.tsx",
+    "./badge": "./src/badge.tsx"
   },
   "scripts": {
     "lint": "eslint \"**/*.ts*\" --max-warnings 0"

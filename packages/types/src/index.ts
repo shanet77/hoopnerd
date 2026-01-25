@@ -6,6 +6,7 @@ export interface Player {
   id: number;
   name: string;
   position: string;
+  socketId?: string; // Add this line
 }
 
 // WebSocket Event Types
@@ -70,6 +71,9 @@ export interface WebSocketEvents {
   player_disconnected: (playerName: string) => void;
   game_error: (error: string) => void;
   room_updated: (roomState: GameRoomState) => void;
+  game_started: (state: GameRoomState) => void;
+  turn_changed: (player: Player) => void;
+  game_over: (data: { winner: Player; reason: string }) => void;
 }
 
 export class PlayerService {
