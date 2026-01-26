@@ -383,7 +383,7 @@ function GamePage() {
             <div className="mb-6">
               <h3 className="font-medium mb-2">Submit a Move</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Connect a player to <strong>{roomState.lastConnectedPlayer?.name || 'the starting player'}</strong> who played with them on the same team in the same season.
+                Connect a player to <strong>{roomState.lastConnectedPlayer?.name || 'the starting player'}</strong> who has played with them before.
               </p>
 
               <form onSubmit={handleSubmitMove} className="space-y-4">
@@ -450,7 +450,7 @@ function GamePage() {
                 <div className="border rounded-md divide-y">
                   {roomState.moves.map((move, index) => (
                     <div key={index} className="p-3">
-                      <span className="font-medium">{move.playerName}</span>{" "}
+                      <span className="font-medium text-gray-600">{move.playerName}</span>{" "}
                       <span className="text-gray-600">({move.position})</span>{" "}
                       connected
                     </div>
