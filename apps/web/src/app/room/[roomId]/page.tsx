@@ -262,7 +262,7 @@ function GamePage() {
   return (
     <div className="container mx-auto p-4 max-w-4xl min-h-screen">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold mb-3 bg-linear-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
           HoopNerd
         </h1>
         <p className="text-gray-600">Basketball Trivia Game</p>

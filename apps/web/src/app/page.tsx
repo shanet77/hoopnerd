@@ -134,7 +134,7 @@ function LobbyPage() {
   return (
     <div className="container mx-auto p-4 max-w-lg min-h-screen">
       <div className="mb-8 text-center">
-        <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold mb-3 bg-linear-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
           HoopNerd
         </h1>
         <p className="text-gray-600">A Multiplayer Basketball Trivia Game</p>
@@ -158,7 +158,7 @@ function LobbyPage() {
 
       {/* Player Name Input */}
       <Card className="mb-6">
-        <CardHeader className="text-center">
+        <CardHeader className="text-center text-gray-600">
           <CardTitle>Your Name</CardTitle>
         </CardHeader>
         <CardContent>
@@ -176,7 +176,7 @@ function LobbyPage() {
 
       {/* Quick Play Matchmaking */}
       <Card className="mb-6">
-        <CardHeader className="text-center">
+        <CardHeader className="text-center text-gray-600">
           <CardTitle>Quick Play</CardTitle>
         </CardHeader>
         <CardContent>
@@ -198,7 +198,7 @@ function LobbyPage() {
 
       {/* Create Room Section */}
       <Card className="mb-6">
-        <CardHeader className="text-center">
+        <CardHeader className="text-center text-gray-600">
           <CardTitle>Create a Private Game</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -220,7 +220,7 @@ function LobbyPage() {
 
       {/* Join Room Section */}
       <Card>
-        <CardHeader className="text-center">
+        <CardHeader className="text-center text-gray-600">
           <CardTitle>Join with Code</CardTitle>
         </CardHeader>
         <CardContent>

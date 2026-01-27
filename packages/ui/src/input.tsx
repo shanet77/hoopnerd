@@ -12,7 +12,7 @@ export const Input = ({
   ...rest
 }: InputProps) => {
   const inputStyles =
-    "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed";
+    "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed";
   const errorStyles = error ? "border-red-500 focus:ring-red-500" : "";
 
   return (
