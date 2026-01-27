@@ -182,13 +182,13 @@ function LobbyPage() {
           <CardHeader className="text-center pb-2">
             <CardTitle>Who's Playing?</CardTitle>
             <CardDescription>
-              Enter your nickname to get started
+              Enter your name to get started
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Input
               id="playerName"
-              label="Your Nickname"
+              label="Your name"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
               placeholder="King James, Black Mamba, Chef Curry..."
@@ -199,12 +199,9 @@ function LobbyPage() {
 
         <Card hover className="bg-success-light/30 border-success/30">
           <CardHeader className="text-center pb-2">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-success rounded-full mx-auto mb-2">
-              <span className="text-2xl">⚡</span>
-            </div>
             <CardTitle className="text-success-dark">Quick Play</CardTitle>
             <CardDescription>
-              Get matched with a random player instantly
+              Get matched with a random player
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -221,9 +218,6 @@ function LobbyPage() {
 
         <Card hover>
           <CardHeader className="text-center pb-2">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-basketball rounded-full mx-auto mb-2">
-              <span className="text-2xl">👥</span>
-            </div>
             <CardTitle>Play with Friends</CardTitle>
             <CardDescription>
               Create a private room and share the code
