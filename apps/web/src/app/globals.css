@@ -1,28 +1,84 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @source '../../../../packages/ui/src/**/*.{js,ts,jsx,tsx,mdx}';
 
 @theme {
-  --color-primary-50: #f0f9ff;
-  --color-primary-100: #e0f2fe;
-  --color-primary-200: #bae6fd;
-  --color-primary-300: #7dd3fc;
-  --color-primary-400: #38bdf8;
-  --color-primary-500: #0ea5e9;
-  --color-primary-600: #0284c7;
-  --color-primary-700: #0369a1;
-  --color-primary-800: #075985;
-  --color-primary-900: #0c4a6e;
+  --color-brand-50: #e0f2fe;
+  --color-brand-100: #bae6fd;
+  --color-brand-200: #7dd3fc;
+  --color-brand-300: #38bdf8;
+  --color-brand-400: #0ea5e9;
+  --color-brand-500: #0284c7;
+  --color-brand-600: #0369a1;
+  --color-brand-700: #075985;
+  --color-brand-800: #0c4a6e;
+  --color-brand-900: #0a3d5c;
+
+  --color-basketball: #ff6b35;
+  --color-basketball-light: #ff8c5a;
+  --color-basketball-dark: #e55a2b;
+
+  --color-success: #58cc02;
+  --color-success-light: #d7ffb8;
+  --color-success-dark: #46a302;
+
+  --color-error: #ff4b4b;
+  --color-error-light: #ffdfe0;
+  --color-error-dark: #e04444;
+
+  --color-warning: #ffc800;
+  --color-warning-light: #fff0c2;
+  --color-warning-dark: #e6b400;
+
+  --color-gray-50: #f7f7f7;
+  --color-gray-100: #eeeeee;
+  --color-gray-200: #e1e1e1;
+  --color-gray-300: #c8c8c8;
+  --color-gray-400: #a3a3a3;
+  --color-gray-500: #777777;
+  --color-gray-600: #555555;
+  --color-gray-700: #3c3c3c;
+  --color-gray-800: #292929;
+  --color-gray-900: #1a1a1a;
 }
 
-/*
-  The default border color has changed to `currentcolor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
+@keyframes bouncy {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(0.95);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  70% {
+    transform: scale(0.98);
+  }
+}
 
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-gentle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
 @layer base {
   *,
   ::after,
@@ -31,98 +87,145 @@
   ::file-selector-button {
     border-color: var(--color-gray-200, currentcolor);
   }
+
+  body {
+    @apply bg-gray-50 text-gray-800 antialiased;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+      Arial, sans-serif;
+  }
 }
 
 @utility text-balance {
   text-wrap: balance;
 }
 
+@utility btn-bounce {
+  @apply font-bold py-3 px-6 rounded-2xl transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95;
+  box-shadow: 0 4px 0 var(--shadow-color, rgba(0, 0, 0, 0.2));
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 var(--shadow-color, rgba(0, 0, 0, 0.2));
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--shadow-color, rgba(0, 0, 0, 0.2));
+  }
+}
+
 @utility btn-primary {
-  @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply btn-bounce bg-basketball text-white;
+  --shadow-color: rgba(255, 75, 35, 0.4);
+
+  &:hover:not(:disabled) {
+    @apply bg-basketball-light;
+  }
+
+  &:active:not(:disabled) {
+    @apply bg-basketball-dark;
+  }
 }
 
 @utility btn-secondary {
-  @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply btn-bounce bg-gray-100 text-gray-700 border-2 border-gray-300;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 0 var(--shadow-color);
+
+  &:hover:not(:disabled) {
+    @apply bg-white border-gray-400;
+  }
+
+  &:active:not(:disabled) {
+    @apply bg-gray-200 border-gray-400;
+  }
+}
+
+@utility btn-success {
+  @apply btn-bounce bg-success text-white;
+  --shadow-color: rgba(88, 204, 2, 0.4);
+
+  &:hover:not(:disabled) {
+    @apply bg-success-light text-success-dark;
+  }
 }
 
 @utility btn-danger {
-  @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply btn-bounce bg-error text-white;
+  --shadow-color: rgba(255, 75, 75, 0.4);
 }
 
-@utility card {
-  @apply bg-white rounded-lg shadow-md border border-gray-200 p-6;
+@utility card-gamified {
+  @apply bg-white rounded-2xl border-2 border-gray-200 p-6;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.08);
+  animation: slide-up 0.3s ease-out;
 }
 
-@utility input-field {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed;
+@utility input-friendy {
+  @apply w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 transition-all duration-200;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.04);
+
+  &:focus {
+    @apply border-brand-400 bg-white outline-none;
+    box-shadow:
+      0 0 0 4px rgba(14, 165, 233, 0.15),
+      inset 0 2px 4px rgba(0, 0, 0, 0.04);
+  }
+
+  &:disabled {
+    @apply bg-gray-100 cursor-not-allowed;
+  }
 }
 
-@utility status-badge {
-  @apply px-2 py-1 rounded-full text-xs font-semibold;
+@utility badge-gamified {
+  @apply inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold uppercase tracking-wide;
 
   &.success {
-    @apply bg-green-100 text-green-800;
+    @apply bg-success-light text-success-dark;
   }
 
   &.error {
-    @apply bg-red-100 text-red-800;
+    @apply bg-error-light text-error-dark;
   }
 
   &.warning {
-    @apply bg-yellow-100 text-yellow-800;
+    @apply bg-warning-light text-warning-dark;
+  }
+
+  &.info {
+    @apply bg-brand-100 text-brand-700;
+  }
+
+  &.neutral {
+    @apply bg-gray-200 text-gray-600;
   }
 }
 
-@utility success {
-  &.status-badge {
-    @apply bg-green-100 text-green-800;
+@utility progress-bar {
+  @apply h-3 bg-gray-200 rounded-full overflow-hidden;
+
+  &-fill {
+    @apply h-full bg-success rounded-full transition-all duration-500 ease-out;
   }
 }
 
-@utility error {
-  &.status-badge {
-    @apply bg-red-100 text-red-800;
+@utility avatar {
+  @apply w-12 h-12 rounded-full border-3 border-white shadow-md bg-gray-100 flex items-center justify-center overflow-hidden;
+
+  img {
+    @apply w-full h-full object-cover;
   }
 }
 
-@utility warning {
-  &.status-badge {
-    @apply bg-yellow-100 text-yellow-800;
-  }
+@utility trophy {
+  @apply inline-flex items-center justify-center w-16 h-16 bg-warning rounded-full text-4xl shadow-lg;
 }
 
-@layer utilities {
-  :root {
-    --foreground-rgb: 0, 0, 0;
-    --background-start-rgb: 214, 219, 220;
-    --background-end-rgb: 255, 255, 255;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --foreground-rgb: 255, 255, 255;
-      --background-start-rgb: 0, 0, 0;
-      --background-end-rgb: 0, 0, 0;
-    }
-  }
-
-  body {
-    color: rgb(var(--foreground-rgb));
-    background: linear-gradient(
-        to bottom,
-        transparent,
-        rgb(var(--background-end-rgb))
-      )
-      rgb(var(--background-start-rgb));
-  }
+@utility countdown-pulse {
+  animation: pulse-gentle 1s ease-in-out infinite;
 }
 
-@layer base {
-  * {
-    @apply border-gray-200;
-  }
-
-  body {
-    @apply bg-gray-50 text-gray-900;
-  }
+@utility glass-panel {
+  @apply bg-white/80 backdrop-blur-lg border border-white/20 rounded-2xl;
 }

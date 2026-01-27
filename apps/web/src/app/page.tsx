@@ -4,12 +4,23 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
-import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from "@repo/ui/card";
 import { Badge } from "@repo/ui/badge";
-import { SocketProvider, useSocket, createRoom, joinRoom, joinMatchmaking } from "./lib/socket";
+import {
+  SocketProvider,
+  useSocket,
+  createRoom,
+  joinRoom,
+  joinMatchmaking,
+} from "./lib/socket";
 import ClientOnly from "../components/ClientOnly";
 
-// Wrap the main component with SocketProvider
 export default function Web() {
   return (
     <ClientOnly>
@@ -34,7 +45,6 @@ function LobbyPage() {
   const [isMatchmaking, setIsMatchmaking] = useState(false);
   const router = useRouter();
 
-  // Create a new room
   const handleCreateRoom = async () => {
     if (!socket) {
       setFeedbackMessage("Please wait for the connection to be established.");
@@ -59,7 +69,6 @@ function LobbyPage() {
     }
   };
 
-  // Create a friends-only room
   const handleCreateFriendsRoom = async () => {
     if (!socket) {
       setFeedbackMessage("Please wait for the connection to be established.");
@@ -74,7 +83,9 @@ function LobbyPage() {
     try {
       const response = await createRoom(socket, true);
       if (response.success) {
-        router.push(`/room/${response.roomId}?playerName=${playerName}&friendsOnly=true`);
+        router.push(
+          `/room/${response.roomId}?playerName=${playerName}&friendsOnly=true`,
+        );
       } else {
         setFeedbackMessage(`Failed to create room: ${response.message}`);
       }
@@ -84,7 +95,6 @@ function LobbyPage() {
     }
   };
 
-  // Join matchmaking for random game
   const handleJoinMatchmaking = async () => {
     if (!socket) {
       setFeedbackMessage("Please wait for the connection to be established.");
@@ -100,7 +110,10 @@ function LobbyPage() {
     setFeedbackMessage("Searching for a game...");
 
     try {
-      const response = await joinMatchmaking(socket, { playerName, friendsOnly: false });
+      const response = await joinMatchmaking(socket, {
+        playerName,
+        friendsOnly: false,
+      });
       if (response.success) {
         router.push(`/room/${response.roomId}?playerName=${playerName}`);
       } else {
@@ -114,7 +127,6 @@ function LobbyPage() {
     }
   };
 
-  // Join an existing room
   const handleJoinRoom = (e: FormEvent) => {
     e.preventDefault();
 
@@ -132,119 +144,139 @@ function LobbyPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-lg min-h-screen">
-      <div className="mb-8 text-center">
-        <h1 className="text-4xl font-bold mb-3 bg-linear-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
-          HoopNerd
-        </h1>
-        <p className="text-gray-600">A Multiplayer Basketball Trivia Game</p>
-      </div>
-
-      <Card className="mb-6">
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Status:</span>
-            <Badge variant={isConnected ? "success" : "error"}>
-              {isConnected ? "Connected" : "Disconnected"}
-            </Badge>
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-md mx-auto space-y-6">
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-basketball rounded-2xl shadow-[0_6px_0_rgba(255,75,35,0.4)] mb-4">
+            <span className="text-4xl">🏀</span>
           </div>
-          {feedbackMessage && (
-            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800">{feedbackMessage}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Player Name Input */}
-      <Card className="mb-6">
-        <CardHeader className="text-center text-gray-600">
-          <CardTitle>Your Name</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Input
-            id="playerName"
-            className="text-sm text-gray-600"
-            label="Your Name"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-            placeholder="Enter your name"
-            required
-          />
-        </CardContent>
-      </Card>
-
-      {/* Quick Play Matchmaking */}
-      <Card className="mb-6">
-        <CardHeader className="text-center text-gray-600">
-          <CardTitle>Quick Play</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-600 mb-4 text-center">
-            Automatically match with a random player looking for a game
+          <h1 className="text-4xl font-bold text-gray-800 tracking-tight">
+            HoopNerd
+          </h1>
+          <p className="text-gray-500 font-medium">
+            Connect basketball players to win!
           </p>
-          <div className="flex justify-center">
+        </div>
+
+        <Card hover>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+                Status
+              </span>
+              <Badge variant={isConnected ? "success" : "error"}>
+                {isConnected ? "Connected" : "Disconnected"}
+              </Badge>
+            </div>
+            {feedbackMessage && (
+              <div className="p-3 bg-warning-light border-2 border-warning rounded-xl">
+                <p className="text-sm font-bold text-warning-dark text-center">
+                  {feedbackMessage}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card hover>
+          <CardHeader className="text-center pb-2">
+            <CardTitle>Who's Playing?</CardTitle>
+            <CardDescription>
+              Enter your nickname to get started
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Input
+              id="playerName"
+              label="Your Nickname"
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              placeholder="LeBron, Kobe, Steph..."
+              className="text-sm text-gray-600"
+            />
+          </CardContent>
+        </Card>
+
+        <Card hover className="bg-success-light/30 border-success/30">
+          <CardHeader className="text-center pb-2">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-success rounded-full mx-auto mb-2">
+              <span className="text-2xl">⚡</span>
+            </div>
+            <CardTitle className="text-success-dark">Quick Play</CardTitle>
+            <CardDescription>
+              Get matched with a random player instantly
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <Button
               onClick={handleJoinMatchmaking}
               disabled={!isConnected || isMatchmaking || !playerName}
-              variant="primary"
+              variant="success"
               className="w-full"
             >
-              {isMatchmaking ? "Searching..." : "Find Match"}
+              {isMatchmaking ? "🔍 Searching..." : "Find Match"}
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Create Room Section */}
-      <Card className="mb-6">
-        <CardHeader className="text-center text-gray-600">
-          <CardTitle>Create a Private Game</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-gray-600 text-center">
-            Create a room and share the code with friends to play together
-          </p>
-          <div className="flex justify-center">
+        <Card hover>
+          <CardHeader className="text-center pb-2">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-basketball rounded-full mx-auto mb-2">
+              <span className="text-2xl">👥</span>
+            </div>
+            <CardTitle>Play with Friends</CardTitle>
+            <CardDescription>
+              Create a private room and share the code
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <Button
               onClick={handleCreateFriendsRoom}
               disabled={!isConnected || !playerName}
-              variant="secondary"
+              variant="primary"
               className="w-full"
             >
-              Create Friends Room
+              Create Room
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Join Room Section */}
-      <Card>
-        <CardHeader className="text-center text-gray-600">
-          <CardTitle>Join with Code</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleJoinRoom} className="space-y-4">
-            <Input
-              id="roomId"
-              className="text-sm text-gray-600 mb-4"
-              label="Room Code"
-              value={roomId}
-              onChange={(e) => setRoomId(e.target.value)}
-              placeholder="Enter room code"
-              required
-            />
-            <Button
-              type="submit"
-              disabled={!isConnected || !playerName}
-              variant="outline"
-              className="w-full"
-            >
-              Join Room
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        <Card hover>
+          <CardHeader className="text-center pb-2">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-brand-100 rounded-full mx-auto mb-2">
+              <span className="text-2xl">🔑</span>
+            </div>
+            <CardTitle>Join with Code</CardTitle>
+            <CardDescription>Enter a room code from a friend</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleJoinRoom} className="space-y-4">
+              <Input
+                id="roomId"
+                label="Room Code"
+                value={roomId}
+                onChange={(e) => setRoomId(e.target.value)}
+                placeholder="e.g., ABC123"
+              />
+              <Button
+                type="submit"
+                disabled={!isConnected || !playerName}
+                variant="secondary"
+                className="w-full"
+              >
+                Join Room
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <div className="text-center pt-4">
+          <p className="text-xs text-gray-400 font-medium">
+            How to play: Connect players who played together on the same team in
+            the same season!
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

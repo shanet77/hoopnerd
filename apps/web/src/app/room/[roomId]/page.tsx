@@ -10,6 +10,7 @@ import {
   CardTitle,
   CardContent,
   CardFooter,
+  CardDescription,
 } from "@repo/ui/card";
 import { Badge } from "@repo/ui/badge";
 import {
@@ -28,7 +29,6 @@ import {
 import ClientOnly from "../../../components/ClientOnly";
 import { PlayerGraph } from "../../../components/game/PlayerGraph";
 
-// Wrap the main component with SocketProvider
 export default function Room() {
   return (
     <ClientOnly>
@@ -74,7 +74,6 @@ function GamePage() {
     return () => clearInterval(timer);
   }, [roomState?.gameStarted, roomState?.gameCompleted]);
 
-  // Track socket connection status
   useEffect(() => {
     if (socket) {
       setIsConnected(socketConnected);
@@ -112,7 +111,7 @@ function GamePage() {
         }) => {
           setWinner(gameWinner);
           setWinReason(reason);
-          setGameMessage(`Game Over! ${gameWinner.name} wins. ${reason}`);
+          setGameMessage(`Game Over! ${gameWinner.name} wins!`);
         },
       );
 
@@ -150,7 +149,6 @@ function GamePage() {
     }
   }, [socket, socketConnected]);
 
-  // Join a room
   useEffect(() => {
     if (socket && roomId && playerName) {
       const requestData: JoinRoomRequest = { roomId, playerName };
@@ -165,23 +163,22 @@ function GamePage() {
     }
   }, [socket, roomId, playerName]);
 
-  // If socket is not initialized yet, don't render the game UI
   if (!socket) {
     return (
-      <div className="container mx-auto p-4 max-w-4xl">
-        <h1 className="text-3xl font-bold mb-6">
-          HoopNerd - Basketball Trivia Game
-        </h1>
-        <Card>
-          <CardContent className="text-center py-10">
-            <p>Connecting to the game server...</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full text-center">
+          <CardContent className="py-12 space-y-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 rounded-2xl animate-pulse">
+              <span className="text-3xl">🏀</span>
+            </div>
+            <CardTitle>Connecting...</CardTitle>
+            <p className="text-gray-500">Setting up your game!</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Search for players
   const searchPlayers = async (query: string) => {
     if (query.trim() === "") {
       setSearchResults([]);
@@ -200,7 +197,6 @@ function GamePage() {
     }
   };
 
-  // Handle search input changes
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
@@ -212,7 +208,6 @@ function GamePage() {
     }
   };
 
-  // Submit a move
   const handleSubmitMove = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -246,7 +241,6 @@ function GamePage() {
     }
   };
 
-  // Leave room
   const handleLeaveRoom = () => {
     if (roomState && socket) {
       leaveRoom(socket, roomState.roomId);
@@ -258,211 +252,306 @@ function GamePage() {
   };
 
   const isMyTurn = activePlayer?.name === playerName;
+  const progressPercent = (timeRemaining / 25) * 100;
+  const isUrgent = timeRemaining <= 5;
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl min-h-screen">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-3 bg-linear-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
-          HoopNerd
-        </h1>
-        <p className="text-gray-600">Basketball Trivia Game</p>
-      </div>
-
-      <Card className="mb-6">
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Status:</span>
-            <Badge variant={isConnected ? "success" : "error"}>
-              {isConnected ? "Connected" : "Disconnected"}
-            </Badge>
+    <div className="min-h-screen bg-gray-50 py-6 px-4">
+      <div className="max-w-2xl mx-auto space-y-4">
+        <div className="flex items-center justify-between">
+          <Button variant="secondary" size="sm" onClick={handleLeaveRoom}>
+            ← Leave
+          </Button>
+          <Badge variant={isConnected ? "success" : "error"} size="sm">
+            {isConnected ? "Online" : "Offline"}
+          </Badge>
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border-2 border-gray-200">
+            <span className="text-lg">🏀</span>
+            <span className="font-bold text-gray-700">{roomId}</span>
           </div>
-          {gameMessage && (
-            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800">{gameMessage}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Game Controls - Only show if in a room */}
-      {roomState && (
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Room: {roomState.roomId}</CardTitle>
-              <Button onClick={handleLeaveRoom} variant="danger">
-                Leave Room
+        {winner ? (
+          <div className="space-y-6">
+            <Card className="text-center py-8 bg-warning-light/50 border-warning/30">
+              <div className="inline-flex items-center justify-center w-24 h-24 bg-warning rounded-full mx-auto mb-4 shadow-lg animate-bounce">
+                <span className="text-5xl">🏆</span>
+              </div>
+              <CardTitle className="text-3xl text-warning-dark mb-2">
+                {winner.name} Wins!
+              </CardTitle>
+              <p className="text-gray-600 font-medium">{winReason}</p>
+            </Card>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={handleLeaveRoom}
+              >
+                Back to Lobby
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            {/* Game Status */}
-            <div className="mb-6">
-              {winner ? (
-                <div className="text-center text-2xl font-bold text-green-600">
-                  {winner.name} wins! {winReason}
-                </div>
-              ) : roomState.gameStarted ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-center gap-4">
-                    <div className={`px-4 py-2 rounded-lg ${isMyTurn ? 'bg-indigo-100 border-2 border-indigo-500' : 'bg-gray-100'}`}>
-                      <p className="text-sm text-gray-600">Current Turn</p>
-                      <p className="text-xl font-bold">{activePlayer?.name}</p>
-                    </div>
-                    <div className="text-2xl font-mono">{timeRemaining}s</div>
-                  </div>
-
-                  {roomState.startingPlayer && (
-                    <div className="flex items-center justify-center gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                        <span>Starting: <strong>{roomState.startingPlayer.name}</strong></span>
-                      </div>
-                      {roomState.lastConnectedPlayer && (
-                        <>
-                          <span>→</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
-                            <span>Last: <strong>{roomState.lastConnectedPlayer.name}</strong></span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {!isMyTurn && (
-                    <p className="text-center text-gray-600">
-                      Wait for {activePlayer?.name}'s turn
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-center">Waiting for players...</p>
-              )}
-            </div>
-
-            {/* Error Message Display */}
-            {gameMessage && (gameMessage.includes('Invalid') || gameMessage.includes('Invalid connection') || gameMessage.includes('not play with')) && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
-                    <span className="text-white text-sm font-bold">×</span>
-                  </div>
-                  <p className="text-red-800 font-medium">{gameMessage}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Player Graph Visualization */}
-            {roomState.gameStarted && (
-              <div className="mb-6">
-                <h3 className="font-medium mb-2">Player Chain</h3>
-                <PlayerGraph
-                  startingPlayer={roomState.startingPlayer}
-                  connections={roomState.connections}
-                />
-              </div>
-            )}
-
-            {/* Current Players in Room */}
-            <div className="mb-6">
-              <h3 className="font-medium mb-2">Players in Room:</h3>
-              <div className="flex flex-wrap gap-2">
-                {roomState.players.map((player, index) => (
-                  <Badge key={index} variant="info">
-                    {player.name}
+          </div>
+        ) : roomState ? (
+          <>
+            <Card className="bg-white">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+                    Current Turn
+                  </span>
+                  <Badge variant={isMyTurn ? "basketball" : "info"} size="lg">
+                    {isMyTurn ? "🎯 Your Turn!" : activePlayer?.name}
                   </Badge>
-                ))}
-                {roomState.players.length === 0 && (
-                  <p>No players in the room yet</p>
+                </div>
+                <div className="relative h-4 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className={`absolute left-0 top-0 h-full rounded-full transition-all duration-1000 ${
+                      isUrgent ? "bg-error" : "bg-success"
+                    }`}
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <div className="flex justify-between mt-2">
+                  <span
+                    className={`font-bold text-2xl ${isUrgent ? "text-error countdown-pulse" : "text-gray-700"}`}
+                  >
+                    {timeRemaining}s
+                  </span>
+                  <span className="text-sm text-gray-500 font-medium">
+                    {roomState.moves.length} moves made
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {gameMessage &&
+              (gameMessage.includes("Invalid") ||
+                gameMessage.includes("not play with")) && (
+                <div className="p-4 bg-error-light border-2 border-error/30 rounded-2xl">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">❌</span>
+                    <p className="font-bold text-error-dark">{gameMessage}</p>
+                  </div>
+                </div>
+              )}
+
+            {gameMessage &&
+              !gameMessage.includes("Invalid") &&
+              gameMessage.includes("turn") && (
+                <div className="p-3 bg-brand-100 border-2 border-brand/30 rounded-xl text-center">
+                  <p className="font-bold text-brand-700">{gameMessage}</p>
+                </div>
+              )}
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>Player Chain</CardTitle>
+                <CardDescription>
+                  Build the longest chain of connected players!
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {roomState.gameStarted && roomState.startingPlayer ? (
+                  <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-100">
+                    <PlayerGraph
+                      startingPlayer={roomState.startingPlayer}
+                      connections={roomState.connections}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <span className="text-4xl block mb-2">⏳</span>
+                    Waiting for game to start...
+                  </div>
                 )}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            {/* Move Submission */}
-            <div className="mb-6">
-              <h3 className="font-medium mb-2">Submit a Move</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Connect a player to <strong>{roomState.lastConnectedPlayer?.name || 'the starting player'}</strong> who has played with them before.
-              </p>
-
-              <form onSubmit={handleSubmitMove} className="space-y-4">
-                {/* Connected Player Selection */}
-                <div>
-                  <Input
-                    type="text"
-                    label="Latest Connected Player"
-                    value={connectedPlayer?.name || ""}
-                    readOnly
-                    placeholder="Search and select a player..."
-                    className="bg-gray-100 text-gray-600"
-                  />
-                </div>
-
-                {/* Player Search */}
-                <div>
-                  <Input
-                    type="text"
-                    label="Search Players"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    placeholder="Start typing a player name..."
-                    className="text-gray-600"
-                  />
-
-                  {searchResults.length > 0 && (
-                    <div className="mt-2 border rounded-md max-h-60 overflow-y-auto bg-white">
-                      {searchResults.map((player) => (
-                        <div
-                          key={player.id}
-                          className="p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors"
-                          onClick={() => {
-                            setConnectedPlayer(player);
-                            setSearchQuery("");
-                            setSearchResults([]);
-                          }}
-                        >
-                          <span className="font-medium text-gray-600">{player.name}</span>{" "}
-                          <span className="text-gray-700">
-                            ({player.position})
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={!isMyTurn || !connectedPlayer}
-                  variant="primary"
-                  className="w-full"
-                >
-                  Submit Move
-                </Button>
-              </form>
-            </div>
-
-            {/* Move History */}
-            <div>
-              <h3 className="font-medium mb-2">Move History</h3>
-              {roomState.moves.length > 0 ? (
-                <div className="border rounded-md divide-y">
-                  {roomState.moves.map((move, index) => (
-                    <div key={index} className="p-3">
-                      <span className="font-medium text-gray-600">{move.playerName}</span>{" "}
-                      <span className="text-gray-600">({move.position})</span>{" "}
-                      connected
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>Players in Room</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {roomState.players.map((player, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 ${
+                        player.name === activePlayer?.name
+                          ? "bg-basketball text-white border-basketball"
+                          : "bg-gray-100 border-gray-200"
+                      }`}
+                    >
+                      <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm">
+                        {index + 1}
+                      </div>
+                      <span className="font-bold">{player.name}</span>
+                      {player.name === activePlayer?.name && (
+                        <span className="text-xs">🎯</span>
+                      )}
                     </div>
                   ))}
                 </div>
-              ) : (
-                <p className="text-gray-600">No moves yet</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                {roomState.players.length === 0 && (
+                  <p className="text-gray-500 text-center py-4">
+                    No players yet...
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {isMyTurn && roomState.gameStarted && (
+              <Card className="bg-success-light/30 border-success/30">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🎯</span>
+                    <CardTitle>Make Your Move</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Connect a player to{" "}
+                    <strong>
+                      {roomState.lastConnectedPlayer?.name ||
+                        roomState.startingPlayer?.name}
+                    </strong>{" "}
+                    who shared a team and season!
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmitMove} className="space-y-4">
+                    <div>
+                      <Input
+                        type="text"
+                        label="Selected Player"
+                        value={connectedPlayer?.name || ""}
+                        readOnly
+                        placeholder="Search and select a player..."
+                        icon={<span>👤</span>}
+                      />
+                    </div>
+
+                    <div>
+                      <Input
+                        type="text"
+                        label="Search Players"
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        placeholder="Type a player name..."
+                        icon={<span>🔍</span>}
+                      />
+
+                      {searchResults.length > 0 && (
+                        <div className="mt-2 bg-white border-2 border-gray-200 rounded-xl divide-y divide-gray-100 max-h-60 overflow-y-auto">
+                          {searchResults.map((player) => (
+                            <div
+                              key={player.id}
+                              className="p-3 cursor-pointer hover:bg-brand-50 transition-colors flex items-center gap-3"
+                              onClick={() => {
+                                setConnectedPlayer(player);
+                                setSearchQuery("");
+                                setSearchResults([]);
+                              }}
+                            >
+                              <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center">
+                                <span className="text-lg">🏀</span>
+                              </div>
+                              <div>
+                                <span className="font-bold text-gray-800 block">
+                                  {player.name}
+                                </span>
+                                <span className="text-sm text-gray-500">
+                                  {player.position}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={!connectedPlayer}
+                      variant="success"
+                      className="w-full text-lg py-4"
+                    >
+                      {connectedPlayer ? "Submit Move →" : "Select a Player"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+
+            {!isMyTurn && roomState.gameStarted && (
+              <Card className="bg-gray-100 border-gray-200">
+                <CardContent className="py-6 text-center">
+                  <div className="text-4xl mb-2">⏰</div>
+                  <p className="font-bold text-gray-600">
+                    Waiting for {activePlayer?.name}'s move...
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {!roomState.gameStarted && (
+              <Card className="bg-warning-light/30 border-warning/30">
+                <CardContent className="py-6 text-center">
+                  <div className="text-4xl mb-2">👥</div>
+                  <p className="font-bold text-warning-dark">
+                    Waiting for more players...
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Share the room code with friends!
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {roomState.moves.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle>Move History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {roomState.moves.map((move, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
+                      >
+                        <div className="w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center font-bold text-brand-700">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <span className="font-bold text-gray-800">
+                            {move.playerName}
+                          </span>
+                          <span className="text-sm text-gray-500 ml-1">
+                            ({move.position})
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-400">
+                          Move #{index + 1}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        ) : (
+          <Card className="text-center py-8">
+            <CardContent>
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 rounded-2xl animate-pulse mb-4">
+                <span className="text-3xl">🏀</span>
+              </div>
+              <CardTitle>Joining Room...</CardTitle>
+              <p className="text-gray-500 mt-2">Getting everything ready!</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
