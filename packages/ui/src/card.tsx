@@ -17,7 +17,7 @@ export const Card = ({
         bg-white rounded-2xl border-2 border-gray-200 p-6
         shadow-[0_4px_0_rgba(0,0,0,0.08)]
         transition-all duration-200
-        ${hover ? "hover:-translate-y-1 hover:shadow-[0_6px_0_rgba(0,0,0,0.12)] active:translate-y-0 active:shadow-[0_2px_0_rgba(0,0,0,0.08)]" : ""}
+        ${hover ? "hover:shadow-[0_6px_0_rgba(0,0,0,0.12)] hover:bg-gray-50/50" : ""}
         ${className}
       `}
       style={{ animation: "slide-up 0.3s ease-out" }}

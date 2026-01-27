@@ -2,6 +2,7 @@
 
 import { useEffect, useState, ChangeEvent, FormEvent } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import {
@@ -49,6 +50,7 @@ function GamePage() {
   const { socket, isConnected: socketConnected } = useSocket();
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const roomId = params.roomId as string;
   const playerName = searchParams.get("playerName") || "Player";
 
@@ -244,11 +246,8 @@ function GamePage() {
   const handleLeaveRoom = () => {
     if (roomState && socket) {
       leaveRoom(socket, roomState.roomId);
-      setRoomState(null);
-      setGameMessage("Left the room");
-    } else if (!socket) {
-      setGameMessage("Please wait for socket connection");
     }
+    router.push("/");
   };
 
   const isMyTurn = activePlayer?.name === playerName;

@@ -191,7 +191,7 @@ function LobbyPage() {
               label="Your Nickname"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="LeBron, Kobe, Steph..."
+              placeholder="King James, Black Mamba, Chef Curry..."
               className="text-sm text-gray-600"
             />
           </CardContent>
