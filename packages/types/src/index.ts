@@ -134,9 +134,17 @@ export class PlayerService {
 
   async getRandomPlayer(): Promise<Player | null> {
     const sql = `
+      WITH max_id AS (
+        SELECT MAX(id) AS max_id
+        FROM players
+      )
       SELECT id, player_name AS name, position
       FROM players
-      ORDER BY RANDOM()
+      WHERE id >= (
+        SELECT FLOOR(RANDOM() * max_id) + 1
+        FROM max_id
+      )
+      ORDER BY id
       LIMIT 1
     `;
 

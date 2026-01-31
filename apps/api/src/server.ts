@@ -71,8 +71,14 @@ const startGame = async (io: SocketIOServer, roomId: string) => {
   if (room && room.players.length >= 2 && !room.gameStarted) {
     room.gameStarted = true;
     room.currentPlayerIndex = Math.floor(Math.random() * room.players.length);
-    room.startingPlayer = await playerService.getRandomPlayer();
-    room.lastConnectedPlayer = room.startingPlayer;
+    const startingPlayer = await playerService.getRandomPlayer();
+    if (!startingPlayer) {
+      room.gameStarted = false;
+      io.to(roomId).emit('game_error', 'No players available to start the game.');
+      return;
+    }
+    room.startingPlayer = startingPlayer;
+    room.lastConnectedPlayer = startingPlayer;
     io.to(roomId).emit('game_started', room);
     startTurnTimer(io, roomId);
   }
