@@ -94,6 +94,28 @@ export function PlayerGraph({
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
 
+    const drawRoundedRect = (
+      context: CanvasRenderingContext2D,
+      x: number,
+      y: number,
+      rectWidth: number,
+      rectHeight: number,
+      radius: number
+    ) => {
+      const r = Math.min(radius, rectWidth / 2, rectHeight / 2);
+      context.beginPath();
+      context.moveTo(x + r, y);
+      context.lineTo(x + rectWidth - r, y);
+      context.arcTo(x + rectWidth, y, x + rectWidth, y + r, r);
+      context.lineTo(x + rectWidth, y + rectHeight - r);
+      context.arcTo(x + rectWidth, y + rectHeight, x + rectWidth - r, y + rectHeight, r);
+      context.lineTo(x + r, y + rectHeight);
+      context.arcTo(x, y + rectHeight, x, y + rectHeight - r, r);
+      context.lineTo(x, y + r);
+      context.arcTo(x, y, x + r, y, r);
+      context.closePath();
+    };
+
     for (const connection of connections) {
       const fromPos = nodePositions.get(connection.fromPlayer.id);
       const toPos = nodePositions.get(connection.toPlayer.id);
@@ -113,11 +135,31 @@ export function PlayerGraph({
         if (connection.seasonYear && connection.teamName) {
           const labelX = (fromPos.x + toPos.x) / 2;
           const labelY = midY - 10;
-          
-          ctx.font = "10px sans-serif";
-          ctx.fillStyle = "#6b7280";
+
+          const labelText = `${connection.teamName} (${connection.seasonYear})`;
+          ctx.save();
+          ctx.setLineDash([]);
+          ctx.font = "bold 11px sans-serif";
+          const labelMetrics = ctx.measureText(labelText);
+          const labelPaddingX = 6;
+          const labelPaddingY = 3;
+          const labelWidth = Math.ceil(labelMetrics.width) + labelPaddingX * 2;
+          const labelHeight = 16 + labelPaddingY * 2;
+          const labelLeft = labelX - labelWidth / 2;
+          const labelTop = labelY - labelHeight / 2;
+
+          drawRoundedRect(ctx, labelLeft, labelTop, labelWidth, labelHeight, 8);
+          ctx.fillStyle = "#eef2ff";
+          ctx.fill();
+          ctx.strokeStyle = "#c7d2fe";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          ctx.fillStyle = "#3730a3";
           ctx.textAlign = "center";
-          ctx.fillText(`${connection.teamName} (${connection.seasonYear})`, labelX, labelY);
+          ctx.textBaseline = "middle";
+          ctx.fillText(labelText, labelX, labelY);
+          ctx.restore();
         }
       }
     }
@@ -126,10 +168,18 @@ export function PlayerGraph({
 
     Array.from(nodePositions.values()).forEach((node) => {
       const isStartingPlayer = startingPlayer?.id === node.player.id;
-      
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, 28, 0, Math.PI * 2);
-      
+
+      ctx.font = "bold 12px sans-serif";
+      const textMetrics = ctx.measureText(node.player.name);
+      const textPaddingX = 10;
+      const textPaddingY = 6;
+      const nodeWidth = Math.ceil(textMetrics.width) + textPaddingX * 2;
+      const nodeHeight = 24 + textPaddingY * 2;
+      const nodeLeft = node.x - nodeWidth / 2;
+      const nodeTop = node.y - nodeHeight / 2;
+
+      drawRoundedRect(ctx, nodeLeft, nodeTop, nodeWidth, nodeHeight, 14);
+
       if (isStartingPlayer) {
         ctx.fillStyle = "#22c55e";
       } else {
@@ -142,14 +192,10 @@ export function PlayerGraph({
       ctx.stroke();
 
       ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      
-      const displayName = node.player.name.length > 11 
-        ? node.player.name.substring(0, 9) + "..." 
-        : node.player.name;
-      ctx.fillText(displayName, node.x, node.y);
+
+      ctx.fillText(node.player.name, node.x, node.y);
     });
   }, [nodePositions, connections, startingPlayer, canvasHeight, width]);
 

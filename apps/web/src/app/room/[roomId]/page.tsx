@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, ChangeEvent, FormEvent } from "react";
+import { useEffect, useState, ChangeEvent, FormEvent, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
@@ -65,6 +65,7 @@ function GamePage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [gameMessage, setGameMessage] = useState<string>("");
   const [isConnected, setIsConnected] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -305,9 +306,8 @@ function GamePage() {
                 </div>
                 <div className="relative h-4 bg-gray-200 rounded-full overflow-hidden">
                   <div
-                    className={`absolute left-0 top-0 h-full rounded-full transition-all duration-1000 ${
-                      isUrgent ? "bg-error" : "bg-success"
-                    }`}
+                    className={`absolute left-0 top-0 h-full rounded-full transition-all duration-1000 ${isUrgent ? "bg-error" : "bg-success"
+                      }`}
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
@@ -376,11 +376,10 @@ function GamePage() {
                   {roomState.players.map((player, index) => (
                     <div
                       key={index}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 ${
-                        player.name === activePlayer?.name
-                          ? "bg-basketball text-white border-basketball"
-                          : "bg-gray-100 border-gray-200"
-                      }`}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 ${player.name === activePlayer?.name
+                        ? "bg-basketball text-white border-basketball"
+                        : "bg-gray-100 border-gray-200"
+                        }`}
                     >
                       <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm">
                         {index + 1}
@@ -424,7 +423,8 @@ function GamePage() {
                         label="Selected Player"
                         value={connectedPlayer?.name || ""}
                         readOnly
-                        placeholder="Search and select a player..."
+                        onClick={() => searchInputRef.current?.focus()}
+                        placeholder="Currently Selected Player"
                         icon={<span>👤</span>}
                       />
                     </div>
@@ -437,6 +437,7 @@ function GamePage() {
                         onChange={handleSearchChange}
                         placeholder="Type a player name..."
                         icon={<span>🔍</span>}
+                        ref={searchInputRef}
                       />
 
                       {searchResults.length > 0 && (
