@@ -1,4 +1,62 @@
+import fs from 'fs';
+import path from 'path';
 import { Pool, QueryResult } from 'pg';
+
+const TOP_SCORERS_PATH = path.resolve(__dirname, '../../..', 'datasets/top_scorers.csv');
+const DEFAULT_TOP_SCORERS_LIMIT = 80;
+let topScorerNamesCache: string[] | null = null;
+
+const parseTopScorerNames = (csv: string, limit: number): string[] => {
+  const lines = csv
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  const names: string[] = [];
+  const seen = new Set<string>();
+
+  for (const line of lines) {
+    if (line.toLowerCase().startsWith('rank,')) {
+      continue;
+    }
+
+    const parts = line.split(',');
+    if (parts.length < 2) {
+      continue;
+    }
+
+    const name = parts[1].trim();
+    if (!name || seen.has(name)) {
+      continue;
+    }
+
+    names.push(name);
+    seen.add(name);
+
+    if (names.length >= limit) {
+      break;
+    }
+  }
+
+  return names;
+};
+
+const loadTopScorerNames = async (limit: number): Promise<string[]> => {
+  if (topScorerNamesCache && topScorerNamesCache.length >= limit) {
+    return topScorerNamesCache.slice(0, limit);
+  }
+
+  try {
+    const csv = await fs.promises.readFile(TOP_SCORERS_PATH, 'utf8');
+    const names = parseTopScorerNames(csv, limit);
+    topScorerNamesCache = names;
+    return names;
+  } catch (error) {
+    console.error('Failed to load top scorers list:', error);
+    topScorerNamesCache = [];
+    return [];
+  }
+};
 
 export type DatabaseService = Pool;
 
@@ -169,6 +227,24 @@ export class PlayerService {
     `;
 
     const result = await this.db.query(sql);
+    return result.rows.length > 0 ? result.rows[0] : null;
+  }
+
+  async getRandomTopScorer(limit: number = DEFAULT_TOP_SCORERS_LIMIT): Promise<Player | null> {
+    const topScorerNames = await loadTopScorerNames(limit);
+    if (topScorerNames.length === 0) {
+      return null;
+    }
+
+    const sql = `
+      SELECT id, player_name AS name, position
+      FROM players
+      WHERE player_name = ANY($1)
+      ORDER BY RANDOM()
+      LIMIT 1
+    `;
+
+    const result = await this.db.query(sql, [topScorerNames]);
     return result.rows.length > 0 ? result.rows[0] : null;
   }
 }
