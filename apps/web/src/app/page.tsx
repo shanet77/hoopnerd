@@ -231,7 +231,7 @@ function LobbyPage() {
                       Longest Streak
                     </p>
                     <p className="text-lg font-bold text-gray-800">
-                      {stats.longestStreak} wins
+                      {stats.longestStreak} connections
                     </p>
                   </div>
                   <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl shadow-sm">
