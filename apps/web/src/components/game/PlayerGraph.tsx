@@ -23,7 +23,7 @@ export function PlayerGraph({
 }: PlayerGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const nodeSpacing = 70;
+  const nodeSpacing = 90;
   const padding = 60;
 
   const orderedPlayers = useMemo(() => {
@@ -126,7 +126,7 @@ export function PlayerGraph({
 
         if (connection.seasonYear && connection.teamName) {
           const labelX = fromPos.x;
-          const labelY = (fromPos.y + toPos.y) / 2 - 10;
+          const labelY = (fromPos.y + toPos.y) / 2;
 
           const labelText = `${connection.teamName} (${connection.seasonYear})`;
           ctx.save();
