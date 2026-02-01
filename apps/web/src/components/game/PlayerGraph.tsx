@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo, useState } from "react";
 import { Player, PlayerConnection } from "@repo/types";
 
 interface PlayerGraphProps {
   startingPlayer: Player | null | undefined;
   connections: PlayerConnection[];
   width?: number;
-  height?: number;
 }
 
 interface NodePosition {
@@ -24,7 +23,7 @@ export function PlayerGraph({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const nodeSpacing = 90;
-  const padding = 60;
+  const [canvasSize, setCanvasSize] = useState({ width, height: 320 });
 
   const orderedPlayers = useMemo(() => {
     const players: Player[] = [];
@@ -39,10 +38,23 @@ export function PlayerGraph({
     return players;
   }, [startingPlayer, connections]);
 
-  const canvasHeight = useMemo(() => {
-    const totalHeight = Math.max(0, orderedPlayers.length - 1) * nodeSpacing;
-    return Math.max(300, 2 * (totalHeight + padding));
-  }, [orderedPlayers.length, nodeSpacing, padding]);
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateSize = () => {
+      setCanvasSize({
+        width: container.clientWidth || width,
+        height: container.clientHeight || 320,
+      });
+    };
+
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, [width]);
 
   const nodePositions = useMemo(() => {
     const positions = new Map<number, NodePosition>();
@@ -51,11 +63,9 @@ export function PlayerGraph({
       return positions;
     }
 
-    const container = containerRef.current;
-    const canvasWidth = container?.clientWidth || width;
-    const centerX = canvasWidth / 2;
+    const centerX = canvasSize.width / 2;
     const newestIndex = Math.max(0, orderedPlayers.length - 1);
-    const newestY = canvasHeight / 2;
+    const newestY = canvasSize.height / 2;
     const firstY = newestY - newestIndex * nodeSpacing;
 
     orderedPlayers.forEach((player, index) => {
@@ -67,7 +77,7 @@ export function PlayerGraph({
     });
 
     return positions;
-  }, [startingPlayer, connections.length, orderedPlayers, width, canvasHeight, nodeSpacing]);
+  }, [startingPlayer, connections.length, orderedPlayers, canvasSize.width, canvasSize.height, nodeSpacing]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -77,16 +87,17 @@ export function PlayerGraph({
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const displayWidth = containerRef.current?.clientWidth || width;
+    const displayWidth = canvasSize.width;
+    const displayHeight = canvasSize.height;
     
     canvas.width = displayWidth * dpr;
-    canvas.height = canvasHeight * dpr;
+    canvas.height = displayHeight * dpr;
     canvas.style.width = `${displayWidth}px`;
-    canvas.style.height = `${canvasHeight}px`;
+    canvas.style.height = `${displayHeight}px`;
     
     ctx.scale(dpr, dpr);
 
-    ctx.clearRect(0, 0, displayWidth, canvasHeight);
+    ctx.clearRect(0, 0, displayWidth, displayHeight);
 
     ctx.strokeStyle = "#6366f1";
     ctx.lineWidth = 2;
@@ -189,18 +200,18 @@ export function PlayerGraph({
 
       ctx.fillText(node.player.name, node.x, node.y);
     });
-  }, [nodePositions, connections, startingPlayer, canvasHeight, width]);
+  }, [nodePositions, connections, startingPlayer, canvasSize.width, canvasSize.height]);
 
   if (!startingPlayer && connections.length === 0) {
     return (
-      <div ref={containerRef} className="player-graph-container p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <div ref={containerRef} className="player-graph-container h-64 md:h-80 lg:h-96 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <p className="text-gray-500 text-center">Game will start with a random player...</p>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className="player-graph-container bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div ref={containerRef} className="player-graph-container h-64 md:h-80 lg:h-96 bg-white rounded-lg border border-gray-200 overflow-hidden">
       <canvas
         ref={canvasRef}
         className="w-full"
