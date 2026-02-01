@@ -117,6 +117,13 @@ const getPlayerByName = (room: GameRoomState, playerName: string) => {
   return room.players.find(p => p.name === playerName);
 };
 
+const hasPlayerBeenUsed = (room: GameRoomState, playerId: number) => {
+  if (room.startingPlayer?.id === playerId) {
+    return true;
+  }
+  return room.moves.some(move => move.playerId === playerId);
+};
+
 const switchTurn = (io: SocketIOServer, room: GameRoomState) => {
   room.currentPlayerIndex = (room.currentPlayerIndex + 1) % room.players.length;
   io.to(room.roomId).emit('turn_changed', room.players[room.currentPlayerIndex]);
@@ -380,6 +387,14 @@ export const createServer = (): { app: Express; server: HttpServer } => {
       }
 
       try {
+        if (hasPlayerBeenUsed(room, connectedPlayer.id)) {
+          const errorMsg = `Invalid move! ${connectedPlayer.name} was already used in this game.`;
+          socket.emit('move_submitted', { success: false, message: errorMsg });
+          io.to(roomId).emit('move_submitted', { success: false, message: errorMsg });
+          io.to(roomId).emit('room_updated', room);
+          return;
+        }
+
         if (room.lastConnectedPlayer) {
           const isValidMove = await validateMove(databasePool, room.lastConnectedPlayer.id, connectedPlayer.id);
           
