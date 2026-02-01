@@ -23,53 +23,51 @@ export function PlayerGraph({
 }: PlayerGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const nodeSpacing = 70;
+  const padding = 60;
+
+  const orderedPlayers = useMemo(() => {
+    const players: Player[] = [];
+    if (startingPlayer) {
+      players.push(startingPlayer);
+    }
+    for (const connection of connections) {
+      if (!players.some((player) => player.id === connection.toPlayer.id)) {
+        players.push(connection.toPlayer);
+      }
+    }
+    return players;
+  }, [startingPlayer, connections]);
+
+  const canvasHeight = useMemo(() => {
+    const totalHeight = Math.max(0, orderedPlayers.length - 1) * nodeSpacing;
+    return Math.max(300, 2 * (totalHeight + padding));
+  }, [orderedPlayers.length, nodeSpacing, padding]);
 
   const nodePositions = useMemo(() => {
     const positions = new Map<number, NodePosition>();
-    
+
     if (!startingPlayer && connections.length === 0) {
       return positions;
     }
 
     const container = containerRef.current;
     const canvasWidth = container?.clientWidth || width;
-    const padding = 60;
     const centerX = canvasWidth / 2;
-    
-    let currentY = padding + 40;
+    const newestIndex = Math.max(0, orderedPlayers.length - 1);
+    const newestY = canvasHeight / 2;
+    const firstY = newestY - newestIndex * nodeSpacing;
 
-    if (startingPlayer) {
-      positions.set(startingPlayer.id, {
-        player: startingPlayer,
+    orderedPlayers.forEach((player, index) => {
+      positions.set(player.id, {
+        player,
         x: centerX,
-        y: currentY,
+        y: firstY + index * nodeSpacing,
       });
-      currentY += 100;
-    }
-
-    for (const connection of connections) {
-      if (!positions.has(connection.toPlayer.id)) {
-        const existingCount = positions.size - 1;
-        const side = existingCount % 2 === 0 ? 1 : -1;
-        const level = Math.ceil((existingCount + 1) / 2);
-        const offset = side * level * 60;
-        
-        positions.set(connection.toPlayer.id, {
-          player: connection.toPlayer,
-          x: centerX + offset,
-          y: currentY,
-        });
-        currentY += 70;
-      }
-    }
+    });
 
     return positions;
-  }, [startingPlayer, connections, width]);
-
-  const canvasHeight = useMemo(() => {
-    const baseHeight = startingPlayer ? 140 : 100;
-    return Math.max(300, baseHeight + connections.length * 70);
-  }, [startingPlayer, connections.length]);
+  }, [startingPlayer, connections.length, orderedPlayers, width, canvasHeight, nodeSpacing]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -123,18 +121,12 @@ export function PlayerGraph({
       if (fromPos && toPos) {
         ctx.beginPath();
         ctx.moveTo(fromPos.x, fromPos.y);
-        
-        const midY = (fromPos.y + toPos.y) / 2;
-        ctx.bezierCurveTo(
-          fromPos.x, midY,
-          toPos.x, midY,
-          toPos.x, toPos.y
-        );
+        ctx.lineTo(toPos.x, toPos.y);
         ctx.stroke();
 
         if (connection.seasonYear && connection.teamName) {
-          const labelX = (fromPos.x + toPos.x) / 2;
-          const labelY = midY - 10;
+          const labelX = fromPos.x;
+          const labelY = (fromPos.y + toPos.y) / 2 - 10;
 
           const labelText = `${connection.teamName} (${connection.seasonYear})`;
           ctx.save();
