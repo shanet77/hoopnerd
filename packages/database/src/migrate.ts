@@ -31,6 +31,23 @@ async function migrate() {
       );
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS stats_events (
+        id SERIAL PRIMARY KEY,
+        event_type VARCHAR(30) NOT NULL,
+        player_name VARCHAR(150),
+        team_name VARCHAR(120),
+        season_year INTEGER,
+        streak_count INTEGER,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS stats_events_type_created_at_idx
+      ON stats_events (event_type, created_at DESC);
+    `);
+
     console.log('Database schema created successfully!');
   } catch (error) {
     console.error('Error during migration:', error);

@@ -20,6 +20,83 @@ const gameRooms: Map<string, GameRoomState> = new Map();
 const roomTimers: Map<string, NodeJS.Timeout> = new Map();
 
 const playerService = new PlayerService(databasePool);
+const DEFAULT_STATS_WINDOW_DAYS = 7;
+const DEFAULT_STATS_TIMEZONE = 'America/New_York';
+
+const parseWindowDays = (value: unknown): number => {
+  const parsed = typeof value === 'string' ? Number.parseInt(value, 10) : Number.NaN;
+  if (!Number.isFinite(parsed)) return DEFAULT_STATS_WINDOW_DAYS;
+  return Math.min(Math.max(parsed, 1), 365);
+};
+
+const parseTimezone = (value: unknown): string => {
+  if (typeof value !== 'string' || value.trim() === '') {
+    return DEFAULT_STATS_TIMEZONE;
+  }
+  return value.trim();
+};
+
+const recordStatsForRoom = async (room: GameRoomState) => {
+  if (room.statsRecorded) return;
+  room.statsRecorded = true;
+
+  const rows: Array<[string, string | null, string | null, number | null, number | null]> = [];
+
+  for (const move of room.moves) {
+    rows.push(['player', move.playerName, null, null, null]);
+  }
+
+  for (const connection of room.connections) {
+    if (connection.teamName) {
+      rows.push(['team', null, connection.teamName, null, null]);
+    }
+    if (connection.seasonYear) {
+      rows.push(['season', null, null, connection.seasonYear, null]);
+    }
+  }
+
+  rows.push(['streak', null, null, null, room.connections.length]);
+
+  if (rows.length === 0) return;
+
+  const placeholders = rows
+    .map((_, index) => {
+      const offset = index * 5;
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`;
+    })
+    .join(', ');
+
+  await databasePool.query(
+    `
+      INSERT INTO stats_events (event_type, player_name, team_name, season_year, streak_count)
+      VALUES ${placeholders}
+    `,
+    rows.flat()
+  );
+};
+
+const endGame = (
+  io: SocketIOServer,
+  roomId: string,
+  winner: Player | null,
+  reason: string
+) => {
+  const room = gameRooms.get(roomId);
+  if (!room || room.gameCompleted) return;
+
+  room.gameCompleted = true;
+  room.winner = winner;
+
+  if (roomTimers.has(roomId)) {
+    clearTimeout(roomTimers.get(roomId)!);
+    roomTimers.delete(roomId);
+  }
+
+  io.to(roomId).emit('game_over', { winner: room.winner, reason });
+  recordStatsForRoom(room).catch((error) => {
+    console.error('Error recording stats:', error);
+  });
+};
 
 const createGameRoom = (roomId: string, friendsOnly: boolean = false): GameRoomState => ({
   roomId,
@@ -33,6 +110,7 @@ const createGameRoom = (roomId: string, friendsOnly: boolean = false): GameRoomS
   connections: [],
   lastConnectedPlayer: null,
   friendsOnly,
+  statsRecorded: false,
 });
 
 const getPlayerByName = (room: GameRoomState, playerName: string) => {
@@ -56,10 +134,7 @@ const startTurnTimer = (io: SocketIOServer, roomId: string) => {
   const timer = setTimeout(() => {
     if (room.players.length > 1) {
       const winner = room.players[(room.currentPlayerIndex + 1) % room.players.length];
-      room.winner = winner;
-      room.gameCompleted = true;
-      roomTimers.delete(roomId);
-      io.to(roomId).emit('game_over', { winner, reason: 'Opponent timed out.' });
+      endGame(io, roomId, winner, 'Opponent timed out.');
     }
   }, 25000);
 
@@ -124,6 +199,82 @@ export const createServer = (): { app: Express; server: HttpServer } => {
 
   app.get('/health', (req: Request, res: Response) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  });
+
+  app.get('/api/stats', async (req: Request, res: Response) => {
+    const windowDays = parseWindowDays(req.query.windowDays);
+    const timezone = parseTimezone(req.query.tz);
+
+    try {
+      const timeFilter = `
+        created_at AT TIME ZONE $2 >= (NOW() AT TIME ZONE $2) - ($1 || ' days')::interval
+      `;
+
+      const playersResult = await databasePool.query(
+        `
+          SELECT player_name AS name, COUNT(*)::int AS count
+          FROM stats_events
+          WHERE event_type = 'player'
+            AND ${timeFilter}
+            AND player_name IS NOT NULL
+          GROUP BY player_name
+          ORDER BY count DESC, name ASC
+          LIMIT 5
+        `,
+        [windowDays, timezone]
+      );
+
+      const teamsResult = await databasePool.query(
+        `
+          SELECT team_name AS name, COUNT(*)::int AS count
+          FROM stats_events
+          WHERE event_type = 'team'
+            AND ${timeFilter}
+            AND team_name IS NOT NULL
+          GROUP BY team_name
+          ORDER BY count DESC, name ASC
+          LIMIT 5
+        `,
+        [windowDays, timezone]
+      );
+
+      const seasonsResult = await databasePool.query(
+        `
+          SELECT season_year AS "seasonYear", COUNT(*)::int AS count
+          FROM stats_events
+          WHERE event_type = 'season'
+            AND ${timeFilter}
+            AND season_year IS NOT NULL
+          GROUP BY season_year
+          ORDER BY count DESC, season_year DESC
+          LIMIT 5
+        `,
+        [windowDays, timezone]
+      );
+
+      const streakResult = await databasePool.query(
+        `
+          SELECT COALESCE(MAX(streak_count), 0)::int AS longest
+          FROM stats_events
+          WHERE event_type = 'streak'
+            AND ${timeFilter}
+        `,
+        [windowDays, timezone]
+      );
+
+      res.json({
+        windowDays,
+        timezone,
+        updatedAt: new Date().toISOString(),
+        players: playersResult.rows,
+        teams: teamsResult.rows,
+        seasons: seasonsResult.rows,
+        longestStreak: streakResult.rows[0]?.longest ?? 0,
+      });
+    } catch (error) {
+      console.error('Stats query error:', error);
+      res.status(400).json({ error: 'Invalid stats query' });
+    }
   });
 
   io.on('connection', (socket: Socket) => {
@@ -278,13 +429,8 @@ export const createServer = (): { app: Express; server: HttpServer } => {
               room.players.splice(playerIndex, 1);
               io.to(roomId).emit('player_disconnected', playerName);
               if (room.gameStarted && !room.gameCompleted && room.players.length < 2) {
-                room.gameCompleted = true;
-                room.winner = room.players[0] || null;
-                if (roomTimers.has(roomId)) {
-                  clearTimeout(roomTimers.get(roomId)!);
-                  roomTimers.delete(roomId);
-                }
-                io.to(roomId).emit('game_over', { winner: room.winner, reason: 'Opponent left the room.' });
+                const winner = room.players[0] || null;
+                endGame(io, roomId, winner, 'Opponent left the room.');
               }
               io.to(roomId).emit('room_updated', room);
           }
@@ -300,13 +446,8 @@ export const createServer = (): { app: Express; server: HttpServer } => {
           room.players.splice(playerIndex, 1);
           io.to(roomId).emit('player_disconnected', disconnectedPlayer.name);
           if (room.gameStarted && !room.gameCompleted && room.players.length < 2) {
-            room.gameCompleted = true;
-            room.winner = room.players[0] || null;
-            if (roomTimers.has(roomId)) {
-              clearTimeout(roomTimers.get(roomId)!);
-              roomTimers.delete(roomId);
-            }
-            io.to(roomId).emit('game_over', { winner: room.winner, reason: 'Opponent disconnected.' });
+            const winner = room.players[0] || null;
+            endGame(io, roomId, winner, 'Opponent disconnected.');
           }
           io.to(roomId).emit('room_updated', room);
         }

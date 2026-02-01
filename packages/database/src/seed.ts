@@ -7,6 +7,7 @@ import pool from './index';
 async function runMigrations() {
   try {
     // Drop tables if they exist to ensure clean state with proper constraints
+    await pool.query(`DROP TABLE IF EXISTS stats_events;`);
     await pool.query(`DROP TABLE IF EXISTS rosters;`);
     await pool.query(`DROP TABLE IF EXISTS players;`);
     await pool.query(`DROP TABLE IF EXISTS teams;`);
@@ -38,6 +39,23 @@ async function runMigrations() {
 
         PRIMARY KEY (player_id, team_id, season_year)
       );
+    `);
+
+    await pool.query(`
+      CREATE TABLE stats_events (
+        id SERIAL PRIMARY KEY,
+        event_type VARCHAR(30) NOT NULL,
+        player_name VARCHAR(150),
+        team_name VARCHAR(120),
+        season_year INTEGER,
+        streak_count INTEGER,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE INDEX stats_events_type_created_at_idx
+      ON stats_events (event_type, created_at DESC);
     `);
 
     console.log('Database schema created successfully!');

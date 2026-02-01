@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
@@ -20,6 +20,18 @@ import {
   joinMatchmaking,
 } from "./lib/socket";
 import ClientOnly from "../components/ClientOnly";
+
+type PopularItem = { name: string; count: number };
+type PopularSeason = { seasonYear: number; count: number };
+type StatsResponse = {
+  windowDays: number;
+  timezone: string;
+  updatedAt: string;
+  players: PopularItem[];
+  teams: PopularItem[];
+  seasons: PopularSeason[];
+  longestStreak: number;
+};
 
 export default function Web() {
   return (
@@ -43,6 +55,7 @@ function LobbyPage() {
   const [playerName, setPlayerName] = useState<string>("");
   const [feedbackMessage, setFeedbackMessage] = useState<string>("");
   const [isMatchmaking, setIsMatchmaking] = useState(false);
+  const [stats, setStats] = useState<StatsResponse | null>(null);
   const router = useRouter();
 
   const handleCreateRoom = async () => {
@@ -143,6 +156,26 @@ function LobbyPage() {
     router.push(`/room/${roomId}?playerName=${playerName}`);
   };
 
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const apiHost = process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3001";
+        const response = await fetch(
+          `${apiHost}/api/stats?windowDays=7&tz=America%2FNew_York`,
+        );
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as StatsResponse;
+        setStats(payload);
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-md mx-auto space-y-6">
@@ -154,7 +187,7 @@ function LobbyPage() {
             HoopNerd
           </h1>
           <p className="text-gray-500 font-medium">
-            Connect basketball players to win!
+            Who played with who?
           </p>
         </div>
 
@@ -173,6 +206,58 @@ function LobbyPage() {
                 <p className="text-sm font-bold text-warning-dark text-center">
                   {feedbackMessage}
                 </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card hover className="bg-white">
+          <CardHeader className="text-center pb-2">
+            <CardTitle>Trending This Week</CardTitle>
+            <CardDescription>Last 7 days (EST)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-gray-600">
+            {!stats && (
+              <p className="text-center text-gray-400">Loading stats...</p>
+            )}
+            {stats && (
+              <div className="space-y-3">
+                <div>
+                  <p className="font-semibold text-gray-700">Players</p>
+                  <p>
+                    {stats.players.length
+                      ? stats.players
+                          .map((item) => `${item.name} (${item.count})`)
+                          .join(", ")
+                      : "No data yet"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-700">Teams</p>
+                  <p>
+                    {stats.teams.length
+                      ? stats.teams
+                          .map((item) => `${item.name} (${item.count})`)
+                          .join(", ")
+                      : "No data yet"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-700">Seasons</p>
+                  <p>
+                    {stats.seasons.length
+                      ? stats.seasons
+                          .map((item) => `${item.seasonYear} (${item.count})`)
+                          .join(", ")
+                      : "No data yet"}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <p className="font-semibold text-gray-700">Longest Streak</p>
+                  <p className="font-bold text-gray-800">
+                    {stats.longestStreak}
+                  </p>
+                </div>
               </div>
             )}
           </CardContent>

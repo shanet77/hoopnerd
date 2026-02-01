@@ -47,6 +47,7 @@ export interface GameRoomState {
   connections: PlayerConnection[];
   lastConnectedPlayer?: Player | null;
   friendsOnly: boolean;
+  statsRecorded?: boolean;
 }
 
 export interface JoinRoomRequest {
@@ -114,6 +115,26 @@ export interface WebSocketEvents {
   game_over: (data: { winner: Player; reason: string }) => void;
 }
 
+export interface PopularItem {
+  name: string;
+  count: number;
+}
+
+export interface PopularSeason {
+  seasonYear: number;
+  count: number;
+}
+
+export interface StatsResponse {
+  windowDays: number;
+  timezone: string;
+  updatedAt: string;
+  players: PopularItem[];
+  teams: PopularItem[];
+  seasons: PopularSeason[];
+  longestStreak: number;
+}
+
 export class PlayerService {
   constructor(private db: DatabaseService) { }
 
@@ -125,7 +146,6 @@ export class PlayerService {
       FROM players
       WHERE player_name ILIKE $1
       ORDER BY player_name
-      LIMIT 5
     `;
 
     const result = await this.db.query(sql, [searchTerm]);
