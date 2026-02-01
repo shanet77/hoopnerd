@@ -11,7 +11,7 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "dev": "tsc src/index.ts",
-    "seed": "node src/seed.ts",
+    "seed": "pnpm run build && node dist/seed.js",
     "migrate": "node src/migrate.ts",
     "lint": "eslint \"src/**/*.ts*\" --max-warnings 0",
     "test": "jest"

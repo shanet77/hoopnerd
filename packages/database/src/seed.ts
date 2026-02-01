@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import * as csv from 'csv-parser';
 import pool from './index';
 
@@ -46,65 +47,115 @@ async function runMigrations() {
   }
 }
 
-// Function to seed the database from CSV files
+const datasetsDir = path.resolve(__dirname, '../../../datasets');
+const { getTeamName } = require(path.join(datasetsDir, 'team_abbreviation_map.js'));
+
+const multiWordMascots = new Set(['Trail Blazers']);
+
+function splitTeamName(fullTeamName: string) {
+  if (!fullTeamName) {
+    return { city: '', teamName: '' };
+  }
+
+  const ofIndex = fullTeamName.indexOf(' of ');
+  if (ofIndex > -1) {
+    return {
+      teamName: fullTeamName.slice(0, ofIndex).trim(),
+      city: fullTeamName.slice(ofIndex + 4).trim(),
+    };
+  }
+
+  for (const mascot of multiWordMascots) {
+    if (fullTeamName.endsWith(mascot)) {
+      return {
+        city: fullTeamName.slice(0, -mascot.length).trim(),
+        teamName: mascot,
+      };
+    }
+  }
+
+  const parts = fullTeamName.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return { city: fullTeamName, teamName: fullTeamName };
+  }
+
+  return {
+    city: parts.slice(0, -1).join(' '),
+    teamName: parts[parts.length - 1],
+  };
+}
+
+// Function to seed the database from the player season CSV
 async function seedDatabase() {
   try {
     // Run migrations first to ensure tables and constraints exist
     await runMigrations();
 
-    const datasetsDir = '../../datasets/';
-    const files = fs.readdirSync(datasetsDir);
+    const file = 'player_season_info.csv';
+    const filePath = path.join(datasetsDir, file);
+    console.log(`Processing file: ${filePath}`);
 
-    for (const file of files) {
-      if (file.endsWith('.csv')) {
-        console.log(`Processing file: ${file}`);
+    const results: any[] = [];
 
-        const results: any[] = [];
+    // Parse the CSV file
+    await new Promise<void>((resolve, reject) => {
+      fs.createReadStream(filePath)
+        .pipe(csv.default())
+        .on('data', (data: any) => results.push(data))
+        .on('end', () => {
+          console.log(`Parsed ${results.length} records from ${file}`);
+          resolve();
+        })
+        .on('error', reject);
+    });
 
-        // Parse the CSV file
-        await new Promise<void>((resolve, reject) => {
-          fs.createReadStream(datasetsDir + file)
-            .pipe(csv.default())
-            .on('data', (data: any) => results.push(data))
-            .on('end', () => {
-              console.log(`Parsed ${results.length} records from ${file}`);
-              resolve();
-            })
-            .on('error', reject);
+    // Process each record
+    for (const row of results) {
+      if (row.lg !== 'NBA') continue;
+
+      const teamAbbreviation = String(row.team || '').toUpperCase();
+      if (!teamAbbreviation) continue;
+
+      const fullTeamName = getTeamName(teamAbbreviation);
+      const { city, teamName } = splitTeamName(fullTeamName);
+      const resolvedTeamName = teamName || fullTeamName;
+      const resolvedCity = city || fullTeamName;
+      const seasonYear = Number.parseInt(row.season, 10);
+
+      // Insert team if it doesn't exist
+      if (!resolvedTeamName || !resolvedCity) {
+        console.warn('Skipping row due to missing team info:', {
+          season: row.season,
+          lg: row.lg,
+          team: row.team,
+          player: row.player,
+          player_id: row.player_id,
+          resolvedTeamName,
+          resolvedCity,
         });
-
-        // Process each record
-        for (const row of results) {
-          console.log(`Processing row: ${JSON.stringify(row)}`);
-
-          // Insert team if it doesn't exist
-          let teamResult = await pool.query(
-            'INSERT INTO teams (team_name, city, abbreviation) VALUES ($1, $2, $3) ON CONFLICT (abbreviation) DO UPDATE SET team_name = EXCLUDED.team_name, city = EXCLUDED.city RETURNING id',
-            [row.Team, row.City, row.Abbreviation]
-          );
-
-          const teamId = teamResult.rows[0].id;
-          console.log(`Team ID: ${teamId}`);
-
-          // Insert player if it doesn't exist, or get the existing player's ID
-          let playerResult = await pool.query(
-            'INSERT INTO players (player_name, position) VALUES ($1, $2) ON CONFLICT (player_name) DO UPDATE SET position = EXCLUDED.position RETURNING id',
-            [row.Player, row.Pos]
-          );
-
-          const playerId = playerResult.rows[0].id;
-          console.log(`Player ID: ${playerId}`);
-
-          // Insert roster entry
-          await pool.query(
-            'INSERT INTO rosters (player_id, team_id, season_year) VALUES ($1, $2, $3) ON CONFLICT (player_id, team_id, season_year) DO UPDATE SET season_year = EXCLUDED.season_year',
-            [playerId, teamId, row.Year]
-          );
-          console.log(`Roster entry inserted for player ${playerId}, team ${teamId}, year ${row.Year}`);
-        }
-
-        console.log(`Successfully processed ${file}`);
+        continue;
       }
+
+      const teamResult = await pool.query(
+        'INSERT INTO teams (team_name, city, abbreviation) VALUES ($1, $2, $3) ON CONFLICT (abbreviation) DO UPDATE SET team_name = EXCLUDED.team_name, city = EXCLUDED.city RETURNING id',
+        [resolvedTeamName, resolvedCity, teamAbbreviation]
+      );
+
+      const teamId = teamResult.rows[0].id;
+
+      // Insert player if it doesn't exist, or get the existing player's ID
+      const playerResult = await pool.query(
+        'INSERT INTO players (player_name, position) VALUES ($1, $2) ON CONFLICT (player_name) DO UPDATE SET position = EXCLUDED.position RETURNING id',
+        [row.player, row.pos]
+      );
+
+      const playerId = playerResult.rows[0].id;
+
+      // Insert roster entry
+      await pool.query(
+        'INSERT INTO rosters (player_id, team_id, season_year) VALUES ($1, $2, $3) ON CONFLICT (player_id, team_id, season_year) DO UPDATE SET season_year = EXCLUDED.season_year',
+        [playerId, teamId, seasonYear]
+      );
     }
 
     console.log('Database seeding completed successfully!');
