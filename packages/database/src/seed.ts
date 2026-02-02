@@ -3,18 +3,33 @@ import * as path from 'path';
 import * as csv from 'csv-parser';
 import pool from './index';
 
-// Function to run migrations first
-async function runMigrations() {
-  try {
-    // Drop tables if they exist to ensure clean state with proper constraints
-    await pool.query(`DROP TABLE IF EXISTS stats_events;`);
-    await pool.query(`DROP TABLE IF EXISTS rosters;`);
-    await pool.query(`DROP TABLE IF EXISTS players;`);
-    await pool.query(`DROP TABLE IF EXISTS teams;`);
+const waitForDatabase = async (retries = 10, delayMs = 3000) => {
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      await pool.query('SELECT 1');
+      return;
+    } catch (error) {
+      if (attempt === retries) throw error;
+      console.log(`Database not ready (attempt ${attempt}/${retries}). Retrying...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+};
 
+const hasSeededData = async (): Promise<boolean> => {
+  const tableResult = await pool.query(`SELECT to_regclass('public.players') AS table_name`);
+  if (!tableResult.rows[0]?.table_name) return false;
+
+  const countResult = await pool.query(`SELECT COUNT(*)::int AS count FROM players`);
+  return (countResult.rows[0]?.count ?? 0) > 0;
+};
+
+// Function to ensure schema exists
+async function ensureSchema() {
+  try {
     // Create tables as defined in README with proper constraints
     await pool.query(`
-      CREATE TABLE teams (
+      CREATE TABLE IF NOT EXISTS teams (
         id SERIAL PRIMARY KEY,
         team_name VARCHAR(100) NOT NULL,
         city VARCHAR(100) NOT NULL,
@@ -23,7 +38,7 @@ async function runMigrations() {
     `);
 
     await pool.query(`
-      CREATE TABLE players (
+      CREATE TABLE IF NOT EXISTS players (
         id SERIAL PRIMARY KEY,
         player_name VARCHAR(150) NOT NULL,
         position VARCHAR(50),
@@ -32,7 +47,7 @@ async function runMigrations() {
     `);
 
     await pool.query(`
-      CREATE TABLE rosters (
+      CREATE TABLE IF NOT EXISTS rosters (
         player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
         team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
         season_year INTEGER NOT NULL,
@@ -42,7 +57,7 @@ async function runMigrations() {
     `);
 
     await pool.query(`
-      CREATE TABLE stats_events (
+      CREATE TABLE IF NOT EXISTS stats_events (
         id SERIAL PRIMARY KEY,
         event_type VARCHAR(30) NOT NULL,
         player_name VARCHAR(150),
@@ -54,11 +69,11 @@ async function runMigrations() {
     `);
 
     await pool.query(`
-      CREATE INDEX stats_events_type_created_at_idx
+      CREATE INDEX IF NOT EXISTS stats_events_type_created_at_idx
       ON stats_events (event_type, created_at DESC);
     `);
 
-    console.log('Database schema created successfully!');
+    console.log('Database schema ensured successfully!');
   } catch (error) {
     console.error('Error during migration:', error);
     throw error;
@@ -106,8 +121,16 @@ function splitTeamName(fullTeamName: string) {
 // Function to seed the database from the player season CSV
 async function seedDatabase() {
   try {
-    // Run migrations first to ensure tables and constraints exist
-    await runMigrations();
+    await waitForDatabase();
+
+    // Ensure tables and constraints exist before checking/starting seeding
+    await ensureSchema();
+
+    const alreadySeeded = await hasSeededData();
+    if (alreadySeeded) {
+      console.log('Database already seeded. Skipping seed step.');
+      return;
+    }
 
     const file = 'player_season_info.csv';
     const filePath = path.join(datasetsDir, file);

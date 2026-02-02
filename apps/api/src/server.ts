@@ -1,5 +1,5 @@
 import express, { type Express, Request, Response } from "express";
-import cors from "cors";
+import cors, { type CorsOptions } from "cors";
 import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import {
@@ -22,6 +22,32 @@ const roomTimers: Map<string, NodeJS.Timeout> = new Map();
 const playerService = new PlayerService(databasePool);
 const DEFAULT_STATS_WINDOW_DAYS = 7;
 const DEFAULT_STATS_TIMEZONE = 'America/New_York';
+const DEFAULT_ALLOWED_ORIGINS = ['https://hoopnerd.xyz', 'https://www.hoopnerd.xyz'];
+
+const parseAllowedOrigins = (raw: string | undefined): string[] => {
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
+};
+
+const buildAllowedOrigins = () => {
+  if (process.env.NODE_ENV !== 'production') {
+    return ['*'];
+  }
+
+  const configured = parseAllowedOrigins(process.env.CORS_ORIGIN);
+  return configured.length > 0 ? configured : DEFAULT_ALLOWED_ORIGINS;
+};
+
+const allowedOrigins = buildAllowedOrigins();
+
+const isOriginAllowed = (origin: string | undefined) => {
+  if (!origin) return true;
+  if (allowedOrigins.includes('*')) return true;
+  return allowedOrigins.includes(origin);
+};
 
 const parseWindowDays = (value: unknown): number => {
   const parsed = typeof value === 'string' ? Number.parseInt(value, 10) : Number.NaN;
@@ -169,14 +195,29 @@ const startGame = async (io: SocketIOServer, roomId: string) => {
 export const createServer = (): { app: Express; server: HttpServer } => {
   const app = express();
   const server = new HttpServer(app);
+  const corsOptions: CorsOptions = {
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('Not allowed by CORS'));
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+  };
   const io = new SocketIOServer(server, {
     cors: {
-      origin: process.env.NODE_ENV === 'production' ? false : "*",
-      methods: ["GET", "POST"]
+      origin: allowedOrigins.includes('*') ? '*' : allowedOrigins,
+      methods: ["GET", "POST", "OPTIONS"]
     }
   });
 
-  app.use(cors());
+  app.disable('x-powered-by');
+  if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+  }
+
+  app.use(cors(corsOptions));
   app.use(express.json());
 
   app.get('/api/players/search', async (req: Request, res: Response) => {
@@ -375,9 +416,9 @@ export const createServer = (): { app: Express; server: HttpServer } => {
 
       const currentPlayerTurn = room.players[room.currentPlayerIndex];
       if (currentPlayerTurn.socketId !== socket.id) {
-          socket.emit('game_error', 'Not your turn.');
-          io.to(roomId).emit('game_error', `${currentPlayerTurn.name}'s turn.`);
-          return;
+        socket.emit('game_error', 'Not your turn.');
+        io.to(roomId).emit('game_error', `${currentPlayerTurn.name}'s turn.`);
+        return;
       }
 
       if (!room.startingPlayer) {
@@ -397,12 +438,12 @@ export const createServer = (): { app: Express; server: HttpServer } => {
 
         if (room.lastConnectedPlayer) {
           const isValidMove = await validateMove(databasePool, room.lastConnectedPlayer.id, connectedPlayer.id);
-          
+
           if (!isValidMove) {
             const errorMsg = `Invalid connection! ${connectedPlayer.name} did not play with ${room.lastConnectedPlayer.name}`;
             socket.emit('move_submitted', { success: false, message: errorMsg });
-            io.to(roomId).emit('move_submitted', { 
-              success: false, 
+            io.to(roomId).emit('move_submitted', {
+              success: false,
               message: errorMsg,
               errorPlayer: connectedPlayer.name,
               expectedPlayer: room.lastConnectedPlayer.name
@@ -419,11 +460,11 @@ export const createServer = (): { app: Express; server: HttpServer } => {
 
         room.moves.push({ playerId: connectedPlayer.id, playerName: connectedPlayer.name, position: connectedPlayer.position });
         room.lastConnectedPlayer = connectedPlayer;
-        
-        io.to(roomId).emit('move_submitted', { 
-          success: true, 
+
+        io.to(roomId).emit('move_submitted', {
+          success: true,
           message: `${connectedPlayer.name} connected to ${room.lastConnectedPlayer ? 'chain' : 'start'}!`,
-          roomState: room 
+          roomState: room
         });
         io.to(roomId).emit('room_updated', room);
         switchTurn(io, room);
@@ -438,17 +479,17 @@ export const createServer = (): { app: Express; server: HttpServer } => {
       socket.leave(roomId);
       const room = gameRooms.get(roomId);
       if (room) {
-          const playerIndex = room.players.findIndex(p => p.socketId === socket.id);
-          if (playerIndex !== -1) {
-              const playerName = room.players[playerIndex].name;
-              room.players.splice(playerIndex, 1);
-              io.to(roomId).emit('player_disconnected', playerName);
-              if (room.gameStarted && !room.gameCompleted && room.players.length < 2) {
-                const winner = room.players[0] || null;
-                endGame(io, roomId, winner, 'Opponent left the room.');
-              }
-              io.to(roomId).emit('room_updated', room);
+        const playerIndex = room.players.findIndex(p => p.socketId === socket.id);
+        if (playerIndex !== -1) {
+          const playerName = room.players[playerIndex].name;
+          room.players.splice(playerIndex, 1);
+          io.to(roomId).emit('player_disconnected', playerName);
+          if (room.gameStarted && !room.gameCompleted && room.players.length < 2) {
+            const winner = room.players[0] || null;
+            endGame(io, roomId, winner, 'Opponent left the room.');
           }
+          io.to(roomId).emit('room_updated', room);
+        }
       }
     });
 

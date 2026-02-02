@@ -25,6 +25,10 @@ RUN npm i -g turbo
 RUN pnpm install
 # Build the project
 COPY --from=prepare /app/out/full/ .
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_HOST
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_HOST=$NEXT_PUBLIC_API_HOST
 
 # Uncomment and use build args to enable remote caching
 # ARG TURBO_TEAM
