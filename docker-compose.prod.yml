@@ -1,4 +1,47 @@
 services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp
+    init: true
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    init: true
+
   api:
     build:
       context: .
@@ -17,17 +60,27 @@ services:
     expose:
       - "3001"
     networks:
-      - app_network
+      - edge
+      - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    init: true
 
   web:
     build:
       context: .
       dockerfile: ./apps/web/Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://hoopnerd.xyz}
-        NEXT_PUBLIC_API_HOST: ${NEXT_PUBLIC_API_HOST:-https://hoopnerd.xyz}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.hoopnerd.xyz}
+        NEXT_PUBLIC_API_HOST: ${NEXT_PUBLIC_API_HOST:-https://api.hoopnerd.xyz}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -35,15 +88,26 @@ services:
     expose:
       - "3000"
     networks:
-      - app_network
+      - edge
+    depends_on:
+      - api
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /apps/web/.next/cache
+    init: true
 
   db-seed:
     build:
       context: .
       dockerfile: ./packages/database/Dockerfile.seed
     restart: "no"
+    profiles:
+      - seed
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
@@ -52,11 +116,30 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./datasets:/app/datasets:ro
     networks:
-      - app_network
+      - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    init: true
 
 networks:
-  app_network:
+  edge:
     driver: bridge
+  internal:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
