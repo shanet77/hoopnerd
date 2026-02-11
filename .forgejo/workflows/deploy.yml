@@ -9,7 +9,7 @@ on:
 jobs:
   deploy:
     runs-on:
-      - forger
+      - forgejo
     steps:
       - name: Checkout
         uses: actions/checkout@v4
