@@ -33,7 +33,7 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
     volumes:
-      - ./datasets:/app/datasets
+      - ./datasets:/app/datasets:ro
     networks:
       - app_network
 
