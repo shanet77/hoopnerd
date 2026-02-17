@@ -1,46 +1,15 @@
 name: Deploy to VPS
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
-  build-and-push:
+  disabled:
     runs-on:
       - forgejo
-    env:
-      REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
-      REGISTRY_NAMESPACE: ${{ secrets.REGISTRY_NAMESPACE }}
-      API_IMAGE_NAME: hoopnerd-api
-      WEB_IMAGE_NAME: hoopnerd-web
-      IMAGE_TAG: ${{ github.sha }}
-      NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
-      NEXT_PUBLIC_API_HOST: ${{ vars.NEXT_PUBLIC_API_HOST }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Login to Forgejo registry
-        run: echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login "$REGISTRY_URL" -u "${{ secrets.REGISTRY_USER }}" --password-stdin
-
-      - name: Build and push API image
+      - name: Workflow disabled
         run: |
-          API_IMAGE="$REGISTRY_URL/$REGISTRY_NAMESPACE/$API_IMAGE_NAME"
-          docker build -f apps/api/Dockerfile -t "$API_IMAGE:$IMAGE_TAG" -t "$API_IMAGE:latest" .
-          docker push "$API_IMAGE:$IMAGE_TAG"
-          docker push "$API_IMAGE:latest"
-
-      - name: Build and push Web image
-        run: |
-          WEB_IMAGE="$REGISTRY_URL/$REGISTRY_NAMESPACE/$WEB_IMAGE_NAME"
-          docker build \
-            -f apps/web/Dockerfile \
-            --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
-            --build-arg NEXT_PUBLIC_API_HOST="$NEXT_PUBLIC_API_HOST" \
-            -t "$WEB_IMAGE:$IMAGE_TAG" \
-            -t "$WEB_IMAGE:latest" \
-            .
-          docker push "$WEB_IMAGE:$IMAGE_TAG"
-          docker push "$WEB_IMAGE:latest"
+          echo "Docker build/push is disabled in Forgejo Actions for now."
+          echo "Build and deploy manually on VPS:"
+          echo "docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build --remove-orphans"
