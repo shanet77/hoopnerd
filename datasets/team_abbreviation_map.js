@@ -20,6 +20,7 @@ const teamAbbreviationMap = {
   PHI: "Philadelphia 76ers",
   TOR: "Toronto Raptors",
   WAS: "Washington Wizards",
+  BRK: "Brooklyn Nets",
 
   // Western Conference
   DAL: "Dallas Mavericks",
