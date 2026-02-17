@@ -1,8 +1,27 @@
+# Dependency and build artifacts
 node_modules
-.next
-dist
+**/node_modules
+.pnpm-store
 .turbo
+.next
+**/.next
 out
+dist
+coverage
+
+# VCS and CI metadata
+.git
+.gitignore
+.forgejo
+.github
+
+# Local/editor files
+.vscode
 *.log
+
+# Environment and secrets
 .env
-*node_modules
+.env.*
+
+# Non-build runtime data
+datasets

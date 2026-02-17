@@ -43,9 +43,7 @@ services:
     init: true
 
   api:
-    build:
-      context: .
-      dockerfile: ./apps/api/Dockerfile
+    image: ${API_IMAGE}:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -75,12 +73,7 @@ services:
     init: true
 
   web:
-    build:
-      context: .
-      dockerfile: ./apps/web/Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.hoopnerd.xyz}
-        NEXT_PUBLIC_API_HOST: ${NEXT_PUBLIC_API_HOST:-https://api.hoopnerd.xyz}
+    image: ${WEB_IMAGE}:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production

@@ -1,17 +1,18 @@
+# syntax=docker/dockerfile:1.7
 ARG NODE_VERSION=24
 FROM node:${NODE_VERSION}-slim AS base
 
 # This Dockerfile is copy-pasted into our main docs at /docs/handbook/deploying-with-docker.
 # Make sure you update both files!
 
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 # Set working directory
 WORKDIR /app
 
+# Shared toolchain for all stages
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate && npm i -g turbo
+
 # ---
 FROM base AS prepare
-RUN npm i -g pnpm
-RUN npm i -g turbo
 COPY . .
 # Add lockfile and package.json's of isolated subworkspace
 RUN turbo prune web --docker
@@ -20,9 +21,8 @@ RUN turbo prune web --docker
 FROM base AS builder
 # First install the dependencies (as they change less often)
 COPY --from=prepare /app/out/json/ .
-RUN npm i -g pnpm
-RUN npm i -g turbo
-RUN pnpm install
+RUN --mount=type=cache,target=/pnpm/store pnpm config set store-dir /pnpm/store && pnpm install --frozen-lockfile
+
 # Build the project
 COPY --from=prepare /app/out/full/ .
 ARG NEXT_PUBLIC_API_URL
@@ -37,7 +37,7 @@ ENV NEXT_PUBLIC_API_HOST=$NEXT_PUBLIC_API_HOST
 # ARG TURBO_TOKEN
 # ENV TURBO_TOKEN=$TURBO_TOKEN
 
-RUN pnpm turbo build
+RUN pnpm turbo run build --filter=web...
 
 # ---
 FROM node:${NODE_VERSION}-alpine AS runner

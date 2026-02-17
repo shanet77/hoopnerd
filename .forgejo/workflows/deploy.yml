@@ -7,30 +7,40 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on:
       - forgejo
+    env:
+      REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
+      REGISTRY_NAMESPACE: ${{ secrets.REGISTRY_NAMESPACE }}
+      API_IMAGE_NAME: hoopnerd-api
+      WEB_IMAGE_NAME: hoopnerd-web
+      IMAGE_TAG: ${{ github.sha }}
+      NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+      NEXT_PUBLIC_API_HOST: ${{ vars.NEXT_PUBLIC_API_HOST }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Start ssh-agent and add key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Login to Forgejo registry
+        run: echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login "$REGISTRY_URL" -u "${{ secrets.REGISTRY_USER }}" --password-stdin
 
-      - name: Add VPS host key
+      - name: Build and push API image
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+          API_IMAGE="$REGISTRY_URL/$REGISTRY_NAMESPACE/$API_IMAGE_NAME"
+          docker build -f apps/api/Dockerfile -t "$API_IMAGE:$IMAGE_TAG" -t "$API_IMAGE:latest" .
+          docker push "$API_IMAGE:$IMAGE_TAG"
+          docker push "$API_IMAGE:latest"
 
-      - name: Deploy on VPS
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          DEPLOY_BRANCH: ${{ secrets.DEPLOY_BRANCH }}
+      - name: Build and push Web image
         run: |
-          chmod +x scripts/deploy-vps.sh
-          scripts/deploy-vps.sh
+          WEB_IMAGE="$REGISTRY_URL/$REGISTRY_NAMESPACE/$WEB_IMAGE_NAME"
+          docker build \
+            -f apps/web/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
+            --build-arg NEXT_PUBLIC_API_HOST="$NEXT_PUBLIC_API_HOST" \
+            -t "$WEB_IMAGE:$IMAGE_TAG" \
+            -t "$WEB_IMAGE:latest" \
+            .
+          docker push "$WEB_IMAGE:$IMAGE_TAG"
+          docker push "$WEB_IMAGE:latest"
