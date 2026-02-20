@@ -22,6 +22,11 @@ import {
   leaveRoom,
 } from "../../lib/socket";
 import {
+  clearPlayerSession,
+  getPlayerSession,
+  setPlayerSession,
+} from "../../lib/playerSession";
+import {
   Player,
   GameRoomState,
   JoinRoomRequest,
@@ -53,6 +58,7 @@ function GamePage() {
   const router = useRouter();
   const roomId = params.roomId as string;
   const playerName = searchParams.get("playerName") || "Player";
+  const existingSession = getPlayerSession(roomId, playerName);
 
   const [activePlayer, setActivePlayer] = useState<Player | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(25);
@@ -65,6 +71,8 @@ function GamePage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [gameMessage, setGameMessage] = useState<string>("");
   const [isConnected, setIsConnected] = useState(false);
+  const [playerToken, setPlayerToken] = useState<string>(existingSession?.token ?? "");
+  const [myPlayerId, setMyPlayerId] = useState<number | null>(existingSession?.playerId ?? null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -81,7 +89,43 @@ function GamePage() {
     if (socket) {
       setIsConnected(socketConnected);
 
-      const handleConnect = () => setIsConnected(true);
+      const handleConnect = () => {
+        setIsConnected(true);
+        if (playerToken) {
+          const reconnectRequest: JoinRoomRequest = {
+            roomId,
+            playerName,
+            playerToken,
+          };
+          joinRoom(socket, reconnectRequest).then((response) => {
+            if (response.success) {
+              setRoomState(response.roomState || null);
+              if (response.roomState?.players?.length) {
+                setActivePlayer(
+                  response.roomState.players[response.roomState.currentPlayerIndex],
+                );
+              }
+              if (response.playerToken) {
+                setPlayerToken(response.playerToken);
+              }
+              if (typeof response.playerId === "number") {
+                setMyPlayerId(response.playerId);
+              }
+              if (response.playerToken && typeof response.playerId === "number") {
+                setPlayerSession(roomId, playerName, {
+                  token: response.playerToken,
+                  playerId: response.playerId,
+                });
+              }
+            } else {
+              setGameMessage(`Failed to rejoin room: ${response.message}`);
+            }
+          }).catch((error) => {
+            console.error("Error rejoining room:", error);
+            setGameMessage("Failed to rejoin room. Please refresh and try again.");
+          });
+        }
+      };
       const handleDisconnect = () => setIsConnected(false);
 
       socket.on("connect", handleConnect);
@@ -89,6 +133,9 @@ function GamePage() {
 
       socket.on("room_updated", (state: GameRoomState) => {
         setRoomState(state);
+        if (state.players.length > 0) {
+          setActivePlayer(state.players[state.currentPlayerIndex] || null);
+        }
       });
 
       socket.on("game_started", (state: GameRoomState) => {
@@ -150,21 +197,44 @@ function GamePage() {
         socket.off("game_over");
       };
     }
-  }, [socket, socketConnected]);
+  }, [socket, socketConnected, playerToken, roomId, playerName]);
 
   useEffect(() => {
-    if (socket && roomId && playerName) {
+    if (socket && socketConnected && roomId && playerName && !playerToken) {
       const requestData: JoinRoomRequest = { roomId, playerName };
       joinRoom(socket, requestData).then((response) => {
         if (response.success) {
           setRoomState(response.roomState || null);
           setGameMessage(response.message);
+          if (response.roomState?.players?.length) {
+            setActivePlayer(
+              response.roomState.players[response.roomState.currentPlayerIndex],
+            );
+          }
+          if (response.playerToken) {
+            setPlayerToken(response.playerToken);
+          }
+          if (typeof response.playerId === "number") {
+            setMyPlayerId(response.playerId);
+          }
+          if (response.playerToken && typeof response.playerId === "number") {
+            setPlayerSession(roomId, playerName, {
+              token: response.playerToken,
+              playerId: response.playerId,
+            });
+          }
         } else {
           setGameMessage(`Failed to join room: ${response.message}`);
+          clearPlayerSession(roomId, playerName);
+          setPlayerToken("");
+          setMyPlayerId(null);
         }
+      }).catch((error) => {
+        console.error("Error joining room:", error);
+        setGameMessage("Failed to join room. Please refresh and try again.");
       });
     }
-  }, [socket, roomId, playerName]);
+  }, [socket, socketConnected, roomId, playerName, playerToken]);
 
   if (!socket) {
     return (
@@ -221,10 +291,15 @@ function GamePage() {
       return;
     }
 
+    if (!playerToken) {
+      setGameMessage("Missing player session token. Please rejoin the room.");
+      return;
+    }
+
     const moveData: SubmitMoveRequest = {
       roomId: roomState.roomId,
-      player: roomState.lastConnectedPlayer || roomState.startingPlayer!,
       connectedPlayer: connectedPlayer,
+      playerToken,
     };
 
     try {
@@ -245,13 +320,16 @@ function GamePage() {
   };
 
   const handleLeaveRoom = () => {
-    if (roomState && socket) {
-      leaveRoom(socket, roomState.roomId);
+    if (roomState && socket && playerToken) {
+      leaveRoom(socket, { roomId: roomState.roomId, playerToken });
     }
+    clearPlayerSession(roomId, playerName);
+    setPlayerToken("");
+    setMyPlayerId(null);
     router.push("/");
   };
 
-  const isMyTurn = activePlayer?.name === playerName;
+  const isMyTurn = typeof myPlayerId === "number" && activePlayer?.id === myPlayerId;
   const progressPercent = (timeRemaining / 25) * 100;
   const isUrgent = timeRemaining <= 5;
 
@@ -375,7 +453,7 @@ function GamePage() {
                 <div className="flex flex-wrap gap-2">
                   {roomState.players.map((player, index) => (
                     <div
-                      key={index}
+                      key={player.id}
                       className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 ${player.name === activePlayer?.name
                         ? "bg-basketball text-white border-basketball"
                         : "bg-gray-100 border-gray-200"
@@ -548,6 +626,9 @@ function GamePage() {
               </div>
               <CardTitle>Joining Room...</CardTitle>
               <p className="text-gray-500 mt-2">Getting everything ready!</p>
+              {gameMessage && (
+                <p className="text-sm font-semibold text-warning-dark mt-3">{gameMessage}</p>
+              )}
             </CardContent>
           </Card>
         )}

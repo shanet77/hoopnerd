@@ -41,7 +41,7 @@ services:
     container_name: hoopnerd-web-dev
     image: node:24-alpine
     working_dir: /app
-    command: sh -c "npx pnpm install && npx pnpm dev"
+    command: sh -c "npx pnpm install && npx pnpm --filter web dev"
     ports:
       - "3000:3000"
     environment:
@@ -59,7 +59,7 @@ services:
     container_name: hoopnerd-api-dev
     image: node:24-alpine
     working_dir: /app
-    command: sh -c "npx pnpm install && npx pnpm dev"
+    command: sh -c "npx pnpm install && npx pnpm --filter api dev"
     ports:
       - "3001:3001"
     environment:

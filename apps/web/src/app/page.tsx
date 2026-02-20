@@ -16,9 +16,9 @@ import {
   SocketProvider,
   useSocket,
   createRoom,
-  joinRoom,
   joinMatchmaking,
 } from "./lib/socket";
+import { setPlayerSession } from "./lib/playerSession";
 import ClientOnly from "../components/ClientOnly";
 
 type PopularItem = { name: string; count: number };
@@ -128,6 +128,12 @@ function LobbyPage() {
         friendsOnly: false,
       });
       if (response.success) {
+        if (response.roomId && response.playerToken && typeof response.playerId === "number") {
+          setPlayerSession(response.roomId, playerName, {
+            token: response.playerToken,
+            playerId: response.playerId,
+          });
+        }
         router.push(`/room/${response.roomId}?playerName=${playerName}`);
       } else {
         setFeedbackMessage(`Matchmaking failed: ${response.message}`);

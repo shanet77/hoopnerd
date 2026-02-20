@@ -111,18 +111,21 @@ export interface GameRoomState {
 export interface JoinRoomRequest {
   roomId: string;
   playerName: string;
+  playerToken?: string;
 }
 
 export interface JoinRoomResponse {
   success: boolean;
   message: string;
   roomState?: GameRoomState;
+  playerToken?: string;
+  playerId?: number;
 }
 
 export interface SubmitMoveRequest {
   roomId: string;
-  player: Player;
   connectedPlayer: Player;
+  playerToken: string;
 }
 
 export interface SubmitMoveResponse {
@@ -149,6 +152,13 @@ export interface JoinMatchmakingResponse {
   roomId?: string;
   roomState?: GameRoomState;
   joinedExisting: boolean;
+  playerToken?: string;
+  playerId?: number;
+}
+
+export interface LeaveRoomRequest {
+  roomId: string;
+  playerToken: string;
 }
 
 export interface WebSocketEvents {
@@ -156,7 +166,7 @@ export interface WebSocketEvents {
   join_room: (data: JoinRoomRequest) => void;
   join_matchmaking: (data: JoinMatchmakingRequest) => void;
   create_room: (friendsOnly?: boolean) => void;
-  leave_room: (roomId: string) => void;
+  leave_room: (data: LeaveRoomRequest) => void;
   submit_move: (data: SubmitMoveRequest) => void;
 
   // Server to Client events

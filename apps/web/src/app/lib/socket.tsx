@@ -6,11 +6,11 @@ import {
   WebSocketEvents, 
   JoinRoomRequest, 
   SubmitMoveRequest, 
-  GameRoomState,
   JoinRoomResponse,
   SubmitMoveResponse,
   JoinMatchmakingRequest,
-  JoinMatchmakingResponse
+  JoinMatchmakingResponse,
+  LeaveRoomRequest
 } from '@repo/types';
 
 // Define a type for our socket context value
@@ -72,11 +72,19 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
 // Helper functions for socket operations
 export const joinRoom = (socket: Socket<WebSocketEvents, WebSocketEvents>, data: JoinRoomRequest) => {
-  return new Promise<JoinRoomResponse>((resolve) => {
-    socket.emit('join_room', data);
-    socket.once('room_joined', (response: JoinRoomResponse) => {
+  return new Promise<JoinRoomResponse>((resolve, reject) => {
+    const onJoined = (response: JoinRoomResponse) => {
+      clearTimeout(timeout);
       resolve(response);
-    });
+    };
+
+    const timeout = setTimeout(() => {
+      socket.off('room_joined', onJoined);
+      reject(new Error('join_room timed out'));
+    }, 8000);
+
+    socket.once('room_joined', onJoined);
+    socket.emit('join_room', data);
   });
 };
 
@@ -107,6 +115,6 @@ export const joinMatchmaking = (socket: Socket<WebSocketEvents, WebSocketEvents>
   });
 };
 
-export const leaveRoom = (socket: Socket<WebSocketEvents, WebSocketEvents>, roomId: string) => {
-  socket.emit('leave_room', roomId);
+export const leaveRoom = (socket: Socket<WebSocketEvents, WebSocketEvents>, data: LeaveRoomRequest) => {
+  socket.emit('leave_room', data);
 };

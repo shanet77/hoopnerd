@@ -5,19 +5,40 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import {
   Player,
   PlayerService,
-  WebSocketEvents,
   JoinRoomRequest,
   SubmitMoveRequest,
   GameRoomState,
   JoinMatchmakingRequest,
-  JoinMatchmakingResponse
+  JoinMatchmakingResponse,
+  LeaveRoomRequest
 } from "@repo/types";
-import { validateMove, getConnectionDetails, getPlayerById } from "@repo/logic";
+import { validateMove, getConnectionDetails } from "@repo/logic";
 import databasePool from "@repo/database";
+import {
+  generatePlayerId,
+  issueSessionToken,
+  MAX_PLAYER_NAME_LENGTH,
+  normalizePlayerName,
+  verifySessionToken,
+} from "./socketAuth";
 
 // In-memory storage for game rooms (in production, you might use Redis)
 const gameRooms: Map<string, GameRoomState> = new Map();
 const roomTimers: Map<string, NodeJS.Timeout> = new Map();
+const socketRoomBindings: Map<string, { roomId: string; playerId: number }> = new Map();
+const disconnectGraceTimers: Map<string, NodeJS.Timeout> = new Map();
+const DISCONNECT_GRACE_PERIOD_MS = 10000;
+
+const getDisconnectGraceKey = (roomId: string, playerId: number) => `${roomId}:${playerId}`;
+
+const clearDisconnectGraceTimer = (roomId: string, playerId: number) => {
+  const key = getDisconnectGraceKey(roomId, playerId);
+  const timer = disconnectGraceTimers.get(key);
+  if (timer) {
+    clearTimeout(timer);
+    disconnectGraceTimers.delete(key);
+  }
+};
 
 const playerService = new PlayerService(databasePool);
 const DEFAULT_STATS_WINDOW_DAYS = 7;
@@ -139,8 +160,36 @@ const createGameRoom = (roomId: string, friendsOnly: boolean = false): GameRoomS
   statsRecorded: false,
 });
 
-const getPlayerByName = (room: GameRoomState, playerName: string) => {
-  return room.players.find(p => p.name === playerName);
+const removePlayerFromRoom = (
+  io: SocketIOServer,
+  roomId: string,
+  playerId: number,
+  reason: 'left' | 'disconnected'
+) => {
+  const room = gameRooms.get(roomId);
+  if (!room) return;
+
+  const playerIndex = room.players.findIndex(player => player.id === playerId);
+  if (playerIndex === -1) return;
+
+  const removedPlayer = room.players[playerIndex];
+  room.players.splice(playerIndex, 1);
+  io.to(roomId).emit('player_disconnected', removedPlayer.name);
+
+  if (room.gameStarted && !room.gameCompleted && room.players.length < 2) {
+    const winner = room.players[0] || null;
+    endGame(
+      io,
+      roomId,
+      winner,
+      reason === 'left' ? 'Opponent left the room.' : 'Opponent disconnected.'
+    );
+  }
+
+  room.currentPlayerIndex = room.players.length > 0
+    ? room.currentPlayerIndex % room.players.length
+    : 0;
+  io.to(roomId).emit('room_updated', room);
 };
 
 const hasPlayerBeenUsed = (room: GameRoomState, playerId: number) => {
@@ -328,22 +377,53 @@ export const createServer = (): { app: Express; server: HttpServer } => {
   io.on('connection', (socket: Socket) => {
     console.log(`User connected: ${socket.id}`);
 
+    const bindSocketToPlayer = (roomId: string, playerId: number) => {
+      clearDisconnectGraceTimer(roomId, playerId);
+
+      for (const [boundSocketId, binding] of socketRoomBindings.entries()) {
+        if (
+          binding.roomId === roomId
+          && binding.playerId === playerId
+          && boundSocketId !== socket.id
+        ) {
+          socketRoomBindings.delete(boundSocketId);
+          const staleSocket = io.sockets.sockets.get(boundSocketId);
+          staleSocket?.disconnect(true);
+        }
+      }
+
+      socketRoomBindings.set(socket.id, { roomId, playerId });
+    };
+
     socket.on('create_room', (friendsOnly: boolean = false) => {
       const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-      socket.join(roomId);
       gameRooms.set(roomId, createGameRoom(roomId, friendsOnly));
       socket.emit('room_created', { success: true, message: `Room ${roomId} created successfully`, roomId });
     });
 
-    socket.on('join_matchmaking', (data: JoinMatchmakingRequest) => {
-      const { playerName, friendsOnly = false } = data;
+    socket.on('join_matchmaking', async (data: JoinMatchmakingRequest) => {
+      const normalizedName = normalizePlayerName(data.playerName ?? '');
+      const friendsOnly = data.friendsOnly ?? false;
+      if (!normalizedName || normalizedName.length > MAX_PLAYER_NAME_LENGTH) {
+        socket.emit('matchmaking_result', {
+          success: false,
+          message: `Name is required and must be ${MAX_PLAYER_NAME_LENGTH} characters or fewer.`,
+          joinedExisting: false,
+        });
+        return;
+      }
 
       let selectedRoomId: string | null = null;
       let joinedExisting = false;
 
       if (!friendsOnly) {
         for (const [roomId, room] of gameRooms.entries()) {
-          if (!room.friendsOnly && room.players.length < 2 && !room.gameStarted) {
+          if (
+            !room.friendsOnly
+            && room.players.length < 2
+            && !room.gameStarted
+            && !room.players.some(player => player.name.toLowerCase() === normalizedName.toLowerCase())
+          ) {
             selectedRoomId = roomId;
             joinedExisting = true;
             break;
@@ -357,10 +437,36 @@ export const createServer = (): { app: Express; server: HttpServer } => {
       }
 
       const room = gameRooms.get(selectedRoomId)!;
+      if (room.players.length >= 2 && !room.players.some(player => player.name.toLowerCase() === normalizedName.toLowerCase())) {
+        socket.emit('matchmaking_result', {
+          success: false,
+          message: 'Room is full.',
+          joinedExisting: joinedExisting,
+        });
+        return;
+      }
+
+      if (room.players.some(player => player.name.toLowerCase() === normalizedName.toLowerCase())) {
+        socket.emit('matchmaking_result', {
+          success: false,
+          message: 'That name is already in use for this room.',
+          joinedExisting: joinedExisting,
+        });
+        return;
+      }
+
       socket.join(selectedRoomId);
 
-      const player: Player = { id: Date.now(), name: playerName, position: 'G', socketId: socket.id };
+      const player: Player = {
+        id: generatePlayerId(room),
+        name: normalizedName,
+        position: 'G',
+        socketId: socket.id
+      };
       room.players.push(player);
+      bindSocketToPlayer(selectedRoomId, player.id);
+      const playerToken = issueSessionToken(selectedRoomId, player.id);
+
       io.to(selectedRoomId).emit('player_connected', player);
       io.to(selectedRoomId).emit('room_updated', room);
 
@@ -371,14 +477,26 @@ export const createServer = (): { app: Express; server: HttpServer } => {
           : `Created and joined room ${selectedRoomId}`,
         roomId: selectedRoomId,
         roomState: room,
-        joinedExisting
+        joinedExisting,
+        playerToken,
+        playerId: player.id,
       };
 
       socket.emit('matchmaking_result', response);
+      await startGame(io, selectedRoomId);
     });
 
     socket.on('join_room', async (data: JoinRoomRequest) => {
-      const { roomId, playerName } = data;
+      const { roomId, playerToken } = data;
+      const normalizedName = normalizePlayerName(data.playerName ?? '');
+      if (!normalizedName || normalizedName.length > MAX_PLAYER_NAME_LENGTH) {
+        socket.emit('room_joined', {
+          success: false,
+          message: `Name is required and must be ${MAX_PLAYER_NAME_LENGTH} characters or fewer.`,
+        });
+        return;
+      }
+
       let room = gameRooms.get(roomId);
       if (!room) {
         room = createGameRoom(roomId);
@@ -387,25 +505,66 @@ export const createServer = (): { app: Express; server: HttpServer } => {
 
       socket.join(roomId);
 
-      let player = room.players.find(p => p.name === playerName);
-      if (player) {
-        // Player already exists, update their socket ID
-        player.socketId = socket.id;
+      let player: Player | undefined;
+      if (playerToken) {
+        const claims = verifySessionToken(playerToken);
+        if (!claims || claims.roomId !== roomId) {
+          socket.emit('room_joined', { success: false, message: 'Invalid session token.' });
+          return;
+        }
+        player = room.players.find(existingPlayer => existingPlayer.id === claims.playerId);
+        if (!player) {
+          socket.emit('room_joined', { success: false, message: 'Session is no longer valid for this room.' });
+          return;
+        }
       } else {
-        // Add new player
-        player = { id: Date.now(), name: playerName, position: 'G', socketId: socket.id };
+        if (room.players.length >= 2) {
+          socket.emit('room_joined', { success: false, message: 'Room is full.' });
+          return;
+        }
+        if (room.players.some(existingPlayer => existingPlayer.name.toLowerCase() === normalizedName.toLowerCase())) {
+          socket.emit('room_joined', { success: false, message: 'That name is already in use for this room.' });
+          return;
+        }
+
+        player = { id: generatePlayerId(room), name: normalizedName, position: 'G', socketId: socket.id };
         room.players.push(player);
         io.to(roomId).emit('player_connected', player);
       }
+
+      player.socketId = socket.id;
+      bindSocketToPlayer(roomId, player.id);
+      const newSessionToken = issueSessionToken(roomId, player.id);
+
       io.to(roomId).emit('room_updated', room);
-
-
-      socket.emit('room_joined', { success: true, message: `Successfully joined room ${roomId}`, roomState: room });
+      socket.emit('room_joined', {
+        success: true,
+        message: `Successfully joined room ${roomId}`,
+        roomState: room,
+        playerToken: newSessionToken,
+        playerId: player.id,
+      });
       startGame(io, roomId);
     });
 
     socket.on('submit_move', async (data: SubmitMoveRequest) => {
-      const { roomId, player, connectedPlayer } = data;
+      const { roomId, connectedPlayer, playerToken } = data;
+      const claims = verifySessionToken(playerToken);
+      if (!claims || claims.roomId !== roomId) {
+        socket.emit('game_error', 'Invalid session token.');
+        return;
+      }
+
+      const socketBinding = socketRoomBindings.get(socket.id);
+      if (
+        !socketBinding
+        || socketBinding.roomId !== roomId
+        || socketBinding.playerId !== claims.playerId
+      ) {
+        socket.emit('game_error', 'Socket identity does not match session.');
+        return;
+      }
+
       const room = gameRooms.get(roomId);
 
       if (!room || room.gameCompleted) {
@@ -414,8 +573,14 @@ export const createServer = (): { app: Express; server: HttpServer } => {
         return;
       }
 
+      const requestingPlayer = room.players.find(player => player.id === claims.playerId);
+      if (!requestingPlayer) {
+        socket.emit('game_error', 'Player is not part of this room.');
+        return;
+      }
+
       const currentPlayerTurn = room.players[room.currentPlayerIndex];
-      if (currentPlayerTurn.socketId !== socket.id) {
+      if (currentPlayerTurn.id !== requestingPlayer.id) {
         socket.emit('game_error', 'Not your turn.');
         io.to(roomId).emit('game_error', `${currentPlayerTurn.name}'s turn.`);
         return;
@@ -458,12 +623,13 @@ export const createServer = (): { app: Express; server: HttpServer } => {
           }
         }
 
+        const previousConnectedPlayer = room.lastConnectedPlayer;
         room.moves.push({ playerId: connectedPlayer.id, playerName: connectedPlayer.name, position: connectedPlayer.position });
         room.lastConnectedPlayer = connectedPlayer;
 
         io.to(roomId).emit('move_submitted', {
           success: true,
-          message: `${connectedPlayer.name} connected to ${room.lastConnectedPlayer ? 'chain' : 'start'}!`,
+          message: `${connectedPlayer.name} connected to ${previousConnectedPlayer ? 'chain' : 'start'}!`,
           roomState: room
         });
         io.to(roomId).emit('room_updated', room);
@@ -475,38 +641,53 @@ export const createServer = (): { app: Express; server: HttpServer } => {
       }
     });
 
-    socket.on('leave_room', (roomId: string) => {
-      socket.leave(roomId);
-      const room = gameRooms.get(roomId);
-      if (room) {
-        const playerIndex = room.players.findIndex(p => p.socketId === socket.id);
-        if (playerIndex !== -1) {
-          const playerName = room.players[playerIndex].name;
-          room.players.splice(playerIndex, 1);
-          io.to(roomId).emit('player_disconnected', playerName);
-          if (room.gameStarted && !room.gameCompleted && room.players.length < 2) {
-            const winner = room.players[0] || null;
-            endGame(io, roomId, winner, 'Opponent left the room.');
-          }
-          io.to(roomId).emit('room_updated', room);
-        }
+    socket.on('leave_room', (data: LeaveRoomRequest) => {
+      const { roomId, playerToken } = data;
+      const claims = verifySessionToken(playerToken);
+      if (!claims || claims.roomId !== roomId) {
+        socket.emit('game_error', 'Invalid session token.');
+        return;
       }
+
+      const socketBinding = socketRoomBindings.get(socket.id);
+      if (
+        !socketBinding
+        || socketBinding.roomId !== roomId
+        || socketBinding.playerId !== claims.playerId
+      ) {
+        socket.emit('game_error', 'Socket identity does not match session.');
+        return;
+      }
+
+      socket.leave(roomId);
+      socketRoomBindings.delete(socket.id);
+      clearDisconnectGraceTimer(roomId, claims.playerId);
+      removePlayerFromRoom(io, roomId, claims.playerId, 'left');
     });
 
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.id}`);
-      for (const [roomId, room] of gameRooms.entries()) {
-        const playerIndex = room.players.findIndex(p => p.socketId === socket.id);
-        if (playerIndex !== -1) {
-          const disconnectedPlayer = room.players[playerIndex];
-          room.players.splice(playerIndex, 1);
-          io.to(roomId).emit('player_disconnected', disconnectedPlayer.name);
-          if (room.gameStarted && !room.gameCompleted && room.players.length < 2) {
-            const winner = room.players[0] || null;
-            endGame(io, roomId, winner, 'Opponent disconnected.');
+      const binding = socketRoomBindings.get(socket.id);
+      if (binding) {
+        socketRoomBindings.delete(socket.id);
+        const key = getDisconnectGraceKey(binding.roomId, binding.playerId);
+        clearDisconnectGraceTimer(binding.roomId, binding.playerId);
+
+        const timer = setTimeout(() => {
+          const stillBound = Array.from(socketRoomBindings.values()).some(
+            (activeBinding) =>
+              activeBinding.roomId === binding.roomId
+              && activeBinding.playerId === binding.playerId
+          );
+
+          if (!stillBound) {
+            removePlayerFromRoom(io, binding.roomId, binding.playerId, 'disconnected');
           }
-          io.to(roomId).emit('room_updated', room);
-        }
+
+          disconnectGraceTimers.delete(key);
+        }, DISCONNECT_GRACE_PERIOD_MS);
+
+        disconnectGraceTimers.set(key, timer);
       }
     });
   });

@@ -16,7 +16,20 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": [
+        "DATABASE_URL",
+        "DB_HOST",
+        "DB_PORT",
+        "DB_NAME",
+        "DB_USER",
+        "DB_PASSWORD",
+        "NODE_ENV",
+        "PORT",
+        "CORS_ORIGIN",
+        "NEXT_PUBLIC_API_URL",
+        "NEXT_PUBLIC_API_HOST"
+      ]
     },
     "clean": {
       "cache": false
