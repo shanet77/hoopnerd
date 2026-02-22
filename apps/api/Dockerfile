@@ -6,7 +6,7 @@ FROM node:${NODE_VERSION}-slim AS base
 # Make sure you update this Dockerfile, the Dockerfile in the web workspace and copy that over to Dockerfile in the docs.
 
 # Shared toolchain for all stages
-RUN corepack enable && corepack prepare pnpm@10.28.0 --activate && npm i -g turbo
+RUN corepack enable && corepack prepare pnpm@10.30.1 --activate && npm i -g turbo
 
 FROM base AS prepare
 WORKDIR /app

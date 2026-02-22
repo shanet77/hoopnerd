@@ -9,7 +9,7 @@ FROM node:${NODE_VERSION}-slim AS base
 WORKDIR /app
 
 # Shared toolchain for all stages
-RUN corepack enable && corepack prepare pnpm@10.28.0 --activate && npm i -g turbo
+RUN corepack enable && corepack prepare pnpm@10.30.1 --activate && npm i -g turbo
 
 # ---
 FROM base AS prepare
