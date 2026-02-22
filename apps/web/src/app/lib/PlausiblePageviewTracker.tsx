@@ -6,19 +6,19 @@ import { isPlausibleEnabled, trackPageview } from "./analytics";
 
 export default function PlausiblePageviewTracker() {
   const pathname = usePathname();
-  const hasTrackedFirstViewRef = useRef(false);
+  const lastTrackedPathRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isPlausibleEnabled) {
       return;
     }
-    if (!hasTrackedFirstViewRef.current) {
-      hasTrackedFirstViewRef.current = true;
-      return;
-    }
     const search =
       typeof window !== "undefined" ? window.location.search : "";
     const pathWithQuery = search ? `${pathname}${search}` : pathname;
+    if (lastTrackedPathRef.current === pathWithQuery) {
+      return;
+    }
+    lastTrackedPathRef.current = pathWithQuery;
     trackPageview(pathWithQuery);
   }, [pathname]);
 

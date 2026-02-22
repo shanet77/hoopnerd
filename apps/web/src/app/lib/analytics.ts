@@ -21,7 +21,16 @@ const callPlausible = (eventName: string, options?: PlausibleOptions) => {
   if (!isPlausibleEnabled || typeof window === "undefined") {
     return;
   }
-  window.plausible?.(eventName, options);
+
+  if (typeof window.plausible !== "function") {
+    console.warn("[plausible] window.plausible is not available", {
+      eventName,
+      options,
+    });
+    return;
+  }
+
+  window.plausible(eventName, options);
 };
 
 export const trackPageview = (path?: string) => {
