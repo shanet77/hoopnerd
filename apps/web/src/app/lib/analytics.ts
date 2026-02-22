@@ -12,21 +12,10 @@ declare global {
   }
 }
 
-const PLAUSIBLE_HOST_FALLBACK = "https://plausible.io";
+export const plausibleScriptSrc =
+  process.env.NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC?.trim() || "";
 
-const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
-
-export const plausibleDomain =
-  process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim() || "";
-
-export const plausibleApiHost = trimTrailingSlash(
-  process.env.NEXT_PUBLIC_PLAUSIBLE_API_HOST?.trim() ||
-    PLAUSIBLE_HOST_FALLBACK,
-);
-
-export const plausibleScriptSrc = `${plausibleApiHost}/js/script.manual.js`;
-
-export const isPlausibleEnabled = plausibleDomain.length > 0;
+export const isPlausibleEnabled = plausibleScriptSrc.length > 0;
 
 const callPlausible = (eventName: string, options?: PlausibleOptions) => {
   if (!isPlausibleEnabled || typeof window === "undefined") {

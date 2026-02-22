@@ -5,7 +5,7 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**", "public/dist/**"],
       "dependsOn": ["^build"],
-      "env": ["NEXT_PUBLIC_API_HOST"]
+      "env": ["NEXT_PUBLIC_API_HOST", "NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC"]
     },
     "test": {
       "outputs": ["coverage/**"],
@@ -28,7 +28,8 @@
         "PORT",
         "CORS_ORIGIN",
         "NEXT_PUBLIC_API_URL",
-        "NEXT_PUBLIC_API_HOST"
+        "NEXT_PUBLIC_API_HOST",
+        "NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC"
       ]
     },
     "clean": {
