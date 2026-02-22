@@ -81,6 +81,8 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.hoopnerd.xyz}
         NEXT_PUBLIC_API_HOST: ${NEXT_PUBLIC_API_HOST:-https://api.hoopnerd.xyz}
+        NEXT_PUBLIC_PLAUSIBLE_DOMAIN: ${NEXT_PUBLIC_PLAUSIBLE_DOMAIN:-hoopnerd.xyz}
+        NEXT_PUBLIC_PLAUSIBLE_API_HOST: ${NEXT_PUBLIC_PLAUSIBLE_API_HOST:-https://plausible.io}
     restart: unless-stopped
     environment:
       NODE_ENV: production

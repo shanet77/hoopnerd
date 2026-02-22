@@ -18,6 +18,7 @@ import {
   createRoom,
   joinMatchmaking,
 } from "./lib/socket";
+import { trackEvent } from "./lib/analytics";
 import { setPlayerSession } from "./lib/playerSession";
 import ClientOnly from "../components/ClientOnly";
 
@@ -72,13 +73,16 @@ function LobbyPage() {
     try {
       const response = await createRoom(socket, false);
       if (response.success) {
+        trackEvent("room_created", { mode: "public" });
         router.push(`/room/${response.roomId}?playerName=${playerName}`);
       } else {
         setFeedbackMessage(`Failed to create room: ${response.message}`);
+        trackEvent("room_create_failed", { mode: "public" });
       }
     } catch (error) {
       console.error("Error creating room:", error);
       setFeedbackMessage("An error occurred while creating the room.");
+      trackEvent("room_create_error", { mode: "public" });
     }
   };
 
@@ -96,15 +100,18 @@ function LobbyPage() {
     try {
       const response = await createRoom(socket, true);
       if (response.success) {
+        trackEvent("room_created", { mode: "friends_only" });
         router.push(
           `/room/${response.roomId}?playerName=${playerName}&friendsOnly=true`,
         );
       } else {
         setFeedbackMessage(`Failed to create room: ${response.message}`);
+        trackEvent("room_create_failed", { mode: "friends_only" });
       }
     } catch (error) {
       console.error("Error creating friends room:", error);
       setFeedbackMessage("An error occurred while creating the friends room.");
+      trackEvent("room_create_error", { mode: "friends_only" });
     }
   };
 
@@ -121,6 +128,7 @@ function LobbyPage() {
 
     setIsMatchmaking(true);
     setFeedbackMessage("Searching for a game...");
+    trackEvent("matchmaking_started");
 
     try {
       const response = await joinMatchmaking(socket, {
@@ -128,6 +136,9 @@ function LobbyPage() {
         friendsOnly: false,
       });
       if (response.success) {
+        trackEvent("matchmaking_joined_room", {
+          joined_existing_room: response.joinedExisting,
+        });
         if (response.roomId && response.playerToken && typeof response.playerId === "number") {
           setPlayerSession(response.roomId, playerName, {
             token: response.playerToken,
@@ -137,10 +148,12 @@ function LobbyPage() {
         router.push(`/room/${response.roomId}?playerName=${playerName}`);
       } else {
         setFeedbackMessage(`Matchmaking failed: ${response.message}`);
+        trackEvent("matchmaking_failed");
       }
     } catch (error) {
       console.error("Error joining matchmaking:", error);
       setFeedbackMessage("An error occurred during matchmaking.");
+      trackEvent("matchmaking_error");
     } finally {
       setIsMatchmaking(false);
     }
@@ -159,6 +172,7 @@ function LobbyPage() {
       return;
     }
 
+    trackEvent("room_code_join_submitted");
     router.push(`/room/${roomId}?playerName=${playerName}`);
   };
 

@@ -10,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
-  CardFooter,
   CardDescription,
 } from "@repo/ui/card";
 import { Badge } from "@repo/ui/badge";
@@ -21,6 +20,7 @@ import {
   submitMove,
   leaveRoom,
 } from "../../lib/socket";
+import { trackEvent } from "../../lib/analytics";
 import {
   clearPlayerSession,
   getPlayerSession,
@@ -74,6 +74,8 @@ function GamePage() {
   const [playerToken, setPlayerToken] = useState<string>(existingSession?.token ?? "");
   const [myPlayerId, setMyPlayerId] = useState<number | null>(existingSession?.playerId ?? null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const hasTrackedJoinRef = useRef(false);
+  const latestMoveCountRef = useRef(0);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -84,6 +86,14 @@ function GamePage() {
     }
     return () => clearInterval(timer);
   }, [roomState?.gameStarted, roomState?.gameCompleted]);
+
+  useEffect(() => {
+    latestMoveCountRef.current = roomState?.moves.length || 0;
+  }, [roomState?.moves.length]);
+
+  useEffect(() => {
+    hasTrackedJoinRef.current = false;
+  }, [roomId, playerName]);
 
   useEffect(() => {
     if (socket) {
@@ -105,6 +115,10 @@ function GamePage() {
                   response.roomState.players[response.roomState.currentPlayerIndex],
                 );
               }
+              trackEvent("room_rejoined", {
+                player_count: response.roomState?.players.length || 0,
+                game_started: response.roomState?.gameStarted || false,
+              });
               if (response.playerToken) {
                 setPlayerToken(response.playerToken);
               }
@@ -119,10 +133,12 @@ function GamePage() {
               }
             } else {
               setGameMessage(`Failed to rejoin room: ${response.message}`);
+              trackEvent("room_rejoin_failed");
             }
           }).catch((error) => {
             console.error("Error rejoining room:", error);
             setGameMessage("Failed to rejoin room. Please refresh and try again.");
+            trackEvent("room_rejoin_error");
           });
         }
       };
@@ -142,6 +158,10 @@ function GamePage() {
         setRoomState(state);
         setActivePlayer(state.players[state.currentPlayerIndex]);
         setTimeRemaining(25);
+        trackEvent("game_started", {
+          player_count: state.players.length,
+          friends_only: state.friendsOnly,
+        });
       });
 
       socket.on("turn_changed", (player: Player) => {
@@ -162,6 +182,11 @@ function GamePage() {
           setWinner(gameWinner);
           setWinReason(reason);
           setGameMessage(`Game Over! ${gameWinner.name} wins!`);
+          trackEvent("game_over", {
+            winner_is_me:
+              typeof myPlayerId === "number" && gameWinner.id === myPlayerId,
+            move_count: latestMoveCountRef.current,
+          });
         },
       );
 
@@ -197,7 +222,7 @@ function GamePage() {
         socket.off("game_over");
       };
     }
-  }, [socket, socketConnected, playerToken, roomId, playerName]);
+  }, [socket, socketConnected, playerToken, roomId, playerName, myPlayerId]);
 
   useEffect(() => {
     if (socket && socketConnected && roomId && playerName && !playerToken) {
@@ -223,8 +248,16 @@ function GamePage() {
               playerId: response.playerId,
             });
           }
+          if (!hasTrackedJoinRef.current) {
+            trackEvent("room_joined", {
+              player_count: response.roomState?.players.length || 0,
+              game_started: response.roomState?.gameStarted || false,
+            });
+            hasTrackedJoinRef.current = true;
+          }
         } else {
           setGameMessage(`Failed to join room: ${response.message}`);
+          trackEvent("room_join_failed");
           clearPlayerSession(roomId, playerName);
           setPlayerToken("");
           setMyPlayerId(null);
@@ -232,6 +265,7 @@ function GamePage() {
       }).catch((error) => {
         console.error("Error joining room:", error);
         setGameMessage("Failed to join room. Please refresh and try again.");
+        trackEvent("room_join_error");
       });
     }
   }, [socket, socketConnected, roomId, playerName, playerToken]);
@@ -307,15 +341,20 @@ function GamePage() {
 
       if (response.success) {
         setGameMessage(response.message);
+        trackEvent("move_submitted", {
+          move_count: response.roomState?.moves.length || latestMoveCountRef.current + 1,
+        });
         setConnectedPlayer(null);
         setSearchQuery("");
         setSearchResults([]);
       } else {
         setGameMessage(response.message);
+        trackEvent("move_rejected");
       }
     } catch (error) {
       console.error("Error submitting move:", error);
       setGameMessage("Error submitting move");
+      trackEvent("move_submit_error");
     }
   };
 
@@ -323,6 +362,7 @@ function GamePage() {
     if (roomState && socket && playerToken) {
       leaveRoom(socket, { roomId: roomState.roomId, playerToken });
     }
+    trackEvent("room_left");
     clearPlayerSession(roomId, playerName);
     setPlayerToken("");
     setMyPlayerId(null);
