@@ -50,6 +50,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
+      SOCKET_SESSION_SECRET: ${SOCKET_SESSION_SECRET}
       DATABASE_URL: ${DATABASE_URL}
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT:-5432}
