@@ -4,11 +4,14 @@
   "private": true,
   "license": "MIT",
   "files": [
-    "node/jest-preset.js"
+    "node/jest-preset.js",
+    "node/jest-preset-react.js"
   ],
   "exports": {
     "./node": "./node/jest-preset.js",
-    "./node/jest-preset": "./node/jest-preset.js"
+    "./node/jest-preset": "./node/jest-preset.js",
+    "./react": "./node/jest-preset-react.js",
+    "./react/jest-preset": "./node/jest-preset-react.js"
   },
   "dependencies": {
     "jest": "^30.2.0",

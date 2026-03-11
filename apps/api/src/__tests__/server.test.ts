@@ -5,16 +5,26 @@ import { Server as HttpServer } from 'http';
 import { io, Socket } from 'socket.io-client';
 import { GameRoomState, Player } from "@repo/types";
 import { AddressInfo } from "net";
-import { validateMove } from "@repo/logic";
+import { getConnectionDetails, validateMove } from "@repo/logic";
 import type { Express } from "express";
+import databasePool from "@repo/database";
 
 // Mock the validateMove function from the @repo/logic package
 jest.mock('@repo/logic', () => ({
   __esModule: true,
   validateMove: jest.fn<typeof validateMove>(),
+  getConnectionDetails: jest.fn<typeof getConnectionDetails>(),
+}));
+jest.mock("@repo/database", () => ({
+  __esModule: true,
+  default: {
+    query: jest.fn(),
+  },
 }));
 
 const mockValidateMove = validateMove as jest.Mock<typeof validateMove>;
+const mockGetConnectionDetails = getConnectionDetails as jest.Mock<typeof getConnectionDetails>;
+const mockDbQuery = databasePool.query as unknown as jest.Mock<any>;
 
 // Helper function to create a socket client
 const createSocketClient = (port: number): Socket => {
@@ -48,6 +58,11 @@ describe("API Server", () => {
   // Assign the mock to a variable for easier access and control
   beforeEach(() => {
     mockValidateMove.mockClear(); // Clear mock calls before each test
+    mockGetConnectionDetails.mockClear();
+    mockDbQuery.mockReset();
+    mockDbQuery.mockResolvedValue({
+      rows: [{ id: 1, name: "Tim Duncan", position: "PF" }],
+    });
   });
 
   it("health check returns 200", async () => {
@@ -60,11 +75,42 @@ describe("API Server", () => {
   });
 
   it("player search endpoint works", async () => {
+    mockDbQuery.mockResolvedValueOnce({
+      rows: [{ id: 10, name: "Tony Parker", position: "PG" }],
+    });
     await supertest(app)
       .get("/api/players/search?q=test")
       .expect(200)
       .then((res) => {
         expect(Array.isArray(res.body)).toBe(true);
+        expect(res.body[0].name).toBe("Tony Parker");
+      });
+  });
+
+  it("player search endpoint validates missing query", async () => {
+    await supertest(app)
+      .get("/api/players/search?q=")
+      .expect(400)
+      .then((res) => {
+        expect(res.body.error).toContain("Query parameter");
+      });
+  });
+
+  it("stats endpoint parses clamped window and timezone", async () => {
+    mockDbQuery
+      .mockResolvedValueOnce({ rows: [{ name: "Tim Duncan", count: 3 }] })
+      .mockResolvedValueOnce({ rows: [{ name: "Spurs", count: 4 }] })
+      .mockResolvedValueOnce({ rows: [{ seasonYear: 2005, count: 5 }] })
+      .mockResolvedValueOnce({ rows: [{ longest: 8 }] });
+
+    await supertest(app)
+      .get("/api/stats?windowDays=900&tz=America%2FChicago")
+      .expect(200)
+      .then((res) => {
+        expect(res.body.windowDays).toBe(365);
+        expect(res.body.timezone).toBe("America/Chicago");
+        expect(res.body.longestStreak).toBe(8);
+        expect(res.body.players[0].name).toBe("Tim Duncan");
       });
   });
 
@@ -137,6 +183,27 @@ describe("API Server", () => {
         expect(roomState.gameStarted).toBe(true);
         expect(roomState.players).toHaveLength(2);
         expect(roomState.currentPlayerIndex).toBeDefined();
+        done();
+      });
+    });
+
+    it("should reject duplicate player names in a room", (done) => {
+      let roomId: string;
+
+      client1.emit("create_room");
+      client1.on("room_created", (response) => {
+        roomId = response.roomId;
+        client1.emit("join_room", { roomId, playerName: player1.name });
+      });
+
+      client1.on("room_joined", (response) => {
+        expect(response.success).toBe(true);
+        client2.emit("join_room", { roomId, playerName: player1.name });
+      });
+
+      client2.on("room_joined", (response) => {
+        expect(response.success).toBe(false);
+        expect(response.message.toLowerCase()).toContain("already in use");
         done();
       });
     });
@@ -269,7 +336,6 @@ describe("API Server", () => {
     it("should end the game if a player disconnects", (done) => {
       let roomId: string;
       let gameStarted = false;
-      let playersJoined = 0;
 
       client1.emit('create_room');
       client1.on('room_created', (response) => {
@@ -279,10 +345,11 @@ describe("API Server", () => {
 
       client1.on('room_joined', (response) => {
         expect(response.success).toBe(true);
-        playersJoined++;
-        if (playersJoined === 1) {
-          client2.emit('join_room', { roomId, playerName: player2.name });
-        }
+        client2.emit('join_room', { roomId, playerName: player2.name });
+      });
+
+      client2.on('room_joined', (response) => {
+        expect(response.success).toBe(true);
       });
 
       client1.on('game_started', () => {
@@ -297,6 +364,6 @@ describe("API Server", () => {
         expect(data.reason).toContain('disconnected');
         done();
       });
-    });
+    }, 26000);
   });
 });

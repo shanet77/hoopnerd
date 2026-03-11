@@ -258,3 +258,5 @@ export class PlayerService {
     return result.rows.length > 0 ? result.rows[0] : null;
   }
 }
+
+export * from "./testing";

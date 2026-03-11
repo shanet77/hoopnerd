@@ -21,6 +21,14 @@ import {
   normalizePlayerName,
   verifySessionToken,
 } from "./socketAuth";
+import {
+  buildAllowedOrigins,
+  createGameRoom,
+  hasPlayerBeenUsed,
+  isOriginAllowed,
+  parseTimezone,
+  parseWindowDays,
+} from "./serverUtils";
 
 // In-memory storage for game rooms (in production, you might use Redis)
 const gameRooms: Map<string, GameRoomState> = new Map();
@@ -40,48 +48,7 @@ const clearDisconnectGraceTimer = (roomId: string, playerId: number) => {
   }
 };
 
-const playerService = new PlayerService(databasePool);
-const DEFAULT_STATS_WINDOW_DAYS = 7;
-const DEFAULT_STATS_TIMEZONE = 'America/New_York';
-const DEFAULT_ALLOWED_ORIGINS = ['https://hoopnerd.xyz', 'https://www.hoopnerd.xyz'];
-
-const parseAllowedOrigins = (raw: string | undefined): string[] => {
-  if (!raw) return [];
-  return raw
-    .split(',')
-    .map(origin => origin.trim())
-    .filter(Boolean);
-};
-
-const buildAllowedOrigins = () => {
-  if (process.env.NODE_ENV !== 'production') {
-    return ['*'];
-  }
-
-  const configured = parseAllowedOrigins(process.env.CORS_ORIGIN);
-  return configured.length > 0 ? configured : DEFAULT_ALLOWED_ORIGINS;
-};
-
-const allowedOrigins = buildAllowedOrigins();
-
-const isOriginAllowed = (origin: string | undefined) => {
-  if (!origin) return true;
-  if (allowedOrigins.includes('*')) return true;
-  return allowedOrigins.includes(origin);
-};
-
-const parseWindowDays = (value: unknown): number => {
-  const parsed = typeof value === 'string' ? Number.parseInt(value, 10) : Number.NaN;
-  if (!Number.isFinite(parsed)) return DEFAULT_STATS_WINDOW_DAYS;
-  return Math.min(Math.max(parsed, 1), 365);
-};
-
-const parseTimezone = (value: unknown): string => {
-  if (typeof value !== 'string' || value.trim() === '') {
-    return DEFAULT_STATS_TIMEZONE;
-  }
-  return value.trim();
-};
+const allowedOrigins = buildAllowedOrigins(process.env.NODE_ENV, process.env.CORS_ORIGIN);
 
 const recordStatsForRoom = async (room: GameRoomState) => {
   if (room.statsRecorded) return;
@@ -145,21 +112,6 @@ const endGame = (
   });
 };
 
-const createGameRoom = (roomId: string, friendsOnly: boolean = false): GameRoomState => ({
-  roomId,
-  players: [],
-  moves: [],
-  currentPlayerIndex: 0,
-  gameStarted: false,
-  gameCompleted: false,
-  winner: null,
-  startingPlayer: null,
-  connections: [],
-  lastConnectedPlayer: null,
-  friendsOnly,
-  statsRecorded: false,
-});
-
 const removePlayerFromRoom = (
   io: SocketIOServer,
   roomId: string,
@@ -192,13 +144,6 @@ const removePlayerFromRoom = (
   io.to(roomId).emit('room_updated', room);
 };
 
-const hasPlayerBeenUsed = (room: GameRoomState, playerId: number) => {
-  if (room.startingPlayer?.id === playerId) {
-    return true;
-  }
-  return room.moves.some(move => move.playerId === playerId);
-};
-
 const switchTurn = (io: SocketIOServer, room: GameRoomState) => {
   room.currentPlayerIndex = (room.currentPlayerIndex + 1) % room.players.length;
   io.to(room.roomId).emit('turn_changed', room.players[room.currentPlayerIndex]);
@@ -223,7 +168,11 @@ const startTurnTimer = (io: SocketIOServer, roomId: string) => {
   roomTimers.set(roomId, timer);
 };
 
-const startGame = async (io: SocketIOServer, roomId: string) => {
+const startGame = async (
+  io: SocketIOServer,
+  roomId: string,
+  playerService: PlayerService
+) => {
   const room = gameRooms.get(roomId);
   if (room && room.players.length >= 2 && !room.gameStarted) {
     room.gameStarted = true;
@@ -241,12 +190,24 @@ const startGame = async (io: SocketIOServer, roomId: string) => {
   }
 };
 
-export const createServer = (): { app: Express; server: HttpServer } => {
+type CreateServerDependencies = {
+  moveValidator?: typeof validateMove;
+  connectionDetailsProvider?: typeof getConnectionDetails;
+  playerService?: PlayerService;
+};
+
+export const createServer = (
+  dependencies: CreateServerDependencies = {}
+): { app: Express; server: HttpServer } => {
   const app = express();
   const server = new HttpServer(app);
+  const moveValidator = dependencies.moveValidator ?? validateMove;
+  const connectionDetailsProvider =
+    dependencies.connectionDetailsProvider ?? getConnectionDetails;
+  const playerService = dependencies.playerService ?? new PlayerService(databasePool);
   const corsOptions: CorsOptions = {
     origin: (origin, callback) => {
-      if (isOriginAllowed(origin)) {
+      if (isOriginAllowed(allowedOrigins, origin)) {
         callback(null, true);
         return;
       }
@@ -483,7 +444,7 @@ export const createServer = (): { app: Express; server: HttpServer } => {
       };
 
       socket.emit('matchmaking_result', response);
-      await startGame(io, selectedRoomId);
+      await startGame(io, selectedRoomId, playerService);
     });
 
     socket.on('join_room', async (data: JoinRoomRequest) => {
@@ -544,7 +505,7 @@ export const createServer = (): { app: Express; server: HttpServer } => {
         playerToken: newSessionToken,
         playerId: player.id,
       });
-      startGame(io, roomId);
+      startGame(io, roomId, playerService);
     });
 
     socket.on('submit_move', async (data: SubmitMoveRequest) => {
@@ -602,7 +563,11 @@ export const createServer = (): { app: Express; server: HttpServer } => {
         }
 
         if (room.lastConnectedPlayer) {
-          const isValidMove = await validateMove(databasePool, room.lastConnectedPlayer.id, connectedPlayer.id);
+          const isValidMove = await moveValidator(
+            databasePool,
+            room.lastConnectedPlayer.id,
+            connectedPlayer.id
+          );
 
           if (!isValidMove) {
             const errorMsg = `Invalid connection! ${connectedPlayer.name} did not play with ${room.lastConnectedPlayer.name}`;
@@ -617,7 +582,11 @@ export const createServer = (): { app: Express; server: HttpServer } => {
             return;
           }
 
-          const connection = await getConnectionDetails(databasePool, room.lastConnectedPlayer.id, connectedPlayer.id);
+          const connection = await connectionDetailsProvider(
+            databasePool,
+            room.lastConnectedPlayer.id,
+            connectedPlayer.id
+          );
           if (connection) {
             room.connections.push(connection);
           }

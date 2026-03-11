@@ -6,7 +6,11 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint . --max-warnings 0",
+    "test": "jest",
     "start": "next start"
+  },
+  "jest": {
+    "preset": "@repo/jest-presets/react"
   },
   "dependencies": {
     "@repo/types": "workspace:*",
@@ -17,16 +21,24 @@
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
+    "@jest/globals": "^30.2.0",
     "@next/eslint-plugin-next": "^16.1.6",
     "@repo/eslint-config": "workspace:*",
+    "@repo/jest-presets": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4.2.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^25.3.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "eslint": "^10.0.1",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^29.7.0",
     "postcss": "8.5.6",
     "tailwindcss": "4.2.0",
+    "ts-jest": "^29.4.6",
     "typescript": "5.9.3"
   }
 }

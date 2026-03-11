@@ -14,7 +14,7 @@
     "seed": "pnpm run build && node dist/seed.js",
     "migrate": "node src/migrate.ts",
     "lint": "eslint \"src/**/*.ts*\" --max-warnings 0",
-    "test": "jest"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "jest": {
     "preset": "@repo/jest-presets/node"
