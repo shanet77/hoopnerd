@@ -1,7 +1,16 @@
 import "./globals.css";
+import type { Metadata } from "next";
 import Script from "next/script";
 import PlausiblePageviewTracker from "./lib/PlausiblePageviewTracker";
 import { isPlausibleEnabled, plausibleScriptSrc } from "./lib/analytics";
+
+export const metadata: Metadata = {
+  icons: {
+    icon: "/basketball_favicon.png",
+    shortcut: "/basketball_favicon.png",
+    apple: "/basketball_favicon.png",
+  },
+};
 
 export default function RootLayout({
   children,
