@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
@@ -335,7 +336,13 @@ function LobbyPage() {
             <Card hover className="bg-white border-2 border-gray-200">
               <CardHeader className="text-center pb-2">
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-success-light rounded-2xl mx-auto mb-2 shadow-[0_4px_0_rgba(88,204,2,0.25)]">
-                  <span className="text-2xl">🏆</span>
+                  <Image
+                    src="/larry_obrien.svg"
+                    alt="Larry O'Brien Trophy"
+                    width={28}
+                    height={28}
+                    className="h-7 w-7 object-contain"
+                  />
                 </div>
                 <CardTitle className="text-gray-800">Weekly Leaderboard</CardTitle>
                 <CardDescription>Last 7 days • Top 5 only</CardDescription>
