@@ -33,6 +33,7 @@ type StatsResponse = {
   seasons: PopularSeason[];
   longestStreak: number;
 };
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 
 export default function Web() {
   return (
@@ -208,6 +209,9 @@ function LobbyPage() {
           </h1>
           <p className="text-gray-500 font-medium">
             Who played with who?
+          </p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Alpha • v{APP_VERSION}
           </p>
         </div>
 
