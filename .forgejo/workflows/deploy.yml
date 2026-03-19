@@ -1,15 +1,58 @@
-name: Deploy to VPS
+name: CI/CD
 
 on:
+  push:
+    branches:
+      - main
+  pull_request:
   workflow_dispatch:
 
 jobs:
-  disabled:
+  test:
     runs-on:
-      - forgejo
+      - linux-amd64
     steps:
-      - name: Workflow disabled
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
         run: |
-          echo "Docker build/push is disabled in Forgejo Actions for now."
-          echo "Build and deploy manually on VPS:"
-          echo "docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build --remove-orphans"
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Lint and test
+        run: |
+          set -euo pipefail
+          pnpm lint
+          pnpm test
+
+  deploy_prod:
+    if: github.ref == 'refs/heads/main'
+    needs: test
+    runs-on:
+      - linux-amd64
+    steps:
+      - name: Deploy to Racknerd over SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          PATH_ON_VPS: ${{ secrets.PATH_ON_VPS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          key_file=~/.ssh/prod_deploy_key
+          printf '%s\n' "${DEPLOY_SSH_KEY}" > "${key_file}"
+          chmod 600 "${key_file}"
+
+          ssh -i "${key_file}" -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "export DEPLOY_PATH='${DEPLOY_PATH}' PATH_ON_VPS='${PATH_ON_VPS}'; bash -s" \
+            < scripts/deploy-racknerd.sh
