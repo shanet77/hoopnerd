@@ -12,9 +12,26 @@ jobs:
     runs-on:
       - linux-amd64
     steps:
+      - name: Checkout repository
+        run: |
+          set -euo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}"
+          cd "${GITHUB_WORKSPACE}"
+          repo_host="${GITHUB_SERVER_URL#https://}"
+          repo_url="https://${repo_host}/${GITHUB_REPOSITORY}.git"
+          if [ ! -d .git ]; then
+            git init
+            git remote add origin "${repo_url}"
+          else
+            git remote set-url origin "${repo_url}"
+          fi
+          git fetch --depth=1 origin "${GITHUB_SHA}"
+          git checkout --detach FETCH_HEAD
+
       - name: Bootstrap Node.js 22
         run: |
           set -euo pipefail
+          cd "${GITHUB_WORKSPACE}"
           if ! command -v node >/dev/null 2>&1; then
             mkdir -p "$HOME/.local/node"
             curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz -o /tmp/node.tar.xz
@@ -27,6 +44,7 @@ jobs:
       - name: Install dependencies
         run: |
           set -euo pipefail
+          cd "${GITHUB_WORKSPACE}"
           export PATH="$HOME/.local/node/bin:$PATH"
           corepack enable
           pnpm install --frozen-lockfile
@@ -34,6 +52,7 @@ jobs:
       - name: Lint and test
         run: |
           set -euo pipefail
+          cd "${GITHUB_WORKSPACE}"
           export PATH="$HOME/.local/node/bin:$PATH"
           pnpm lint
           pnpm test
@@ -53,6 +72,7 @@ jobs:
           PATH_ON_VPS: ${{ secrets.PATH_ON_VPS }}
         run: |
           set -euo pipefail
+          cd "${GITHUB_WORKSPACE}"
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           key_file=~/.ssh/prod_deploy_key
