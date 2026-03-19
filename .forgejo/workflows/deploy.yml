@@ -12,23 +12,29 @@ jobs:
     runs-on:
       - linux-amd64
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+      - name: Bootstrap Node.js 22
+        run: |
+          set -euo pipefail
+          if ! command -v node >/dev/null 2>&1; then
+            mkdir -p "$HOME/.local/node"
+            curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz -o /tmp/node.tar.xz
+            tar -xJf /tmp/node.tar.xz -C "$HOME/.local/node" --strip-components=1
+          fi
+          export PATH="$HOME/.local/node/bin:$PATH"
+          node --version
+          npm --version
 
       - name: Install dependencies
         run: |
           set -euo pipefail
+          export PATH="$HOME/.local/node/bin:$PATH"
           corepack enable
           pnpm install --frozen-lockfile
 
       - name: Lint and test
         run: |
           set -euo pipefail
+          export PATH="$HOME/.local/node/bin:$PATH"
           pnpm lint
           pnpm test
 
