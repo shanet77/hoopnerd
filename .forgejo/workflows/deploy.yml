@@ -49,6 +49,13 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile
 
+      - name: Build workspace packages
+        run: |
+          set -euo pipefail
+          cd "${GITHUB_WORKSPACE}"
+          export PATH="$HOME/.local/node/bin:$PATH"
+          pnpm -r --if-present run build
+
       - name: Test
         run: |
           set -euo pipefail
