@@ -69,6 +69,22 @@ jobs:
     runs-on:
       - linux-amd64
     steps:
+      - name: Checkout repository
+        run: |
+          set -euo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}"
+          cd "${GITHUB_WORKSPACE}"
+          repo_host="${GITHUB_SERVER_URL#https://}"
+          repo_url="https://${repo_host}/${GITHUB_REPOSITORY}.git"
+          if [ ! -d .git ]; then
+            git init
+            git remote add origin "${repo_url}"
+          else
+            git remote set-url origin "${repo_url}"
+          fi
+          git fetch --depth=1 origin "${GITHUB_SHA}"
+          git checkout --detach FETCH_HEAD
+
       - name: Deploy to Racknerd over SSH
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
