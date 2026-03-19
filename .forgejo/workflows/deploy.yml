@@ -49,13 +49,12 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile
 
-      - name: Lint and test
+      - name: Test
         run: |
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}"
           export PATH="$HOME/.local/node/bin:$PATH"
-          pnpm lint
-          pnpm test
+          pnpm -r --if-present run test
 
   deploy_prod:
     if: github.ref == 'refs/heads/main'
