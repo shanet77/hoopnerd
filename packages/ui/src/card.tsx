@@ -33,7 +33,7 @@ export const CardHeader = ({ children, className = "" }: CardProps) => {
 
 export const CardTitle = ({ children, className = "" }: CardProps) => {
   return (
-    <h2 className={`text-xl font-bold text-gray-800 ${className}`}>
+    <h2 className={`font-title text-xl font-bold text-gray-800 ${className}`}>
       {children}
     </h2>
   );

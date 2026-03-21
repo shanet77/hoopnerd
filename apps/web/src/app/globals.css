@@ -100,6 +100,10 @@
   text-wrap: balance;
 }
 
+@utility font-title {
+  font-family: var(--font-oswald), sans-serif;
+}
+
 @utility btn-bounce {
   @apply font-bold py-3 px-6 rounded-2xl transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95;
   box-shadow: 0 4px 0 var(--shadow-color, rgba(0, 0, 0, 0.2));

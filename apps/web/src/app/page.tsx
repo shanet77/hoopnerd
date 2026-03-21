@@ -202,10 +202,7 @@ function LobbyPage() {
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-basketball rounded-2xl shadow-[0_6px_0_rgba(255,75,35,0.4)] mb-4">
-            <span className="text-4xl">🏀</span>
-          </div>
-          <h1 className="text-4xl font-bold text-gray-800 tracking-tight">
+          <h1 className="font-title text-4xl font-bold text-gray-800 tracking-tight">
             HoopNerd
           </h1>
           <p className="text-gray-500 font-medium">
@@ -297,9 +294,6 @@ function LobbyPage() {
 
             <Card hover>
               <CardHeader className="text-center pb-2">
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-brand-100 rounded-full mx-auto mb-2">
-                  <span className="text-2xl">🔑</span>
-                </div>
                 <CardTitle>Join with Code</CardTitle>
                 <CardDescription>Enter a room code from a friend</CardDescription>
               </CardHeader>
