@@ -38,6 +38,23 @@ export function PlayerGraph({
     return players;
   }, [startingPlayer, connections]);
 
+  const graphDescription = useMemo(() => {
+    if (!startingPlayer) {
+      return "Game will start with a random player.";
+    }
+    const connectionSummary =
+      connections.length === 0
+        ? "No connections yet."
+        : connections
+            .map((connection) => {
+              const season = connection.seasonYear ? ` in ${connection.seasonYear}` : "";
+              const team = connection.teamName ? ` with ${connection.teamName}` : "";
+              return `${connection.fromPlayer.name} to ${connection.toPlayer.name}${team}${season}`;
+            })
+            .join(". ");
+    return `Starting player: ${startingPlayer.name}. ${connectionSummary}`;
+  }, [startingPlayer, connections]);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -204,18 +221,29 @@ export function PlayerGraph({
 
   if (!startingPlayer && connections.length === 0) {
     return (
-      <div ref={containerRef} className="player-graph-container h-64 md:h-80 lg:h-96 p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <div
+        ref={containerRef}
+        className="player-graph-container h-64 md:h-80 lg:h-96 p-4 bg-gray-50 rounded-lg border border-gray-200"
+        aria-label="Player connection graph"
+      >
         <p className="text-gray-500 text-center">Game will start with a random player...</p>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className="player-graph-container h-64 md:h-80 lg:h-96 bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div
+      ref={containerRef}
+      className="player-graph-container h-64 md:h-80 lg:h-96 bg-white rounded-lg border border-gray-200 overflow-hidden"
+      aria-label="Player connection graph"
+    >
       <canvas
         ref={canvasRef}
         className="w-full"
+        role="img"
+        aria-label={graphDescription}
       />
+      <p className="sr-only">{graphDescription}</p>
     </div>
   );
 }

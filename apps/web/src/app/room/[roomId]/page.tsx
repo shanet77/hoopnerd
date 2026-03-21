@@ -272,17 +272,22 @@ function GamePage() {
 
   if (!socket) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <main
+        id="main-content"
+        className="min-h-screen bg-gray-50 flex items-center justify-center p-4"
+      >
         <Card className="max-w-md w-full text-center">
           <CardContent className="py-12 space-y-4">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 rounded-2xl animate-pulse">
               <span className="text-3xl">🏀</span>
             </div>
             <CardTitle>Connecting...</CardTitle>
-            <p className="text-gray-500">Setting up your game!</p>
+            <p className="text-gray-500" role="status" aria-live="polite">
+              Setting up your game!
+            </p>
           </CardContent>
         </Card>
-      </div>
+      </main>
     );
   }
 
@@ -374,16 +379,28 @@ function GamePage() {
   const isUrgent = timeRemaining <= 5;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4">
+    <main id="main-content" className="min-h-screen bg-gray-50 py-6 px-4">
       <div className="max-w-2xl mx-auto space-y-4">
+        <p className="sr-only" role="status" aria-live="polite">
+          {gameMessage}
+        </p>
         <div className="flex items-center justify-between">
-          <Button variant="secondary" size="sm" onClick={handleLeaveRoom}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleLeaveRoom}
+            aria-label="Leave room and return to lobby"
+          >
             ← Leave
           </Button>
-          <Badge variant={isConnected ? "success" : "error"} size="sm">
+          <Badge variant={isConnected ? "success" : "error"} size="sm" aria-live="polite">
             {isConnected ? "Online" : "Offline"}
           </Badge>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border-2 border-gray-200">
+          <div
+            className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border-2 border-gray-200"
+            role="group"
+            aria-label={`Room code ${roomId}`}
+          >
             <span className="text-lg">🏀</span>
             <span className="font-bold text-gray-700">{roomId}</span>
           </div>
@@ -418,11 +435,18 @@ function GamePage() {
                   <span className="text-sm font-bold text-gray-500 uppercase tracking-wide">
                     Current Turn
                   </span>
-                  <Badge variant={isMyTurn ? "basketball" : "info"} size="lg">
+                  <Badge variant={isMyTurn ? "basketball" : "info"} size="lg" aria-live="polite">
                     {isMyTurn ? "🎯 Your Turn!" : activePlayer?.name}
                   </Badge>
                 </div>
-                <div className="relative h-4 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="relative h-4 bg-gray-200 rounded-full overflow-hidden"
+                  role="progressbar"
+                  aria-label="Turn timer"
+                  aria-valuemin={0}
+                  aria-valuemax={25}
+                  aria-valuenow={timeRemaining}
+                >
                   <div
                     className={`absolute left-0 top-0 h-full rounded-full transition-all duration-1000 ${isUrgent ? "bg-error" : "bg-success"
                       }`}
@@ -445,7 +469,10 @@ function GamePage() {
             {gameMessage &&
               (gameMessage.includes("Invalid") ||
                 gameMessage.includes("not play with")) && (
-                <div className="p-4 bg-error-light border-2 border-error/30 rounded-2xl">
+                <div
+                  className="p-4 bg-error-light border-2 border-error/30 rounded-2xl"
+                  role="alert"
+                >
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">❌</span>
                     <p className="font-bold text-error-dark">{gameMessage}</p>
@@ -456,7 +483,11 @@ function GamePage() {
             {gameMessage &&
               !gameMessage.includes("Invalid") &&
               gameMessage.includes("turn") && (
-                <div className="p-3 bg-brand-100 border-2 border-brand/30 rounded-xl text-center">
+                <div
+                  className="p-3 bg-brand-100 border-2 border-brand/30 rounded-xl text-center"
+                  role="status"
+                  aria-live="polite"
+                >
                   <p className="font-bold text-brand-700">{gameMessage}</p>
                 </div>
               )}
@@ -559,16 +590,22 @@ function GamePage() {
                       />
 
                       {searchResults.length > 0 && (
-                        <div className="mt-2 bg-white border-2 border-gray-200 rounded-xl divide-y divide-gray-100 max-h-60 overflow-y-auto">
+                        <div
+                          className="mt-2 bg-white border-2 border-gray-200 rounded-xl divide-y divide-gray-100 max-h-60 overflow-y-auto"
+                          role="listbox"
+                          aria-label="Player search results"
+                        >
                           {searchResults.map((player) => (
-                            <div
+                            <button
                               key={player.id}
-                              className="p-3 cursor-pointer hover:bg-brand-50 transition-colors flex items-center gap-3"
+                              type="button"
+                              className="p-3 cursor-pointer hover:bg-brand-50 transition-colors flex items-center gap-3 w-full text-left"
                               onClick={() => {
                                 setConnectedPlayer(player);
                                 setSearchQuery("");
                                 setSearchResults([]);
                               }}
+                              aria-label={`Select ${player.name}${player.position ? `, ${player.position}` : ""}`}
                             >
                               <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center">
                                 <span className="text-lg">🏀</span>
@@ -581,7 +618,7 @@ function GamePage() {
                                   {player.position}
                                 </span>
                               </div>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       )}
@@ -673,6 +710,6 @@ function GamePage() {
           </Card>
         )}
       </div>
-    </div>
+    </main>
   );
 }

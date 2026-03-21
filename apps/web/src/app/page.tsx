@@ -199,7 +199,7 @@ function LobbyPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <main id="main-content" className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="text-center space-y-2">
           <h1 className="font-title text-4xl font-bold text-gray-800 tracking-tight">
@@ -221,12 +221,16 @@ function LobbyPage() {
                   <span className="text-sm font-bold text-gray-500 uppercase tracking-wide">
                     Status
                   </span>
-                  <Badge variant={isConnected ? "success" : "error"}>
+                  <Badge variant={isConnected ? "success" : "error"} aria-live="polite">
                     {isConnected ? "Connected" : "Disconnected"}
                   </Badge>
                 </div>
                 {feedbackMessage && (
-                  <div className="p-3 bg-warning-light border-2 border-warning rounded-xl">
+                  <div
+                    className="p-3 bg-warning-light border-2 border-warning rounded-xl"
+                    role="status"
+                    aria-live="polite"
+                  >
                     <p className="text-sm font-bold text-warning-dark text-center">
                       {feedbackMessage}
                     </p>
@@ -343,7 +347,9 @@ function LobbyPage() {
               </CardHeader>
               <CardContent className="space-y-4 text-sm text-gray-600">
                 {!stats && (
-                  <p className="text-center text-gray-400">Loading stats...</p>
+                  <p className="text-center text-gray-400" role="status" aria-live="polite">
+                    Loading stats...
+                  </p>
                 )}
                 {stats && (
                   <div className="space-y-4">
@@ -466,6 +472,6 @@ function LobbyPage() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

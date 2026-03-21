@@ -11,10 +11,11 @@ export const Button = ({
   variant = "primary",
   size = "md",
   className = "",
+  type = "button",
   ...rest
 }: ButtonProps) => {
   const baseStyles =
-    "font-bold py-3 px-6 rounded-2xl transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shadow-[0_4px_0_var(--shadow-color)] hover:translate-y-[-2px] hover:shadow-[0_6px_0_var(--shadow-color)] active:translate-y-[2px] active:shadow-[0_1px_0_var(--shadow-color)]";
+    "font-bold py-3 px-6 rounded-2xl transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shadow-[0_4px_0_var(--shadow-color)] hover:translate-y-[-2px] hover:shadow-[0_6px_0_var(--shadow-color)] active:translate-y-[2px] active:shadow-[0_1px_0_var(--shadow-color)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white";
 
   const sizeStyles = {
     sm: "py-2 px-4 text-sm",
@@ -48,6 +49,7 @@ export const Button = ({
 
   return (
     <button
+      type={type}
       className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
       style={style}
       {...rest}

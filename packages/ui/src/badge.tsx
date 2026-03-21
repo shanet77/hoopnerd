@@ -1,10 +1,9 @@
 import React from "react";
 
-interface BadgeProps {
+interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   children: React.ReactNode;
   variant?: "success" | "error" | "warning" | "info" | "neutral" | "basketball";
   size?: "sm" | "md" | "lg";
-  className?: string;
 }
 
 export const Badge = ({
@@ -12,6 +11,7 @@ export const Badge = ({
   variant = "info",
   size = "md",
   className = "",
+  ...rest
 }: BadgeProps) => {
   const variantStyles = {
     success: "bg-success-light text-success-dark",
@@ -34,6 +34,7 @@ export const Badge = ({
         inline-flex items-center font-bold uppercase tracking-wide rounded-full
         ${variantStyles[variant]} ${sizeStyles[size]} ${className}
       `}
+      {...rest}
     >
       {children}
     </span>
