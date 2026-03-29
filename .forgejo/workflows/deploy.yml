@@ -142,7 +142,8 @@ jobs:
           REGISTRY_PASSWORD="$(printf '%s' "${REGISTRY_PASSWORD_B64}" | base64 -d)"
           echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY_HOST}" -u "${REGISTRY_USERNAME}" --password-stdin
 
-          docker buildx create --name hoopnerd-builder --driver docker-container --use >/dev/null 2>&1 || docker buildx use hoopnerd-builder
+          # Use the host daemon builder to avoid separate docker-container BuildKit TLS trust issues.
+          docker buildx use default >/dev/null 2>&1 || true
 
           API_IMAGE_SHA="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:${IMAGE_TAG}"
           API_IMAGE_LATEST="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:main-latest"
@@ -150,6 +151,7 @@ jobs:
           WEB_IMAGE_LATEST="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-web:main-latest"
 
           docker buildx build \
+            --builder default \
             --platform linux/amd64 \
             --file apps/api/Dockerfile \
             --tag "${API_IMAGE_SHA}" \
@@ -158,6 +160,7 @@ jobs:
             .
 
           docker buildx build \
+            --builder default \
             --platform linux/amd64 \
             --file apps/web/Dockerfile \
             --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
