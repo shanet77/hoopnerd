@@ -21,6 +21,8 @@ fi
 
 REGISTRY_HOST="${REGISTRY_URL#https://}"
 REGISTRY_HOST="${REGISTRY_HOST#http://}"
+REGISTRY_HOST="${REGISTRY_HOST%%/*}"
+REGISTRY_HOST="${REGISTRY_HOST%/}"
 
 if [ -n "${REGISTRY_HOST}" ] && [ -n "${REGISTRY_USERNAME}" ] && [ -n "${REGISTRY_PASSWORD}" ]; then
   echo "Logging into ${REGISTRY_HOST}"

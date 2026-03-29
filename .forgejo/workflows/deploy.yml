@@ -123,6 +123,9 @@ jobs:
           REPO_URL="https://${REPO_HOST}/${GITHUB_REPOSITORY}.git"
           REGISTRY_HOST="${REGISTRY_URL#https://}"
           REGISTRY_HOST="${REGISTRY_HOST#http://}"
+          REGISTRY_HOST="${REGISTRY_HOST%%/*}"
+          REGISTRY_HOST="${REGISTRY_HOST%/}"
+          echo "Using registry host: ${REGISTRY_HOST}"
           REGISTRY_PASSWORD_B64="$(printf '%s' "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')"
 
           ssh -i "${key_file}" -o StrictHostKeyChecking=accept-new "${DOCKERNODE_USER}@${DOCKERNODE_HOST}" \
@@ -140,6 +143,8 @@ jobs:
           git checkout --detach "${TARGET_SHA}"
 
           REGISTRY_PASSWORD="$(printf '%s' "${REGISTRY_PASSWORD_B64}" | base64 -d)"
+          echo "Validating registry endpoint https://${REGISTRY_HOST}/v2/"
+          curl -fsS --connect-timeout 10 "https://${REGISTRY_HOST}/v2/" >/dev/null || true
           echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY_HOST}" -u "${REGISTRY_USERNAME}" --password-stdin
 
           API_IMAGE_SHA="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:${IMAGE_TAG}"
