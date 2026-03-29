@@ -154,6 +154,8 @@ jobs:
 
           docker build \
             --platform linux/amd64 \
+            --provenance=false \
+            --sbom=false \
             --file apps/api/Dockerfile \
             --tag "${API_IMAGE_SHA}" \
             --tag "${API_IMAGE_LATEST}" \
@@ -163,6 +165,8 @@ jobs:
 
           docker build \
             --platform linux/amd64 \
+            --provenance=false \
+            --sbom=false \
             --file apps/web/Dockerfile \
             --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
             --build-arg NEXT_PUBLIC_API_HOST="${NEXT_PUBLIC_API_HOST}" \
