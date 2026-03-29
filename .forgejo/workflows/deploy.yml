@@ -6,6 +6,11 @@ on:
       - main
   pull_request:
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Optional existing image tag to deploy without rebuilding"
+        required: false
+        default: ""
 
 jobs:
   test:
@@ -63,9 +68,118 @@ jobs:
           export PATH="$HOME/.local/node/bin:$PATH"
           pnpm -r --if-present run test
 
-  deploy_prod:
+  build_images_prod:
     if: github.ref == 'refs/heads/main'
     needs: test
+    runs-on:
+      - linux-amd64
+    outputs:
+      image_tag: ${{ steps.resolve_image_tag.outputs.image_tag }}
+    steps:
+      - name: Resolve deployment image tag
+        id: resolve_image_tag
+        run: |
+          set -euo pipefail
+          IMAGE_TAG="${{ github.event.inputs.image_tag }}"
+          if [ -z "${IMAGE_TAG}" ]; then
+            IMAGE_TAG="${GITHUB_SHA}"
+          fi
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Resolved image tag: ${IMAGE_TAG}"
+
+      - name: Build and push images on dockernode
+        if: ${{ !(github.event_name == 'workflow_dispatch' && github.event.inputs.image_tag != '') }}
+        env:
+          DOCKERNODE_HOST: ${{ secrets.DOCKERNODE_HOST }}
+          DOCKERNODE_USER: ${{ secrets.DOCKERNODE_USER }}
+          DOCKERNODE_SSH_KEY: ${{ secrets.DOCKERNODE_SSH_KEY }}
+          DOCKERNODE_PATH: ${{ secrets.DOCKERNODE_PATH }}
+          REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+          REGISTRY_NAMESPACE: ${{ secrets.REGISTRY_NAMESPACE || vars.REGISTRY_NAMESPACE }}
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_API_HOST: ${{ vars.NEXT_PUBLIC_API_HOST }}
+          NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC: ${{ vars.NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC }}
+          IMAGE_TAG: ${{ steps.resolve_image_tag.outputs.image_tag }}
+        run: |
+          set -euo pipefail
+          : "${DOCKERNODE_HOST:?DOCKERNODE_HOST is required}"
+          : "${DOCKERNODE_USER:?DOCKERNODE_USER is required}"
+          : "${DOCKERNODE_SSH_KEY:?DOCKERNODE_SSH_KEY is required}"
+          : "${DOCKERNODE_PATH:?DOCKERNODE_PATH is required}"
+          : "${REGISTRY_URL:?REGISTRY_URL is required}"
+          : "${REGISTRY_USERNAME:?REGISTRY_USERNAME is required}"
+          : "${REGISTRY_PASSWORD:?REGISTRY_PASSWORD is required}"
+          : "${REGISTRY_NAMESPACE:?REGISTRY_NAMESPACE is required}"
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          key_file=~/.ssh/dockernode_deploy_key
+          printf '%s\n' "${DOCKERNODE_SSH_KEY}" > "${key_file}"
+          chmod 600 "${key_file}"
+
+          REPO_HOST="${GITHUB_SERVER_URL#https://}"
+          REPO_URL="https://${REPO_HOST}/${GITHUB_REPOSITORY}.git"
+          REGISTRY_HOST="${REGISTRY_URL#https://}"
+          REGISTRY_HOST="${REGISTRY_HOST#http://}"
+          REGISTRY_PASSWORD_B64="$(printf '%s' "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')"
+
+          ssh -i "${key_file}" -o StrictHostKeyChecking=accept-new "${DOCKERNODE_USER}@${DOCKERNODE_HOST}" \
+            "export DOCKERNODE_PATH='${DOCKERNODE_PATH}' REPO_URL='${REPO_URL}' TARGET_SHA='${GITHUB_SHA}' IMAGE_TAG='${IMAGE_TAG}' REGISTRY_HOST='${REGISTRY_HOST}' REGISTRY_USERNAME='${REGISTRY_USERNAME}' REGISTRY_PASSWORD_B64='${REGISTRY_PASSWORD_B64}' REGISTRY_NAMESPACE='${REGISTRY_NAMESPACE}' NEXT_PUBLIC_API_URL='${NEXT_PUBLIC_API_URL}' NEXT_PUBLIC_API_HOST='${NEXT_PUBLIC_API_HOST}' NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC='${NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC}'; bash -s" \
+            <<'EOF_REMOTE'
+          set -euo pipefail
+
+          if [ ! -d "${DOCKERNODE_PATH}/.git" ]; then
+            mkdir -p "$(dirname "${DOCKERNODE_PATH}")"
+            git clone "${REPO_URL}" "${DOCKERNODE_PATH}"
+          fi
+
+          cd "${DOCKERNODE_PATH}"
+          git fetch --all --prune
+          git checkout --detach "${TARGET_SHA}"
+
+          REGISTRY_PASSWORD="$(printf '%s' "${REGISTRY_PASSWORD_B64}" | base64 -d)"
+          echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY_HOST}" -u "${REGISTRY_USERNAME}" --password-stdin
+
+          docker buildx create --name hoopnerd-builder --driver docker-container --use >/dev/null 2>&1 || docker buildx use hoopnerd-builder
+
+          API_IMAGE_SHA="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:${IMAGE_TAG}"
+          API_IMAGE_LATEST="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:main-latest"
+          WEB_IMAGE_SHA="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-web:${IMAGE_TAG}"
+          WEB_IMAGE_LATEST="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-web:main-latest"
+
+          docker buildx build \
+            --platform linux/amd64 \
+            --file apps/api/Dockerfile \
+            --tag "${API_IMAGE_SHA}" \
+            --tag "${API_IMAGE_LATEST}" \
+            --push \
+            .
+
+          docker buildx build \
+            --platform linux/amd64 \
+            --file apps/web/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
+            --build-arg NEXT_PUBLIC_API_HOST="${NEXT_PUBLIC_API_HOST}" \
+            --build-arg NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC="${NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC}" \
+            --tag "${WEB_IMAGE_SHA}" \
+            --tag "${WEB_IMAGE_LATEST}" \
+            --push \
+            .
+          EOF_REMOTE
+
+      - name: Skip build (redeploy existing tag)
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.image_tag != '' }}
+        run: |
+          set -euo pipefail
+          echo "Skipping image build. Using existing tag: ${{ steps.resolve_image_tag.outputs.image_tag }}"
+
+  deploy_prod:
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - test
+      - build_images_prod
     runs-on:
       - linux-amd64
     steps:
@@ -92,9 +206,19 @@ jobs:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           PATH_ON_VPS: ${{ secrets.PATH_ON_VPS }}
+          REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+          REGISTRY_NAMESPACE: ${{ secrets.REGISTRY_NAMESPACE || vars.REGISTRY_NAMESPACE }}
+          IMAGE_TAG: ${{ needs.build_images_prod.outputs.image_tag }}
         run: |
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}"
+          : "${DEPLOY_HOST:?DEPLOY_HOST is required}"
+          : "${DEPLOY_USER:?DEPLOY_USER is required}"
+          : "${DEPLOY_SSH_KEY:?DEPLOY_SSH_KEY is required}"
+          : "${IMAGE_TAG:?IMAGE_TAG is required}"
+
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           key_file=~/.ssh/prod_deploy_key
@@ -102,5 +226,5 @@ jobs:
           chmod 600 "${key_file}"
 
           ssh -i "${key_file}" -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "export DEPLOY_PATH='${DEPLOY_PATH}' PATH_ON_VPS='${PATH_ON_VPS}'; bash -s" \
+            "export DEPLOY_PATH='${DEPLOY_PATH}' PATH_ON_VPS='${PATH_ON_VPS}' IMAGE_TAG='${IMAGE_TAG}' REGISTRY_URL='${REGISTRY_URL}' REGISTRY_USERNAME='${REGISTRY_USERNAME}' REGISTRY_PASSWORD='${REGISTRY_PASSWORD}' REGISTRY_NAMESPACE='${REGISTRY_NAMESPACE}'; bash -s" \
             < scripts/deploy-racknerd.sh

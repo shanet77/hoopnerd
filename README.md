@@ -46,6 +46,39 @@ CREATE TABLE rosters (
 - `pnpm build`: Builds all apps and shared packages.
 - `pnpm lint`: Runs linting across the entire monorepo.
 
+## Forgejo CI/CD (Actions)
+- Workflow: `.forgejo/workflows/deploy.yml`
+- Deployment helper (executed on Racknerd via SSH): `scripts/deploy-racknerd.sh`
+
+### Required Forgejo Actions Secrets
+- `DEPLOY_HOST` (Racknerd host/IP)
+- `DEPLOY_USER` (example: `<deploy-user>`)
+- `DEPLOY_SSH_KEY` (private key with access to `DEPLOY_USER@DEPLOY_HOST`)
+- `DEPLOY_PATH` (preferred) or `PATH_ON_VPS` (legacy alias)
+- `DOCKERNODE_HOST`
+- `DOCKERNODE_USER`
+- `DOCKERNODE_SSH_KEY`
+- `DOCKERNODE_PATH`
+- `REGISTRY_URL` (example: `zot.example.com`)
+- `REGISTRY_USERNAME`
+- `REGISTRY_PASSWORD`
+
+### Secrets/Vars for Image Namespace
+- `REGISTRY_NAMESPACE` can be provided as either:
+  - Forgejo Secret: `REGISTRY_NAMESPACE`
+  - Forgejo Variable (`vars`): `REGISTRY_NAMESPACE`
+
+### Optional Forgejo Actions Variables (repo/org `vars`)
+- `NEXT_PUBLIC_API_URL`
+- `NEXT_PUBLIC_API_HOST`
+- `NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC`
+
+### Deployment Behavior
+- Pull requests run `test`.
+- Push to `main` builds `api` and `web` Docker images on `dockernode` and pushes them to `zot`.
+- Racknerd deploy then pulls tagged images from the registry and restarts services without local builds.
+- `workflow_dispatch` supports optional `image_tag` to redeploy an existing tag without rebuilding.
+
 ## Boundaries
 - Never modify the database schema without updating `@repo/types`.
 - Avoid hardcoding player data; everything must be queried from the `db` package.
@@ -84,4 +117,3 @@ Connectaball/
 - `@repo/eslint-config`: ESLint presets
 - `@repo/typescript-config`: tsconfig.json's used throughout the monorepo
 - `@repo/jest-presets`: Jest configurations
-

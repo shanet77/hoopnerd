@@ -2,6 +2,9 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    environment:
+      PLAUSIBLE_UPSTREAM: ${PLAUSIBLE_UPSTREAM}
+      PLAUSIBLE_UPSTREAM_TLS_SERVER_NAME: ${PLAUSIBLE_UPSTREAM_TLS_SERVER_NAME:-plausible.hoopnerd.xyz}
     ports:
       - "80:80"
       - "443:443"
@@ -43,9 +46,7 @@ services:
     init: true
 
   api:
-    build:
-      context: .
-      dockerfile: ./apps/api/Dockerfile
+    image: ${API_IMAGE}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -76,13 +77,7 @@ services:
     init: true
 
   web:
-    build:
-      context: .
-      dockerfile: ./apps/web/Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.hoopnerd.xyz}
-        NEXT_PUBLIC_API_HOST: ${NEXT_PUBLIC_API_HOST:-https://api.hoopnerd.xyz}
-        NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC: ${NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC:-https://plausible.hoopnerd.xyz/js/pa-gxNZ0GRhtvX2AeB0vJWaU.js}
+    image: ${WEB_IMAGE}
     restart: unless-stopped
     environment:
       NODE_ENV: production
