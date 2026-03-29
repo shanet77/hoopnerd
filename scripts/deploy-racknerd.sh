@@ -14,9 +14,12 @@ WEB_IMAGE="${WEB_IMAGE:-}"
 cd "${DEPLOY_TARGET_PATH}"
 
 if [ -d .git ]; then
+  echo "Deploy context: user=$(whoami) path=$(pwd)"
   git fetch --all --prune
-  git checkout main
-  git pull --ff-only
+  git checkout -f main || git checkout -B main origin/main
+  # Ensure deploys are reproducible even if tracked files were edited on-host.
+  # This does not remove untracked files like .env.prod or Caddyfile.
+  git reset --hard origin/main
 fi
 
 REGISTRY_HOST="${REGISTRY_URL#https://}"
