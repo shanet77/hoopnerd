@@ -142,25 +142,21 @@ jobs:
           REGISTRY_PASSWORD="$(printf '%s' "${REGISTRY_PASSWORD_B64}" | base64 -d)"
           echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY_HOST}" -u "${REGISTRY_USERNAME}" --password-stdin
 
-          # Use the host daemon builder to avoid separate docker-container BuildKit TLS trust issues.
-          docker buildx use default >/dev/null 2>&1 || true
-
           API_IMAGE_SHA="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:${IMAGE_TAG}"
           API_IMAGE_LATEST="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:main-latest"
           WEB_IMAGE_SHA="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-web:${IMAGE_TAG}"
           WEB_IMAGE_LATEST="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-web:main-latest"
 
-          docker buildx build \
-            --builder default \
+          docker build \
             --platform linux/amd64 \
             --file apps/api/Dockerfile \
             --tag "${API_IMAGE_SHA}" \
             --tag "${API_IMAGE_LATEST}" \
-            --push \
             .
+          docker push "${API_IMAGE_SHA}"
+          docker push "${API_IMAGE_LATEST}"
 
-          docker buildx build \
-            --builder default \
+          docker build \
             --platform linux/amd64 \
             --file apps/web/Dockerfile \
             --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
@@ -168,8 +164,9 @@ jobs:
             --build-arg NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC="${NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC}" \
             --tag "${WEB_IMAGE_SHA}" \
             --tag "${WEB_IMAGE_LATEST}" \
-            --push \
             .
+          docker push "${WEB_IMAGE_SHA}"
+          docker push "${WEB_IMAGE_LATEST}"
           EOF_REMOTE
 
       - name: Skip build (redeploy existing tag)
