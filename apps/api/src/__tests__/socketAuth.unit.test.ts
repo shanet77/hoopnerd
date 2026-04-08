@@ -51,10 +51,10 @@ describe("socketAuth", () => {
     process.env.SOCKET_SESSION_SECRET = "test-secret";
     jest.useFakeTimers();
     const now = new Date("2026-01-01T00:00:00.000Z");
-    jest.setSystemTime(now);
+    jest.setSystemTime(now.getTime());
     const token = issueSessionToken("ROOM1", 42);
 
-    jest.setSystemTime(new Date(now.getTime() + 1000 * 60 * 60 * 13));
+    jest.setSystemTime(now.getTime() + 1000 * 60 * 60 * 13);
     expect(verifySessionToken(token)).toBeNull();
     jest.useRealTimers();
   });

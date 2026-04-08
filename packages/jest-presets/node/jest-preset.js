@@ -2,7 +2,14 @@
 module.exports = {
   roots: ['<rootDir>'],
   transform: {
-    '^.+\\.tsx?$': 'ts-jest'
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: {
+        moduleResolution: 'bundler',
+        target: 'ES2017',
+        module: 'ESNext',
+        ignoreDeprecations: '6.0'
+      }
+    }]
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   modulePathIgnorePatterns: [

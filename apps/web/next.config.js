@@ -5,10 +5,8 @@ module.exports = {
   reactStrictMode: true,
   transpilePackages: ["@repo/ui"],
   output: "standalone",
+  outputFileTracingRoot: path.join(__dirname, "../../"),
   env: {
     NEXT_PUBLIC_APP_VERSION: version,
-  },
-  experimental: {
-    outputFileTracingRoot: path.join(__dirname, "../../"),
   },
 };

@@ -5,7 +5,12 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       tsconfig: {
-        jsx: 'react-jsx'
+        jsx: 'react-jsx',
+        moduleResolution: 'bundler',
+        target: 'ES2017',
+        module: 'ESNext',
+        ignoreDeprecations: '6.0',
+        rootDir: '<rootDir>'
       }
     }]
   },
