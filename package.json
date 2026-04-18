@@ -15,7 +15,7 @@
     "test:coverage": "turbo run test -- --coverage --coveragePathIgnorePatterns=/dist/ --coveragePathIgnorePatterns=/.next/ --coveragePathIgnorePatterns=/node_modules/"
   },
   "devDependencies": {
-    "prettier": "^3.8.2",
+    "prettier": "^3.8.3",
     "turbo": "^2.9.6"
   },
   "engines": {
