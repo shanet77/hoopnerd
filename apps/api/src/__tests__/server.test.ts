@@ -1,5 +1,9 @@
 import supertest from "supertest";
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from "@jest/globals";
+// Use short timeouts for faster integration tests
+process.env.TURN_TIMEOUT_MS = '1000';
+process.env.DISCONNECT_GRACE_MS = '500';
+
 import { createServer } from "../server";
 import { Server as HttpServer } from 'http';
 import { io, Socket } from 'socket.io-client';
@@ -331,7 +335,7 @@ describe("API Server", () => {
         expect(data.reason).toContain('timed out');
         done();
       });
-    }, 26000); // Set a higher timeout for the test to allow for the 25-second game timeout
+    }, 5000); // Uses TURN_TIMEOUT_MS=1000 (set via env at top of file)
 
     it("should end the game if a player disconnects", (done) => {
       let roomId: string;
@@ -364,6 +368,6 @@ describe("API Server", () => {
         expect(data.reason).toContain('disconnected');
         done();
       });
-    }, 26000);
+    }, 5000); // Uses DISCONNECT_GRACE_MS=500 (set via env at top of file)
   });
 });

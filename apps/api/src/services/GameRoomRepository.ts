@@ -25,7 +25,8 @@ export class GameRoomRepository {
   private socketRoomBindings: Map<string, SocketBinding> = new Map();
   private disconnectGraceTimers: Map<string, NodeJS.Timeout> = new Map();
 
-  private readonly DISCONNECT_GRACE_PERIOD_MS = 10000;
+  private readonly DISCONNECT_GRACE_PERIOD_MS = Number(process.env.DISCONNECT_GRACE_MS) || 10000;
+  private readonly TURN_TIMEOUT_MS = Number(process.env.TURN_TIMEOUT_MS) || 25000;
 
   constructor(
     private io: SocketIOServer,
@@ -142,7 +143,7 @@ export class GameRoomRepository {
         const winner = room.players[(room.currentPlayerIndex + 1) % room.players.length];
         this.endGame(roomId, winner, 'Opponent timed out.');
       }
-    }, 25000);
+    }, this.TURN_TIMEOUT_MS);
 
     this.roomTimers.set(roomId, timer);
   }
