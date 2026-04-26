@@ -76,10 +76,9 @@ describe("Matchmaking Handlers", () => {
       const joinMatchmakingHandler = handlers['join_matchmaking'];
       await joinMatchmakingHandler({ playerName: '' } as JoinMatchmakingRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('matchmaking_result', {
-        success: false,
+      expect(mockSocket.emit).toHaveBeenCalledWith('validation_error', {
+        code: 'INVALID_NAME',
         message: 'Name is required and must be 32 characters or fewer.',
-        joinedExisting: false,
       });
     });
 
@@ -90,10 +89,9 @@ describe("Matchmaking Handlers", () => {
       const joinMatchmakingHandler = handlers['join_matchmaking'];
       await joinMatchmakingHandler({ playerName: longName } as JoinMatchmakingRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('matchmaking_result', {
-        success: false,
+      expect(mockSocket.emit).toHaveBeenCalledWith('validation_error', {
+        code: 'INVALID_NAME',
         message: 'Name is required and must be 32 characters or fewer.',
-        joinedExisting: false,
       });
     });
 

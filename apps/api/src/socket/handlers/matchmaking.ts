@@ -2,88 +2,104 @@ import { Socket } from 'socket.io';
 import { JoinMatchmakingRequest, JoinMatchmakingResponse, Player } from '@repo/types';
 import { GameRoomRepository } from '../../services/GameRoomRepository';
 import { normalizePlayerName, MAX_PLAYER_NAME_LENGTH, generatePlayerId, issueSessionToken } from '../../socketAuth';
+import { validatePlayerName, handleErrorOnSocket, HandleErrorOnSocketOptions } from '../middleware/validation';
+
+const MATCHMAKING_OPTIONS: HandleErrorOnSocketOptions = {
+  defaultEvent: 'matchmaking_result',
+  legacyChannel: 'matchmaking_result',
+};
 
 export function registerMatchmakingHandlers(
   socket: Socket,
   roomRepository: GameRoomRepository
 ): void {
   socket.on('join_matchmaking', async (data: JoinMatchmakingRequest) => {
-    const normalizedName = normalizePlayerName(data.playerName ?? '');
     const friendsOnly = data.friendsOnly ?? false;
-    
-    if (!normalizedName || normalizedName.length > MAX_PLAYER_NAME_LENGTH) {
-      socket.emit('matchmaking_result', {
-        success: false,
-        message: `Name is required and must be ${MAX_PLAYER_NAME_LENGTH} characters or fewer.`,
-        joinedExisting: false,
-      });
-      return;
-    }
 
-    let selectedRoomId: string | null = null;
-    let joinedExisting = false;
+    // --- input validation via middleware -------------------------------------
+    const validateNameMiddleware = validatePlayerName((d) => d.playerName);
 
-    if (!friendsOnly) {
-      selectedRoomId = roomRepository.findAvailablePublicRoom(normalizedName);
-      if (selectedRoomId) {
-        joinedExisting = true;
+    validateNameMiddleware(socket, data, async (error, result) => {
+      if (error) {
+        handleErrorOnSocket(socket, error, MATCHMAKING_OPTIONS);
+        return;
       }
-    }
 
-    if (!selectedRoomId) {
-      selectedRoomId = generateRoomId();
-      roomRepository.createRoom(selectedRoomId, friendsOnly);
-    }
+      const normalizedName = (result as any).normalizedName;
+      let selectedRoomId: string | null = null;
+      let joinedExisting = false;
 
-    const room = roomRepository.getRoom(selectedRoomId)!;
-    
-    if (room.players.length >= 2 && !room.players.some(player => player.name.toLowerCase() === normalizedName.toLowerCase())) {
-      socket.emit('matchmaking_result', {
-        success: false,
-        message: 'Room is full.',
+      // Find an available public room
+      if (!friendsOnly) {
+        selectedRoomId = roomRepository.findAvailablePublicRoom(normalizedName);
+        if (selectedRoomId) {
+          joinedExisting = true;
+        }
+      }
+
+      // Fallback: create a new room
+      if (!selectedRoomId) {
+        selectedRoomId = generateRoomId();
+        roomRepository.createRoom(selectedRoomId, friendsOnly);
+      }
+
+      const room = roomRepository.getRoom(selectedRoomId)!;
+
+      // Validate room capacity and name uniqueness
+      if (
+        room.players.length >= 2 &&
+        !room.players.some(
+          (p: any) => p.name.toLowerCase() === normalizedName.toLowerCase()
+        )
+      ) {
+        socket.emit('matchmaking_result', {
+          success: false,
+          message: 'Room is full.',
+          joinedExisting,
+        });
+        return;
+      }
+
+      if (room.players.some((p: any) => p.name.toLowerCase() === normalizedName.toLowerCase())) {
+        socket.emit('matchmaking_result', {
+          success: false,
+          message: 'That name is already in use for this room.',
+          joinedExisting,
+        });
+        return;
+      }
+
+      // --- join / create player ----------------------------------------------
+      socket.join(selectedRoomId);
+
+      const player: Player = {
+        id: generatePlayerId(room),
+        name: normalizedName,
+        position: 'G',
+        socketId: socket.id,
+      };
+      room.players.push(player);
+      roomRepository.bindSocket(socket.id, selectedRoomId, player.id);
+      const playerToken = issueSessionToken(selectedRoomId, player.id);
+
+      socket.to(selectedRoomId).emit('player_connected', player);
+      socket.to(selectedRoomId).emit('room_updated', room);
+
+      const response: JoinMatchmakingResponse = {
+        success: true,
+        message: joinedExisting
+          ? `Joined existing room ${selectedRoomId}`
+          : `Created and joined room ${selectedRoomId}`,
+        roomId: selectedRoomId,
+        roomState: room,
         joinedExisting,
-      });
-      return;
-    }
+        playerToken,
+        playerId: player.id,
+      };
 
-    if (room.players.some(player => player.name.toLowerCase() === normalizedName.toLowerCase())) {
-      socket.emit('matchmaking_result', {
-        success: false,
-        message: 'That name is already in use for this room.',
-        joinedExisting,
-      });
-      return;
-    }
-
-    socket.join(selectedRoomId);
-
-    const player: Player = {
-      id: generatePlayerId(room),
-      name: normalizedName,
-      position: 'G',
-      socketId: socket.id
-    };
-    room.players.push(player);
-    roomRepository.bindSocket(socket.id, selectedRoomId, player.id);
-    const playerToken = issueSessionToken(selectedRoomId, player.id);
-
-    socket.to(selectedRoomId).emit('player_connected', player);
-    socket.to(selectedRoomId).emit('room_updated', room);
-
-    const response: JoinMatchmakingResponse = {
-      success: true,
-      message: joinedExisting
-        ? `Joined existing room ${selectedRoomId}`
-        : `Created and joined room ${selectedRoomId}`,
-      roomId: selectedRoomId,
-      roomState: room,
-      joinedExisting,
-      playerToken,
-      playerId: player.id,
-    };
-
-    socket.emit('matchmaking_result', response);
-    await roomRepository.startGame(selectedRoomId);
+      socket.emit('matchmaking_result', response);
+      await roomRepository.startGame(selectedRoomId);
+    });
   });
 }
 

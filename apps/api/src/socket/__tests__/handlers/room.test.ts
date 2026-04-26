@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, jest } from "@jest/globals";
 import { Socket } from 'socket.io';
 import { GameRoomRepository } from "../../../services/GameRoomRepository";
 import { registerRoomHandlers } from "../../handlers/room";
-import { JoinRoomRequest, LeaveRoomRequest, GameRoomState } from "@repo/types";
+import { JoinRoomRequest, LeaveRoomRequest, GameRoomState, Player } from "@repo/types";
 
 // Mock socketAuth module
 jest.mock("../../../socketAuth", () => ({
@@ -29,7 +29,7 @@ describe("Room Handlers", () => {
   let handlers: Record<string, Function> = {};
 
   beforeEach(() => {
-    jest.clearAllMocks(); // Use clearAllMocks instead of resetAllMocks to preserve mock implementations
+    jest.clearAllMocks();
     handlers = {};
     emitMock = jest.fn();
     toMock = jest.fn(() => ({ emit: emitMock }));
@@ -126,8 +126,8 @@ describe("Room Handlers", () => {
       const joinRoomHandler = handlers['join_room'];
       await joinRoomHandler({ roomId: mockRoomId, playerName: '' } as JoinRoomRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('room_joined', {
-        success: false,
+      expect(mockSocket.emit).toHaveBeenCalledWith('validation_error', {
+        code: 'INVALID_NAME',
         message: 'Name is required and must be 32 characters or fewer.',
       });
     });
@@ -139,14 +139,16 @@ describe("Room Handlers", () => {
       const joinRoomHandler = handlers['join_room'];
       await joinRoomHandler({ roomId: mockRoomId, playerName: longName } as JoinRoomRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('room_joined', {
-        success: false,
+      expect(mockSocket.emit).toHaveBeenCalledWith('validation_error', {
+        code: 'INVALID_NAME',
         message: 'Name is required and must be 32 characters or fewer.',
       });
     });
 
     it("should verify session token when provided", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: 'WRONG_ROOM', playerId: 1 });
+      const mockRoom = { roomId: mockRoomId, players: [] };
+      (mockRoomRepository.getOrCreateRoom as jest.Mock).mockReturnValue(mockRoom);
 
       const joinRoomHandler = handlers['join_room'];
       await joinRoomHandler({
@@ -156,25 +158,10 @@ describe("Room Handlers", () => {
       } as JoinRoomRequest);
 
       expect(mockVerifySessionToken).toHaveBeenCalledWith('invalid-token');
-      expect(mockSocket.emit).toHaveBeenCalledWith('room_joined', {
-        success: false,
-        message: 'Invalid session token.',
-      });
-    });
-
-    it("should reject token for wrong room", async () => {
-      mockVerifySessionToken.mockReturnValueOnce({ roomId: 'OTHER_ROOM', playerId: 1 });
-
-      const joinRoomHandler = handlers['join_room'];
-      await joinRoomHandler({
-        roomId: mockRoomId,
-        playerName: mockPlayerName,
-        playerToken: 'valid-token',
-      } as JoinRoomRequest);
-
-      expect(mockSocket.emit).toHaveBeenCalledWith('room_joined', {
-        success: false,
-        message: 'Invalid session token.',
+      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
+        code: 'AUTH_001',
+        message: 'Invalid session token',
+        metadata: undefined,
       });
     });
 
@@ -277,7 +264,6 @@ describe("Room Handlers", () => {
 
     it("should restore existing player session with valid token", async () => {
       const existingPlayer = { id: 5, name: 'TestPlayer', socketId: 'old-socket' };
-      // Override default mock for this test
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: 5 });
       const mockRoom = {
         roomId: mockRoomId,
@@ -304,25 +290,33 @@ describe("Room Handlers", () => {
       registerRoomHandlers(mockSocket as Socket, mockRoomRepository as GameRoomRepository);
     });
 
-    it("should reject invalid session token", () => {
+    it("should reject invalid session token", async () => {
       mockVerifySessionToken.mockReturnValueOnce(null);
 
       const leaveRoomHandler = handlers['leave_room'];
-      leaveRoomHandler({ roomId: mockRoomId, playerToken: 'invalid' } as LeaveRoomRequest);
+      await leaveRoomHandler({ roomId: mockRoomId, playerToken: 'invalid' } as LeaveRoomRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('game_error', 'Invalid session token.');
+      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
+        code: 'AUTH_001',
+        message: 'Invalid session token',
+        metadata: undefined,
+      });
     });
 
-    it("should reject token for wrong room", () => {
+    it("should reject token for wrong room", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: 'OTHER_ROOM', playerId: 1 });
 
       const leaveRoomHandler = handlers['leave_room'];
-      leaveRoomHandler({ roomId: mockRoomId, playerToken: 'valid' } as LeaveRoomRequest);
+      await leaveRoomHandler({ roomId: mockRoomId, playerToken: 'valid' } as LeaveRoomRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('game_error', 'Invalid session token.');
+      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
+        code: 'AUTH_004',
+        message: 'Socket identity does not match session',
+        metadata: undefined,
+      });
     });
 
-    it("should reject when socket binding doesn't match", () => {
+    it("should reject when socket binding doesn't match", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: 1 });
       (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
         roomId: 'WRONG_ROOM',
@@ -330,13 +324,16 @@ describe("Room Handlers", () => {
       });
 
       const leaveRoomHandler = handlers['leave_room'];
-      leaveRoomHandler({ roomId: mockRoomId, playerToken: 'valid' } as LeaveRoomRequest);
+      await leaveRoomHandler({ roomId: mockRoomId, playerToken: 'valid' } as LeaveRoomRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('game_error', 'Socket identity does not match session.');
+      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
+        code: 'AUTH_004',
+        message: 'Socket identity does not match session',
+        metadata: undefined,
+      });
     });
 
-    it("should successfully leave room when authenticated", () => {
-      // Override default mock for this test
+    it("should successfully leave room when authenticated", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: 1 });
       (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
         roomId: mockRoomId,
@@ -344,7 +341,7 @@ describe("Room Handlers", () => {
       });
 
       const leaveRoomHandler = handlers['leave_room'];
-      leaveRoomHandler({ roomId: mockRoomId, playerToken: 'valid' } as LeaveRoomRequest);
+      await leaveRoomHandler({ roomId: mockRoomId, playerToken: 'valid' } as LeaveRoomRequest);
 
       expect(mockSocket.leave).toHaveBeenCalledWith(mockRoomId);
       expect(mockRoomRepository.removeSocketBinding).toHaveBeenCalledWith('socket-123');

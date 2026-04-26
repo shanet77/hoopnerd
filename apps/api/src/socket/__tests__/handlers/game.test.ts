@@ -72,10 +72,14 @@ describe("Game Handlers", () => {
       } as SubmitMoveRequest);
 
       expect(mockVerifySessionToken).toHaveBeenCalledWith('invalid-token');
-      expect(mockSocket.emit).toHaveBeenCalledWith('game_error', 'Invalid session token.');
+      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
+        code: 'AUTH_001',
+        message: 'Invalid session token',
+        metadata: undefined,
+      });
     });
 
-    it("should reject token for wrong room", async () => {
+    it("should reject socket identity mismatch after valid token", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: 'OTHER_ROOM', playerId: mockPlayerId });
 
       const submitMoveHandler = handlers['submit_move'];
@@ -85,10 +89,16 @@ describe("Game Handlers", () => {
         playerToken: mockToken,
       } as SubmitMoveRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('game_error', 'Invalid session token.');
+      // Middleware runs requireSession first (passes), then requireRoomAccess
+      // The socket binding check will fail because the binding doesn't match the token's room
+      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
+        code: 'AUTH_004',
+        message: 'Socket identity does not match session',
+        metadata: undefined,
+      });
     });
 
-    it("should reject when socket binding doesn't match", async () => {
+    it("should reject when socket binding doesn't match session", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: mockPlayerId });
       (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
         roomId: 'WRONG_ROOM',
@@ -102,7 +112,11 @@ describe("Game Handlers", () => {
         playerToken: mockToken,
       } as SubmitMoveRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('game_error', 'Socket identity does not match session.');
+      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
+        code: 'AUTH_004',
+        message: 'Socket identity does not match session',
+        metadata: undefined,
+      });
     });
 
     it("should reject when room doesn't exist", async () => {
@@ -120,19 +134,24 @@ describe("Game Handlers", () => {
         playerToken: mockToken,
       } as SubmitMoveRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('game_error', 'Game is not active.');
+      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
+        code: 'AUTH_006',
+        message: 'Room not found',
+        metadata: undefined,
+      });
     });
 
-    it("should reject when game is already completed", async () => {
+    it("should emit game error when game is already completed", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: mockPlayerId });
       (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
         roomId: mockRoomId,
         playerId: mockPlayerId,
       });
+      const player = { id: mockPlayerId, name: 'Player1', position: 'G' };
       const completedRoom = {
         roomId: mockRoomId,
         gameCompleted: true,
-        players: [],
+        players: [player],
       } as GameRoomState;
       (mockRoomRepository.getRoom as jest.Mock).mockReturnValueOnce(completedRoom);
 
@@ -169,7 +188,11 @@ describe("Game Handlers", () => {
         playerToken: mockToken,
       } as SubmitMoveRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('game_error', 'Player is not part of this room.');
+      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
+        code: 'AUTH_005',
+        message: 'Player is not part of this room',
+        metadata: undefined,
+      });
     });
 
     it("should reject when it's not the player's turn", async () => {
@@ -178,13 +201,12 @@ describe("Game Handlers", () => {
         roomId: mockRoomId,
         playerId: 1,
       });
+      const player1 = { id: 1, name: 'Player1', position: 'G' } as Player;
+      const player2 = { id: 2, name: 'Player2', position: 'F' } as Player;
       const room = {
         roomId: mockRoomId,
         gameCompleted: false,
-        players: [
-          { id: 1, name: 'Player1', position: 'G' } as Player,
-          { id: 2, name: 'Player2', position: 'F' } as Player,
-        ],
+        players: [player1, player2],
         currentPlayerIndex: 1, // Player 2's turn
         startingPlayer: { id: 50, name: 'Starter', position: 'C' } as Player,
       } as GameRoomState;
@@ -197,8 +219,11 @@ describe("Game Handlers", () => {
         playerToken: mockToken,
       } as SubmitMoveRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('game_error', "Not your turn.");
-      expect(emitMock).toHaveBeenCalledWith('game_error', "Player2's turn.");
+      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
+        code: 'AUTH_007',
+        message: 'Not your turn',
+        metadata: { currentPlayerName: 'Player2' },
+      });
     });
 
     it("should reject when game is not properly initialized", async () => {
