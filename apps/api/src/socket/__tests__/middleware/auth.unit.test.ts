@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, jest, afterEach } from "@jest/globals";
+import { describe, it, expect, jest } from "@jest/globals";
 import { Socket } from "socket.io";
 import { GameRoomRepository } from "../../../services/GameRoomRepository";
-import { verifySessionToken, issueSessionToken } from "../../../socketAuth";
+import { issueSessionToken } from "../../../socketAuth";
 import {
   requireSession,
   requireRoomAccess,
@@ -281,7 +281,7 @@ describe("validatePlayerName", () => {
 
     await validatePlayerName((d) => d.name)(socket, { name: " Alice " }, nextFn);
 
-    expect(nextFn).toHaveBeenCalledWith();
+    expect(nextFn).toHaveBeenCalledWith(null, {"normalizedName": "Alice"});
     const result = (nextFn.mock.calls[0] as any)[1];
     expect(result.normalizedName).toBe("Alice");
   });

@@ -1,7 +1,7 @@
 import { Socket } from 'socket.io';
 import { JoinMatchmakingRequest, JoinMatchmakingResponse, Player } from '@repo/types';
 import { GameRoomRepository } from '../../services/GameRoomRepository';
-import { normalizePlayerName, MAX_PLAYER_NAME_LENGTH, generatePlayerId, issueSessionToken } from '../../socketAuth';
+import { generatePlayerId, issueSessionToken } from '../../socketAuth';
 import { validatePlayerName, handleErrorOnSocket, HandleErrorOnSocketOptions } from '../middleware/validation';
 
 const MATCHMAKING_OPTIONS: HandleErrorOnSocketOptions = {

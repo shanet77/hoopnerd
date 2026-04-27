@@ -10,23 +10,24 @@ export {
 
 // -- Validation helpers -----------------------------------------------------
 export {
-  MiddlewareHandler,
   validatePlayerName,
   validateRequiredField,
   handleErrorOnSocket,
 } from './validation';
+export type { MiddlewareHandler } from './validation';
 
 // -- Auth middleware --------------------------------------------------------
 export {
-  AuthenticatedSocket,
-  AuthMiddleware,
-  HandlerMiddleware,
   extractHandshakeToken,
   extractTokenFromData,
   authenticateConnection,
   requireSession,
-  requireSessionNoBinding,
   requireRoomAccess,
   requireCurrentTurn,
   composeMiddlewares,
+} from './auth';
+export type {
+  AuthenticatedSocket,
+  AuthMiddleware,
+  HandlerMiddleware,
 } from './auth';

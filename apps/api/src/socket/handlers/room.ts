@@ -1,11 +1,11 @@
 import { Socket } from 'socket.io';
 import { JoinRoomRequest, LeaveRoomRequest, Player } from '@repo/types';
 import { GameRoomRepository } from '../../services/GameRoomRepository';
-import { normalizePlayerName, MAX_PLAYER_NAME_LENGTH, generatePlayerId, issueSessionToken } from '../../socketAuth';
+import { generatePlayerId, issueSessionToken } from '../../socketAuth';
 import {
   AuthenticatedSocket,
   composeMiddlewares,
-  requireSessionNoBinding,
+  requireSession,
   requireRoomAccess,
 } from '../middleware/auth';
 import { validatePlayerName, handleErrorOnSocket, HandleErrorOnSocketOptions } from '../middleware/validation';
@@ -24,6 +24,16 @@ export function registerRoomHandlers(
   socket: Socket,
   roomRepository: GameRoomRepository
 ): void {
+  // Pre-compose middleware pipelines (created once, not per-event)
+  const validateName = composeMiddlewares(
+    validatePlayerName((d) => d.playerName)
+  );
+  const requirePlayerToken = requireSession((d) => d.playerToken);
+  const requireLeaveAccess = composeMiddlewares(
+    requirePlayerToken,
+    requireRoomAccess(roomRepository)
+  );
+
   // ---------------------------------------------------------------------------
   // create_room
   // ---------------------------------------------------------------------------
@@ -41,14 +51,10 @@ export function registerRoomHandlers(
   // join_room — dual path: restore session or create new player
   // ---------------------------------------------------------------------------
   socket.on('join_room', async (data: JoinRoomRequest) => {
-    const { roomId, playerName, playerToken } = data;
+    const { roomId, playerToken } = data;
 
     // --- validation step (shared by both paths) --------------------------------
-    const validateNameMiddleware = composeMiddlewares(
-      validatePlayerName((d) => d.playerName)
-    );
-
-    validateNameMiddleware(socket, data, async (error, result) => {
+    validateName(socket, data, async (error, result) => {
       if (error) {
         handleErrorOnSocket(socket, error, ROOM_JOIN_OPTIONS);
         return;
@@ -60,9 +66,7 @@ export function registerRoomHandlers(
 
       // --- path A: restore existing player via session token -----------------
       if (playerToken) {
-        const handlerMiddleware = requireSessionNoBinding((d) => d.playerToken);
-
-        handlerMiddleware(socket, data, async (authError) => {
+        requirePlayerToken(socket, data, async (authError) => {
           if (authError) {
             socket.emit('room_joined', {
               success: false,
@@ -151,12 +155,7 @@ export function registerRoomHandlers(
   // leave_room
   // ---------------------------------------------------------------------------
   socket.on('leave_room', (data: LeaveRoomRequest) => {
-    const handlerMiddleware = composeMiddlewares(
-      requireSession((d) => d.playerToken),
-      requireRoomAccess(roomRepository)
-    );
-
-    handlerMiddleware(socket, data, async (error, _result) => {
+    requireLeaveAccess(socket, data, async (error, _result) => {
       if (error) {
         handleErrorOnSocket(socket, error, GAME_HANDLER_OPTIONS);
         return;

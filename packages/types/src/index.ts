@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Pool, QueryResult } from 'pg';
+import { Pool } from 'pg';
 
 const TOP_SCORERS_PATH = path.resolve(__dirname, '../../..', 'datasets/top_scorers.csv');
 const DEFAULT_TOP_SCORERS_LIMIT = 80;

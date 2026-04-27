@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import { SubmitMoveRequest, Player } from '@repo/types';
+import { SubmitMoveRequest } from '@repo/types';
 import { GameRoomRepository } from '../../services/GameRoomRepository';
 import {
   AuthenticatedSocket,
@@ -19,19 +19,20 @@ export function registerGameHandlers(
   socket: Socket,
   roomRepository: GameRoomRepository
 ): void {
+  // Pre-compose middleware pipeline (created once, not per-event)
+  const requireValidSubmit = composeMiddlewares(
+    requireSession((d) => d.playerToken),
+    requireRoomAccess(roomRepository),
+    requireCurrentTurn(roomRepository)
+  );
+
   // ---------------------------------------------------------------------------
   // submit_move
   // ---------------------------------------------------------------------------
   socket.on('submit_move', async (data: SubmitMoveRequest) => {
-    const { roomId, connectedPlayer, playerToken } = data;
+    const { roomId, connectedPlayer } = data;
 
-    const handlerMiddleware = composeMiddlewares(
-      requireSession((d) => d.playerToken),
-      requireRoomAccess(roomRepository),
-      requireCurrentTurn(roomRepository)
-    );
-
-    handlerMiddleware(socket, data, async (error, _result) => {
+    requireValidSubmit(socket, data, async (error, _result) => {
       if (error) {
         handleErrorOnSocket(socket, error, GAME_HANDLER_OPTIONS);
         return;

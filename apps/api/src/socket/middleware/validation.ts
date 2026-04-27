@@ -1,5 +1,5 @@
-import { Server as SocketIOServer, Socket } from 'socket.io';
-import { AuthError, ValidationError, isAuthError } from './errors';
+import { Socket } from 'socket.io';
+import { ValidationError, isAuthError } from './errors';
 import { normalizePlayerName, MAX_PLAYER_NAME_LENGTH } from '../../socketAuth';
 
 /**
@@ -32,7 +32,7 @@ export function validatePlayerName(
 
       next(null, { normalizedName: normalized });
     } catch (error) {
-      next(error);
+      next(error instanceof Error ? error : new Error(String(error)));
     }
   };
 }

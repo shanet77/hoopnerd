@@ -13,12 +13,6 @@ interface SocketBinding {
   playerId: number;
 }
 
-interface DisconnectGracePeriod {
-  timer: NodeJS.Timeout;
-  roomId: string;
-  playerId: number;
-}
-
 export class GameRoomRepository {
   private gameRooms: Map<string, GameRoomState> = new Map();
   private roomTimers: Map<string, NodeJS.Timeout> = new Map();

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, jest } from "@jest/globals";
 import { Socket } from 'socket.io';
 import { GameRoomRepository } from "../../../services/GameRoomRepository";
 import { registerRoomHandlers } from "../../handlers/room";
-import { JoinRoomRequest, LeaveRoomRequest, GameRoomState, Player } from "@repo/types";
+import { JoinRoomRequest, LeaveRoomRequest, GameRoomState } from "@repo/types";
 
 // Mock socketAuth module
 jest.mock("../../../socketAuth", () => ({
@@ -57,6 +57,7 @@ describe("Room Handlers", () => {
       getOrCreateRoom: jest.fn(),
       bindSocket: jest.fn(),
       getSocketBinding: jest.fn(),
+      getRoom: jest.fn(),
       removeSocketBinding: jest.fn(),
       removePlayerFromRoom: jest.fn(),
       clearDisconnectGraceTimer: jest.fn(),
@@ -146,7 +147,7 @@ describe("Room Handlers", () => {
     });
 
     it("should verify session token when provided", async () => {
-      mockVerifySessionToken.mockReturnValueOnce({ roomId: 'WRONG_ROOM', playerId: 1 });
+      mockVerifySessionToken.mockReturnValueOnce(null);
       const mockRoom = { roomId: mockRoomId, players: [] };
       (mockRoomRepository.getOrCreateRoom as jest.Mock).mockReturnValue(mockRoom);
 
@@ -158,10 +159,9 @@ describe("Room Handlers", () => {
       } as JoinRoomRequest);
 
       expect(mockVerifySessionToken).toHaveBeenCalledWith('invalid-token');
-      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
-        code: 'AUTH_001',
-        message: 'Invalid session token',
-        metadata: undefined,
+      expect(mockSocket.emit).toHaveBeenCalledWith('room_joined', {
+        success: false,
+        message: 'Invalid session token.',
       });
     });
 
@@ -338,6 +338,10 @@ describe("Room Handlers", () => {
       (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
         roomId: mockRoomId,
         playerId: 1,
+      });
+      (mockRoomRepository.getRoom as jest.Mock).mockReturnValueOnce({
+        roomId: mockRoomId,
+        players: [{ id: 1, name: 'Player1' }],
       });
 
       const leaveRoomHandler = handlers['leave_room'];

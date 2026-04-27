@@ -152,6 +152,7 @@ describe("Game Handlers", () => {
         roomId: mockRoomId,
         gameCompleted: true,
         players: [player],
+        currentPlayerIndex: 0,
       } as GameRoomState;
       (mockRoomRepository.getRoom as jest.Mock).mockReturnValueOnce(completedRoom);
 

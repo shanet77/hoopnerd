@@ -8,6 +8,7 @@
     "dev": "turbo run dev",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "lint": "turbo run lint",
+    "lint:oxlint": "oxlint apps/api/src packages/database/src packages/types/src packages/logger/src packages/logic/src packages/ui/src",
     "test": "turbo run test",
     "test:unit": "turbo run test -- --testPathPatterns=unit",
     "test:integration": "turbo run test -- --testPathPatterns=integration",
@@ -15,6 +16,7 @@
     "test:coverage": "turbo run test -- --coverage --coveragePathIgnorePatterns=/dist/ --coveragePathIgnorePatterns=/.next/ --coveragePathIgnorePatterns=/node_modules/"
   },
   "devDependencies": {
+    "oxlint": "^1.61.0",
     "prettier": "^3.8.3",
     "turbo": "^2.9.6"
   },
