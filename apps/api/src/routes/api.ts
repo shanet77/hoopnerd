@@ -11,13 +11,10 @@ type ApiRouterDependencies = {
  * Creates an Express router with all HTTP API routes.
  * This extracts route definitions from server.ts (Step 3 of the refactoring).
  */
-export function createApiRouter(
-  dependencies: ApiRouterDependencies
-): Router {
+export function createApiRouter(dependencies: ApiRouterDependencies): Router {
   const router = Router();
   const { playerService } = dependencies;
 
-  // ─── Player Search ───────────────────────────────────────────────────────
   router.get("/api/players/search", async (req: Request, res: Response) => {
     const { q } = req.query;
 
@@ -27,11 +24,9 @@ export function createApiRouter(
       typeof q !== "string" ||
       q.trim() === ""
     ) {
-      return res
-        .status(400)
-        .json({
-          error: 'Query parameter "q" is required and must not be empty.',
-        });
+      return res.status(400).json({
+        error: 'Query parameter "q" is required and must not be empty.',
+      });
     }
 
     try {
@@ -42,7 +37,6 @@ export function createApiRouter(
     }
   });
 
-  // ─── Random Player ───────────────────────────────────────────────────────
   router.get("/api/players/random", async (req: Request, res: Response) => {
     try {
       const player = await playerService.getRandomPlayer();
@@ -53,12 +47,10 @@ export function createApiRouter(
     }
   });
 
-  // ─── Health Check ────────────────────────────────────────────────────────
   router.get("/health", (req: Request, res: Response) => {
     res.json({ status: "OK", timestamp: new Date().toISOString() });
   });
 
-  // ─── Stats ───────────────────────────────────────────────────────────────
   router.get("/api/stats", async (req: Request, res: Response) => {
     const windowDays = parseWindowDays(req.query.windowDays);
     const timezone = parseTimezone(req.query.tz);
@@ -79,7 +71,7 @@ export function createApiRouter(
           ORDER BY count DESC, name ASC
           LIMIT 5
         `,
-        [windowDays, timezone]
+        [windowDays, timezone],
       );
 
       const teamsResult = await databasePool.query(
@@ -93,7 +85,7 @@ export function createApiRouter(
           ORDER BY count DESC, name ASC
           LIMIT 5
         `,
-        [windowDays, timezone]
+        [windowDays, timezone],
       );
 
       const seasonsResult = await databasePool.query(
@@ -107,7 +99,7 @@ export function createApiRouter(
           ORDER BY count DESC, season_year DESC
           LIMIT 5
         `,
-        [windowDays, timezone]
+        [windowDays, timezone],
       );
 
       const streakResult = await databasePool.query(
@@ -117,7 +109,7 @@ export function createApiRouter(
           WHERE event_type = 'streak'
             AND ${timeFilter}
         `,
-        [windowDays, timezone]
+        [windowDays, timezone],
       );
 
       res.json({
