@@ -5,8 +5,6 @@ import { createApiRouter } from "../api";
 import { PlayerService } from "@repo/types";
 import databasePool from "@repo/database";
 
-// -- Mocks -----------------------------------------------------------------
-
 jest.mock("@repo/database", () => ({
   __esModule: true,
   default: {
@@ -14,15 +12,21 @@ jest.mock("@repo/database", () => ({
   },
 }));
 
-const mockDbQuery = databasePool.query as unknown as jest.Mock<(...args: any[]) => any>;
-
-// -- Helpers ----------------------------------------------------------------
+const mockDbQuery = databasePool.query as unknown as jest.Mock<
+  (...args: any[]) => any
+>;
 
 function createTestApp(playerServiceOverrides: Partial<PlayerService> = {}) {
   const fakePlayerService = {
-    searchPlayers: jest.fn<PlayerService["searchPlayers"]>().mockResolvedValue([]),
-    getRandomPlayer: jest.fn<PlayerService["getRandomPlayer"]>().mockResolvedValue(null),
-    getRandomTopScorer: jest.fn<PlayerService["getRandomTopScorer"]>().mockResolvedValue(null),
+    searchPlayers: jest
+      .fn<PlayerService["searchPlayers"]>()
+      .mockResolvedValue([]),
+    getRandomPlayer: jest
+      .fn<PlayerService["getRandomPlayer"]>()
+      .mockResolvedValue(null),
+    getRandomTopScorer: jest
+      .fn<PlayerService["getRandomTopScorer"]>()
+      .mockResolvedValue(null),
     ...playerServiceOverrides,
   } as unknown as PlayerService;
 
@@ -31,8 +35,6 @@ function createTestApp(playerServiceOverrides: Partial<PlayerService> = {}) {
   app.use(createApiRouter({ playerService: fakePlayerService }));
   return { app, fakePlayerService };
 }
-
-// -- Tests ------------------------------------------------------------------
 
 describe("API Routes — /api/players/search", () => {
   beforeEach(() => {
