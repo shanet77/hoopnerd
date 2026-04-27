@@ -1,3 +1,4 @@
+import type { CorsOptions } from "cors";
 import { GameRoomState } from "@repo/types";
 
 export const DEFAULT_STATS_WINDOW_DAYS = 7;
@@ -35,6 +36,20 @@ export const isOriginAllowed = (
   if (allowedOrigins.includes("*")) return true;
   return allowedOrigins.includes(origin);
 };
+
+/**
+ * Builds CORS options from the resolved allowed origins list.
+ */
+export const buildCorsConfig = (allowedOrigins: string[]): CorsOptions => ({
+  origin: (origin, callback) => {
+    if (isOriginAllowed(allowedOrigins, origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error("Not allowed by CORS"));
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+});
 
 export const parseWindowDays = (value: unknown): number => {
   const parsed =
