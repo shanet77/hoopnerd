@@ -1,21 +1,21 @@
-import { Server as SocketIOServer, Socket } from 'socket.io';
-import { Server as HttpServer } from 'http';
-import { GameRoomRepository } from '../services/GameRoomRepository';
-import { registerRoomHandlers } from './handlers/room';
-import { registerMatchmakingHandlers } from './handlers/matchmaking';
-import { registerGameHandlers } from './handlers/game';
+import { Server as SocketIOServer, Socket } from "socket.io";
+import { Server as HttpServer } from "http";
+import { GameRoomRepository } from "../services/GameRoomRepository";
+import { registerRoomHandlers } from "./handlers/room";
+import { registerMatchmakingHandlers } from "./handlers/matchmaking";
+import { registerGameHandlers } from "./handlers/game";
 
 /**
  * Creates and configures a Socket.io server attached to the given HTTP server.
  */
 export function createSocketIOServer(
   httpServer: HttpServer,
-  allowedOrigins: string[]
+  allowedOrigins: string[],
 ): SocketIOServer {
   return new SocketIOServer(httpServer, {
     cors: {
-      origin: allowedOrigins.includes('*') ? '*' : allowedOrigins,
-      methods: ['GET', 'POST', 'OPTIONS'],
+      origin: allowedOrigins.includes("*") ? "*" : allowedOrigins,
+      methods: ["GET", "POST", "OPTIONS"],
     },
   });
 }
@@ -26,7 +26,7 @@ export function createSocketIOServer(
 export function registerSocketHandlers(
   io: SocketIOServer,
   roomRepository: GameRoomRepository,
-  socket: Socket
+  socket: Socket,
 ): void {
   console.log(`User connected: ${socket.id}`);
 
@@ -36,7 +36,7 @@ export function registerSocketHandlers(
   registerGameHandlers(socket, roomRepository);
 
   // Global disconnect handler
-  socket.on('disconnect', () => {
+  socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.id}`);
     roomRepository.handleDisconnect(socket.id);
   });
@@ -47,9 +47,9 @@ export function registerSocketHandlers(
  */
 export function setupSocketIO(
   io: SocketIOServer,
-  roomRepository: GameRoomRepository
+  roomRepository: GameRoomRepository,
 ): void {
-  io.on('connection', (socket: Socket) => {
+  io.on("connection", (socket: Socket) => {
     registerSocketHandlers(io, roomRepository, socket);
   });
 }
