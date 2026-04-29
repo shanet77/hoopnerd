@@ -47,6 +47,14 @@ export API_IMAGE
 export WEB_IMAGE
 export IMAGE_TAG
 
+# Run database migration + seed (seed skips if data already exists)
+echo "Ensuring database schema and seed data..."
+docker compose \
+  -f docker-compose.prod.yml \
+  --env-file .env.prod \
+  --profile seed \
+  run --rm db-seed
+
 docker compose \
   -f docker-compose.prod.yml \
   --env-file .env.prod \

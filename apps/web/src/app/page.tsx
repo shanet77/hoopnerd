@@ -59,6 +59,7 @@ function LobbyPage() {
   const [feedbackMessage, setFeedbackMessage] = useState<string>("");
   const [isMatchmaking, setIsMatchmaking] = useState(false);
   const [stats, setStats] = useState<StatsResponse | null>(null);
+  const [statsError, setStatsError] = useState(false);
   const router = useRouter();
 
   const handleCreateRoom = async () => {
@@ -186,11 +187,13 @@ function LobbyPage() {
           `${apiHost}/api/stats?windowDays=7&tz=America%2FNew_York`,
         );
         if (!response.ok) {
+          setStatsError(true);
           return;
         }
         const payload = (await response.json()) as StatsResponse;
         setStats(payload);
       } catch (error) {
+        setStatsError(true);
         console.error("Error fetching stats:", error);
       }
     };
@@ -346,9 +349,14 @@ function LobbyPage() {
                 <CardDescription>Last 7 days • Top 5 only</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 text-sm text-gray-600">
-                {!stats && (
+                {!stats && !statsError && (
                   <p className="text-center text-gray-400" role="status" aria-live="polite">
                     Loading stats...
+                  </p>
+                )}
+                {!stats && statsError && (
+                  <p className="text-center text-amber-600" role="alert">
+                    Stats currently unavailable.
                   </p>
                 )}
                 {stats && (

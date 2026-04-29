@@ -10,7 +10,7 @@
     "lint": "turbo run lint",
     "lint:oxlint": "oxlint apps/api/src packages/database/src packages/types/src packages/logger/src packages/logic/src packages/ui/src",
     "test": "turbo run test",
-    "test:unit": "turbo run test -- --testPathPatterns=unit",
+    "test:unit": "turbo run test -- --testPathPatterns=unit --passWithNoTests",
     "test:integration": "turbo run test -- --testPathPatterns=integration",
     "test:contract": "turbo run test -- --testPathPatterns=contract",
     "test:coverage": "turbo run test -- --coverage --coveragePathIgnorePatterns=/dist/ --coveragePathIgnorePatterns=/.next/ --coveragePathIgnorePatterns=/node_modules/"

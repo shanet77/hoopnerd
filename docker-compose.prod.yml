@@ -27,6 +27,7 @@ services:
 
   postgres:
     image: postgres:18-alpine
+    container_name: hoopnerd-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}

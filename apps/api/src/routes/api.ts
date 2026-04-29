@@ -123,7 +123,7 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
       });
     } catch (error) {
       console.error("Stats query error:", error);
-      res.status(400).json({ error: "Invalid stats query" });
+      res.status(500).json({ error: "Failed to fetch stats" });
     }
   });
 

@@ -22,4 +22,6 @@ const pool = process.env.DATABASE_URL
       port: parseInt(process.env.DB_PORT || "5432"),
     });
 
+export { runMigrations } from "./migrate";
+
 export default pool;

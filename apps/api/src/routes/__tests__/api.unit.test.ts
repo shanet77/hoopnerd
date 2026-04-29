@@ -266,9 +266,9 @@ describe("API Routes — /api/stats", () => {
 
     await supertest(app)
       .get("/api/stats")
-      .expect(400)
+      .expect(500)
       .then((res) => {
-        expect(res.body.error).toBe("Invalid stats query");
+        expect(res.body.error).toBe("Failed to fetch stats");
       });
   });
 
