@@ -20,16 +20,16 @@
     "preset": "@repo/jest-presets/node"
   },
   "devDependencies": {
-    "@jest/globals": "^30.3.0",
+    "@jest/globals": "^30.4.0",
     "@repo/eslint-config": "workspace:*",
     "@repo/jest-presets": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.6.2",
     "@types/pg": "^8.20.0",
-    "csv-parser": "^3.2.0",
+    "csv-parser": "^3.2.1",
     "dotenv": "^17.4.2",
-    "eslint": "^10.2.1",
-    "jest": "^30.3.0",
+    "eslint": "^10.3.0",
+    "jest": "^30.4.0",
     "pg": "^8.20.0",
     "typescript": "6.0.2"
   }

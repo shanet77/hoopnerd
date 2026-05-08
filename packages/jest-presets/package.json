@@ -14,7 +14,7 @@
     "./react/jest-preset": "./node/jest-preset-react.js"
   },
   "dependencies": {
-    "jest": "^30.3.0",
+    "jest": "^30.4.0",
     "ts-jest": "^29.4.9"
   }
 }
