@@ -1,39 +1,20 @@
 "use client";
 
-import { useEffect, useState, ChangeEvent, FormEvent, useRef } from "react";
-import { useParams, useSearchParams } from "next/navigation";
-import { useRouter } from "next/navigation";
+import { useState, FormEvent } from "react";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
-import { Input } from "@repo/ui/input";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardDescription,
-} from "@repo/ui/card";
+import { Card, CardContent, CardTitle } from "@repo/ui/card";
 import { Badge } from "@repo/ui/badge";
-import {
-  SocketProvider,
-  useSocket,
-  joinRoom,
-  submitMove,
-  leaveRoom,
-} from "../../lib/socket";
-import { trackEvent } from "../../lib/analytics";
-import {
-  clearPlayerSession,
-  getPlayerSession,
-  setPlayerSession,
-} from "../../lib/playerSession";
-import {
-  Player,
-  GameRoomState,
-  JoinRoomRequest,
-  SubmitMoveRequest,
-} from "@repo/types";
+import { FeedbackBanner } from "@repo/ui/feedback-banner";
+import { SocketProvider, useSocket } from "../../lib/socket";
+import { useGameRoom } from "../../lib/useGameRoom";
+import { Player } from "@repo/types";
 import ClientOnly from "../../../components/ClientOnly";
 import { PlayerGraph } from "../../../components/game/PlayerGraph";
+import { PlayerSearch } from "../../../components/game/PlayerSearch";
+import { MoveHistory } from "../../../components/game/MoveHistory";
+import { PlayerList } from "../../../components/game/PlayerList";
+import { GameStatusBanner } from "../../../components/game/GameStatusBanner";
 
 export default function Room() {
   return (
@@ -58,217 +39,37 @@ function GamePage() {
   const router = useRouter();
   const roomId = params.roomId as string;
   const playerName = searchParams.get("playerName") || "Player";
-  const existingSession = getPlayerSession(roomId, playerName);
 
-  const [activePlayer, setActivePlayer] = useState<Player | null>(null);
-  const [timeRemaining, setTimeRemaining] = useState<number>(25);
-  const [winner, setWinner] = useState<Player | null>(null);
-  const [winReason, setWinReason] = useState<string>("");
+  const {
+    activePlayer,
+    timeRemaining,
+    winner,
+    winReason,
+    roomState,
+    gameMessage,
+    isConnected,
+    isMyTurn,
+    handleSubmitMove,
+    handleLeaveRoom,
+  } = useGameRoom(socket, socketConnected, roomId, playerName);
 
   const [connectedPlayer, setConnectedPlayer] = useState<Player | null>(null);
-  const [roomState, setRoomState] = useState<GameRoomState | null>(null);
-  const [searchResults, setSearchResults] = useState<Player[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [gameMessage, setGameMessage] = useState<string>("");
-  const [isConnected, setIsConnected] = useState(false);
-  const [playerToken, setPlayerToken] = useState<string>(existingSession?.token ?? "");
-  const [myPlayerId, setMyPlayerId] = useState<number | null>(existingSession?.playerId ?? null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const hasTrackedJoinRef = useRef(false);
-  const latestMoveCountRef = useRef(0);
+  const apiHost = process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3001";
 
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (roomState?.gameStarted && !roomState.gameCompleted) {
-      timer = setInterval(() => {
-        setTimeRemaining((prev) => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
+  const onLeave = () => {
+    handleLeaveRoom();
+    router.push("/");
+  };
+
+  const onSubmitMove = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!connectedPlayer) return;
+
+    const response = await handleSubmitMove(connectedPlayer);
+    if (response.success) {
+      setConnectedPlayer(null);
     }
-    return () => clearInterval(timer);
-  }, [roomState?.gameStarted, roomState?.gameCompleted]);
-
-  useEffect(() => {
-    latestMoveCountRef.current = roomState?.moves.length || 0;
-  }, [roomState?.moves.length]);
-
-  useEffect(() => {
-    hasTrackedJoinRef.current = false;
-  }, [roomId, playerName]);
-
-  useEffect(() => {
-    if (socket) {
-      setIsConnected(socketConnected);
-
-      const handleConnect = () => {
-        setIsConnected(true);
-        if (playerToken) {
-          const reconnectRequest: JoinRoomRequest = {
-            roomId,
-            playerName,
-            playerToken,
-          };
-          joinRoom(socket, reconnectRequest).then((response) => {
-            if (response.success) {
-              setRoomState(response.roomState || null);
-              if (response.roomState?.players?.length) {
-                setActivePlayer(
-                  response.roomState.players[response.roomState.currentPlayerIndex],
-                );
-              }
-              trackEvent("room_rejoined", {
-                player_count: response.roomState?.players.length || 0,
-                game_started: response.roomState?.gameStarted || false,
-              });
-              if (response.playerToken) {
-                setPlayerToken(response.playerToken);
-              }
-              if (typeof response.playerId === "number") {
-                setMyPlayerId(response.playerId);
-              }
-              if (response.playerToken && typeof response.playerId === "number") {
-                setPlayerSession(roomId, playerName, {
-                  token: response.playerToken,
-                  playerId: response.playerId,
-                });
-              }
-            } else {
-              setGameMessage(`Failed to rejoin room: ${response.message}`);
-              trackEvent("room_rejoin_failed");
-            }
-          }).catch((error) => {
-            console.error("Error rejoining room:", error);
-            setGameMessage("Failed to rejoin room. Please refresh and try again.");
-            trackEvent("room_rejoin_error");
-          });
-        }
-      };
-      const handleDisconnect = () => setIsConnected(false);
-
-      socket.on("connect", handleConnect);
-      socket.on("disconnect", handleDisconnect);
-
-      socket.on("room_updated", (state: GameRoomState) => {
-        setRoomState(state);
-        if (state.players.length > 0) {
-          setActivePlayer(state.players[state.currentPlayerIndex] || null);
-        }
-      });
-
-      socket.on("game_started", (state: GameRoomState) => {
-        setRoomState(state);
-        setActivePlayer(state.players[state.currentPlayerIndex]);
-        setTimeRemaining(25);
-        trackEvent("game_started", {
-          player_count: state.players.length,
-          friends_only: state.friendsOnly,
-        });
-      });
-
-      socket.on("turn_changed", (player: Player) => {
-        setActivePlayer(player);
-        setTimeRemaining(25);
-        setGameMessage(`${player.name}'s turn!`);
-      });
-
-      socket.on(
-        "game_over",
-        ({
-          winner: gameWinner,
-          reason,
-        }: {
-          winner: Player;
-          reason: string;
-        }) => {
-          setWinner(gameWinner);
-          setWinReason(reason);
-          setGameMessage(`Game Over! ${gameWinner.name} wins!`);
-          trackEvent("game_over", {
-            winner_is_me:
-              typeof myPlayerId === "number" && gameWinner.id === myPlayerId,
-            move_count: latestMoveCountRef.current,
-          });
-        },
-      );
-
-      socket.on("move_submitted", (data) => {
-        if (data.roomState) {
-          setRoomState(data.roomState);
-        }
-        setGameMessage(data.message);
-      });
-
-      socket.on("player_connected", (player: Player) => {
-        setGameMessage(`${player.name} joined the game`);
-      });
-
-      socket.on("player_disconnected", (name: string) => {
-        setGameMessage(`${name} left the game`);
-      });
-
-      socket.on("game_error", (error: string) => {
-        setGameMessage(`Error: ${error}`);
-      });
-
-      return () => {
-        socket.off("connect", handleConnect);
-        socket.off("disconnect", handleDisconnect);
-        socket.off("room_updated");
-        socket.off("move_submitted");
-        socket.off("player_connected");
-        socket.off("player_disconnected");
-        socket.off("game_error");
-        socket.off("game_started");
-        socket.off("turn_changed");
-        socket.off("game_over");
-      };
-    }
-  }, [socket, socketConnected, playerToken, roomId, playerName, myPlayerId]);
-
-  useEffect(() => {
-    if (socket && socketConnected && roomId && playerName && !playerToken) {
-      const requestData: JoinRoomRequest = { roomId, playerName };
-      joinRoom(socket, requestData).then((response) => {
-        if (response.success) {
-          setRoomState(response.roomState || null);
-          setGameMessage(response.message);
-          if (response.roomState?.players?.length) {
-            setActivePlayer(
-              response.roomState.players[response.roomState.currentPlayerIndex],
-            );
-          }
-          if (response.playerToken) {
-            setPlayerToken(response.playerToken);
-          }
-          if (typeof response.playerId === "number") {
-            setMyPlayerId(response.playerId);
-          }
-          if (response.playerToken && typeof response.playerId === "number") {
-            setPlayerSession(roomId, playerName, {
-              token: response.playerToken,
-              playerId: response.playerId,
-            });
-          }
-          if (!hasTrackedJoinRef.current) {
-            trackEvent("room_joined", {
-              player_count: response.roomState?.players.length || 0,
-              game_started: response.roomState?.gameStarted || false,
-            });
-            hasTrackedJoinRef.current = true;
-          }
-        } else {
-          setGameMessage(`Failed to join room: ${response.message}`);
-          trackEvent("room_join_failed");
-          clearPlayerSession(roomId, playerName);
-          setPlayerToken("");
-          setMyPlayerId(null);
-        }
-      }).catch((error) => {
-        console.error("Error joining room:", error);
-        setGameMessage("Failed to join room. Please refresh and try again.");
-        trackEvent("room_join_error");
-      });
-    }
-  }, [socket, socketConnected, roomId, playerName, playerToken]);
+  };
 
   if (!socket) {
     return (
@@ -291,215 +92,51 @@ function GamePage() {
     );
   }
 
-  const searchPlayers = async (query: string) => {
-    if (query.trim() === "") {
-      setSearchResults([]);
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3001"}/api/players/search?q=${encodeURIComponent(query)}`,
-      );
-      const players: Player[] = await response.json();
-      setSearchResults(players);
-    } catch (error) {
-      console.error("Error searching players:", error);
-      setSearchResults([]);
-    }
-  };
-
-  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-
-    if (query.length >= 2) {
-      searchPlayers(query);
-    } else {
-      setSearchResults([]);
-    }
-  };
-
-  const handleSubmitMove = async (e: FormEvent) => {
-    e.preventDefault();
-
-    if (!roomState || !connectedPlayer || !socket) {
-      setGameMessage(
-        "Please select a player to connect and wait for socket connection",
-      );
-      return;
-    }
-
-    if (!playerToken) {
-      setGameMessage("Missing player session token. Please rejoin the room.");
-      return;
-    }
-
-    const moveData: SubmitMoveRequest = {
-      roomId: roomState.roomId,
-      connectedPlayer: connectedPlayer,
-      playerToken,
-    };
-
-    try {
-      const response = await submitMove(socket, moveData);
-
-      if (response.success) {
-        setGameMessage(response.message);
-        trackEvent("move_submitted", {
-          move_count: response.roomState?.moves.length || latestMoveCountRef.current + 1,
-        });
-        setConnectedPlayer(null);
-        setSearchQuery("");
-        setSearchResults([]);
-      } else {
-        setGameMessage(response.message);
-        trackEvent("move_rejected");
-      }
-    } catch (error) {
-      console.error("Error submitting move:", error);
-      setGameMessage("Error submitting move");
-      trackEvent("move_submit_error");
-    }
-  };
-
-  const handleLeaveRoom = () => {
-    if (roomState && socket && playerToken) {
-      leaveRoom(socket, { roomId: roomState.roomId, playerToken });
-    }
-    trackEvent("room_left");
-    clearPlayerSession(roomId, playerName);
-    setPlayerToken("");
-    setMyPlayerId(null);
-    router.push("/");
-  };
-
-  const isMyTurn = typeof myPlayerId === "number" && activePlayer?.id === myPlayerId;
-  const progressPercent = (timeRemaining / 25) * 100;
-  const isUrgent = timeRemaining <= 5;
-
   return (
     <main id="main-content" className="min-h-screen bg-gray-50 py-6 px-4">
       <div className="max-w-2xl mx-auto space-y-4">
         <p className="sr-only" role="status" aria-live="polite">
           {gameMessage}
         </p>
-        <div className="flex items-center justify-between">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleLeaveRoom}
-            aria-label="Leave room and return to lobby"
-          >
-            ← Leave
-          </Button>
-          <Badge variant={isConnected ? "success" : "error"} size="sm" aria-live="polite">
-            {isConnected ? "Online" : "Offline"}
-          </Badge>
-          <div
-            className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border-2 border-gray-200"
-            role="group"
-            aria-label={`Room code ${roomId}`}
-          >
-            <span className="text-lg">🏀</span>
-            <span className="font-bold text-gray-700">{roomId}</span>
-          </div>
-        </div>
+
+        <GameHeader
+          roomId={roomId}
+          isConnected={isConnected}
+          onLeave={onLeave}
+        />
 
         {winner ? (
-          <div className="space-y-6">
-            <Card className="text-center py-8 bg-warning-light/50 border-warning/30">
-              <div className="inline-flex items-center justify-center w-24 h-24 bg-warning rounded-full mx-auto mb-4 shadow-lg animate-bounce">
-                <span className="text-5xl">🏆</span>
-              </div>
-              <CardTitle className="text-3xl text-warning-dark mb-2">
-                {winner.name} Wins!
-              </CardTitle>
-              <p className="text-gray-600 font-medium">{winReason}</p>
-            </Card>
-            <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={handleLeaveRoom}
-              >
-                Back to Lobby
-              </Button>
-            </div>
-          </div>
+          <GameOverScreen winner={winner} winReason={winReason} onLeave={onLeave} />
         ) : roomState ? (
           <>
-            <Card className="bg-white">
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-bold text-gray-500 uppercase tracking-wide">
-                    Current Turn
-                  </span>
-                  <Badge variant={isMyTurn ? "basketball" : "info"} size="lg" aria-live="polite">
-                    {isMyTurn ? "🎯 Your Turn!" : activePlayer?.name}
-                  </Badge>
-                </div>
-                <div
-                  className="relative h-4 bg-gray-200 rounded-full overflow-hidden"
-                  role="progressbar"
-                  aria-label="Turn timer"
-                  aria-valuemin={0}
-                  aria-valuemax={25}
-                  aria-valuenow={timeRemaining}
-                >
-                  <div
-                    className={`absolute left-0 top-0 h-full rounded-full transition-all duration-1000 ${isUrgent ? "bg-error" : "bg-success"
-                      }`}
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-                <div className="flex justify-between mt-2">
-                  <span
-                    className={`font-bold text-2xl ${isUrgent ? "text-error countdown-pulse" : "text-gray-700"}`}
-                  >
-                    {timeRemaining}s
-                  </span>
-                  <span className="text-sm text-gray-500 font-medium">
-                    {roomState.moves.length} moves made
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+            <GameStatusBanner
+              roomState={roomState}
+              activePlayer={activePlayer}
+              isMyTurn={isMyTurn}
+              timeRemaining={timeRemaining}
+            />
+
+            {gameMessage.includes("Invalid") ||
+            gameMessage.includes("not play with") ? (
+              <FeedbackBanner variant="error" icon="❌">
+                {gameMessage}
+              </FeedbackBanner>
+            ) : null}
 
             {gameMessage &&
-              (gameMessage.includes("Invalid") ||
-                gameMessage.includes("not play with")) && (
-                <div
-                  className="p-4 bg-error-light border-2 border-error/30 rounded-2xl"
-                  role="alert"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">❌</span>
-                    <p className="font-bold text-error-dark">{gameMessage}</p>
-                  </div>
-                </div>
-              )}
-
-            {gameMessage &&
-              !gameMessage.includes("Invalid") &&
-              gameMessage.includes("turn") && (
-                <div
-                  className="p-3 bg-brand-100 border-2 border-brand/30 rounded-xl text-center"
-                  role="status"
-                  aria-live="polite"
-                >
-                  <p className="font-bold text-brand-700">{gameMessage}</p>
-                </div>
-              )}
+            !gameMessage.includes("Invalid") &&
+            gameMessage.includes("turn") ? (
+              <FeedbackBanner variant="info">{gameMessage}</FeedbackBanner>
+            ) : null}
 
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle>Player Chain</CardTitle>
-                <CardDescription>
+              <CardContent className="py-4">
+                <h2 className="font-title text-xl font-bold text-gray-800 mb-2">
+                  Player Chain
+                </h2>
+                <p className="text-gray-500 text-sm mb-4">
                   Build the longest chain of connected players!
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+                </p>
                 {roomState.gameStarted && roomState.startingPlayer ? (
                   <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-100">
                     <PlayerGraph
@@ -516,114 +153,34 @@ function GamePage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle>Players in Room</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {roomState.players.map((player, index) => (
-                    <div
-                      key={player.id}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 ${player.name === activePlayer?.name
-                        ? "bg-basketball text-white border-basketball"
-                        : "bg-gray-100 border-gray-200"
-                        }`}
-                    >
-                      <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm">
-                        {index + 1}
-                      </div>
-                      <span className="font-bold">{player.name}</span>
-                      {player.name === activePlayer?.name && (
-                        <span className="text-xs">🎯</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {roomState.players.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">
-                    No players yet...
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+            <PlayerList
+              players={roomState.players}
+              activePlayer={activePlayer}
+            />
 
             {isMyTurn && roomState.gameStarted && (
               <Card className="bg-success-light/30 border-success/30">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-2">
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-2 mb-2">
                     <span className="text-2xl">🎯</span>
-                    <CardTitle>Make Your Move</CardTitle>
+                    <h2 className="font-title text-xl font-bold text-gray-800">
+                      Make Your Move
+                    </h2>
                   </div>
-                  <CardDescription>
+                  <p className="text-gray-500 text-sm mb-4">
                     Connect a player to{" "}
                     <strong>
                       {roomState.lastConnectedPlayer?.name ||
                         roomState.startingPlayer?.name}
                     </strong>{" "}
                     who shared a team and season!
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmitMove} className="space-y-4">
-                    <div>
-                      <Input
-                        type="text"
-                        label="Selected Player"
-                        value={connectedPlayer?.name || ""}
-                        readOnly
-                        onClick={() => searchInputRef.current?.focus()}
-                        placeholder="Currently Selected Player"
-                        icon={<span>👤</span>}
-                      />
-                    </div>
-
-                    <div>
-                      <Input
-                        type="text"
-                        label="Search Players"
-                        value={searchQuery}
-                        onChange={handleSearchChange}
-                        placeholder="Type a player name..."
-                        icon={<span>🔍</span>}
-                        ref={searchInputRef}
-                      />
-
-                      {searchResults.length > 0 && (
-                        <div
-                          className="mt-2 bg-white border-2 border-gray-200 rounded-xl divide-y divide-gray-100 max-h-60 overflow-y-auto"
-                          role="listbox"
-                          aria-label="Player search results"
-                        >
-                          {searchResults.map((player) => (
-                            <button
-                              key={player.id}
-                              type="button"
-                              className="p-3 cursor-pointer hover:bg-brand-50 transition-colors flex items-center gap-3 w-full text-left"
-                              onClick={() => {
-                                setConnectedPlayer(player);
-                                setSearchQuery("");
-                                setSearchResults([]);
-                              }}
-                              aria-label={`Select ${player.name}${player.position ? `, ${player.position}` : ""}`}
-                            >
-                              <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center">
-                                <span className="text-lg">🏀</span>
-                              </div>
-                              <div>
-                                <span className="font-bold text-gray-800 block">
-                                  {player.name}
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                  {player.position}
-                                </span>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
+                  </p>
+                  <form onSubmit={onSubmitMove} className="space-y-4">
+                    <PlayerSearch
+                      apiHost={apiHost}
+                      selectedPlayer={connectedPlayer}
+                      onSelect={setConnectedPlayer}
+                    />
                     <Button
                       type="submit"
                       disabled={!connectedPlayer}
@@ -642,7 +199,7 @@ function GamePage() {
                 <CardContent className="py-6 text-center">
                   <div className="text-4xl mb-2">⏰</div>
                   <p className="font-bold text-gray-600">
-                    Waiting for {activePlayer?.name}'s move...
+                    Waiting for {activePlayer?.name}&apos;s move...
                   </p>
                 </CardContent>
               </Card>
@@ -662,38 +219,7 @@ function GamePage() {
               </Card>
             )}
 
-            {roomState.moves.length > 0 && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle>Move History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {roomState.moves.map((move, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
-                      >
-                        <div className="w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center font-bold text-brand-700">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1">
-                          <span className="font-bold text-gray-800">
-                            {move.playerName}
-                          </span>
-                          <span className="text-sm text-gray-500 ml-1">
-                            ({move.position})
-                          </span>
-                        </div>
-                        <span className="text-sm text-gray-400">
-                          Move #{index + 1}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <MoveHistory moves={roomState.moves} />
           </>
         ) : (
           <Card className="text-center py-8">
@@ -704,12 +230,97 @@ function GamePage() {
               <CardTitle>Joining Room...</CardTitle>
               <p className="text-gray-500 mt-2">Getting everything ready!</p>
               {gameMessage && (
-                <p className="text-sm font-semibold text-warning-dark mt-3">{gameMessage}</p>
+                <p className="text-sm font-semibold text-warning-dark mt-3">
+                  {gameMessage}
+                </p>
               )}
             </CardContent>
           </Card>
         )}
       </div>
     </main>
+  );
+}
+
+function GameHeader({
+  roomId,
+  isConnected,
+  onLeave,
+}: {
+  roomId: string;
+  isConnected: boolean;
+  onLeave: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const copyRoomCode = async () => {
+    try {
+      await navigator.clipboard.writeText(roomId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between">
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={onLeave}
+        aria-label="Leave room and return to lobby"
+      >
+        ← Leave
+      </Button>
+      <Badge variant={isConnected ? "success" : "error"} size="sm" aria-live="polite">
+        {isConnected ? "Online" : "Offline"}
+      </Badge>
+      <div
+        className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border-2 border-gray-200"
+        role="group"
+        aria-label={`Room code ${roomId}`}
+      >
+        <span className="text-lg">🏀</span>
+        <span className="font-bold text-gray-700">{roomId}</span>
+        <button
+          type="button"
+          onClick={copyRoomCode}
+          className="text-xs font-bold text-brand-600 hover:text-brand-800 transition-colors ml-1"
+          aria-label="Copy room code"
+        >
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GameOverScreen({
+  winner,
+  winReason,
+  onLeave,
+}: {
+  winner: Player;
+  winReason: string;
+  onLeave: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <Card className="text-center py-8 bg-warning-light/50 border-warning/30">
+        <div className="inline-flex items-center justify-center w-24 h-24 bg-warning rounded-full mx-auto mb-4 shadow-lg animate-bounce">
+          <span className="text-5xl">🏆</span>
+        </div>
+        <CardTitle className="text-3xl text-warning-dark mb-2">
+          {winner.name} Wins!
+        </CardTitle>
+        <p className="text-gray-600 font-medium">{winReason}</p>
+      </Card>
+      <div className="flex gap-3">
+        <Button variant="secondary" className="flex-1" onClick={onLeave}>
+          Back to Lobby
+        </Button>
+      </div>
+    </div>
   );
 }
