@@ -14,12 +14,13 @@ WEB_IMAGE="${WEB_IMAGE:-}"
 cd "${DEPLOY_TARGET_PATH}"
 
 if [ -d .git ]; then
-  echo "Deploy context: user=$(whoami) path=$(pwd)"
-  git fetch --all --prune
+  echo "Deploy context: user=$(whoami) path=$(pwd) image_tag=${IMAGE_TAG:-}"
+  git fetch origin main:refs/remotes/origin/main --prune
   git checkout -f main || git checkout -B main origin/main
   # Ensure deploys are reproducible even if tracked files were edited on-host.
   # This does not remove untracked files like .env.prod or Caddyfile.
   git reset --hard origin/main
+  echo "Deploying commit: $(git rev-parse HEAD)"
 fi
 
 REGISTRY_HOST="${REGISTRY_URL#https://}"
@@ -63,7 +64,7 @@ docker compose \
 docker compose \
   -f docker-compose.prod.yml \
   --env-file .env.prod \
-  up -d --remove-orphans
+  up -d --remove-orphans --force-recreate
 
 docker compose \
   -f docker-compose.prod.yml \
