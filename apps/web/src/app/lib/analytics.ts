@@ -1,53 +1,51 @@
-type PlausibleValue = string | number | boolean;
+type UmamiValue = string | number | boolean;
 
-type PlausibleOptions = {
-  callback?: () => void;
-  props?: Record<string, PlausibleValue>;
-  u?: string;
-};
+type UmamiEventData = Record<string, UmamiValue>;
 
 declare global {
   interface Window {
-    plausible?: (eventName: string, options?: PlausibleOptions) => void;
+    umami?: {
+      track: (eventName: string, eventData?: UmamiEventData) => void;
+    };
   }
 }
 
-export const plausibleScriptSrc =
-  process.env.NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC?.trim() || "";
+export const umamiWebsiteId =
+  process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID?.trim() || "";
 
-export const isPlausibleEnabled = plausibleScriptSrc.length > 0;
+export const isUmamiEnabled = umamiWebsiteId.length > 0;
 
-const callPlausible = (eventName: string, options?: PlausibleOptions) => {
-  if (!isPlausibleEnabled || typeof window === "undefined") {
+const callUmami = (eventName: string, eventData?: UmamiEventData) => {
+  if (!isUmamiEnabled || typeof window === "undefined") {
     return;
   }
 
-  if (typeof window.plausible !== "function") {
-    console.warn("[plausible] window.plausible is not available", {
+  if (typeof window.umami?.track !== "function") {
+    console.warn("[umami] window.umami.track is not available", {
       eventName,
-      options,
+      eventData,
     });
     return;
   }
 
-  window.plausible(eventName, options);
+  window.umami.track(eventName, eventData);
 };
 
 export const trackPageview = (path?: string) => {
   if (path) {
-    callPlausible("pageview", { u: path });
+    callUmami("pageview", { url: path });
     return;
   }
-  callPlausible("pageview");
+  callUmami("pageview");
 };
 
 export const trackEvent = (
   eventName: string,
-  props?: Record<string, PlausibleValue>,
+  props?: Record<string, UmamiValue>,
 ) => {
   if (props && Object.keys(props).length > 0) {
-    callPlausible(eventName, { props });
+    callUmami(eventName, props);
     return;
   }
-  callPlausible(eventName);
+  callUmami(eventName);
 };

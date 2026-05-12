@@ -2,8 +2,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Oswald } from "next/font/google";
-import PlausiblePageviewTracker from "./lib/PlausiblePageviewTracker";
-import { isPlausibleEnabled, plausibleScriptSrc } from "./lib/analytics";
+import UmamiPageviewTracker from "./lib/UmamiPageviewTracker";
+import { isUmamiEnabled, umamiWebsiteId } from "./lib/analytics";
 
 const oswald = Oswald({
   subsets: ["latin"],
@@ -31,17 +31,15 @@ export default function RootLayout({
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
-        {isPlausibleEnabled ? (
+        {isUmamiEnabled ? (
           <>
-            <Script id="plausible-bootstrap" strategy="afterInteractive">
-              {`window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)};plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init();`}
-            </Script>
             <Script
-              src={plausibleScriptSrc}
+              defer
+              src="https://cloud.umami.is/script.js"
+              data-website-id={umamiWebsiteId}
               strategy="afterInteractive"
-              async
             />
-            <PlausiblePageviewTracker />
+            <UmamiPageviewTracker />
           </>
         ) : null}
         {children}

@@ -2,9 +2,6 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
-    environment:
-      PLAUSIBLE_UPSTREAM: ${PLAUSIBLE_UPSTREAM}
-      PLAUSIBLE_UPSTREAM_TLS_SERVER_NAME: ${PLAUSIBLE_UPSTREAM_TLS_SERVER_NAME:-plausible.hoopnerd.xyz}
     ports:
       - "80:80"
       - "443:443"

@@ -2,14 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { isPlausibleEnabled, trackPageview } from "./analytics";
+import { isUmamiEnabled, trackPageview } from "./analytics";
 
-export default function PlausiblePageviewTracker() {
+export default function UmamiPageviewTracker() {
   const pathname = usePathname();
   const lastTrackedPathRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!isPlausibleEnabled) {
+    if (!isUmamiEnabled) {
       return;
     }
     const search =

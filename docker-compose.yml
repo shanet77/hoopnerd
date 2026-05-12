@@ -48,7 +48,7 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=http://api:3001
       - NEXT_PUBLIC_API_HOST=http://api:3001
-      - NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC=
+      - NEXT_PUBLIC_UMAMI_WEBSITE_ID=
     networks:
       - app_network
   api:

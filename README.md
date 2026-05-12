@@ -71,7 +71,7 @@ CREATE TABLE rosters (
 ### Optional Forgejo Actions Variables (repo/org `vars`)
 - `NEXT_PUBLIC_API_URL`
 - `NEXT_PUBLIC_API_HOST`
-- `NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC`
+- `NEXT_PUBLIC_UMAMI_WEBSITE_ID`
 
 ### Deployment Behavior
 - Pull requests run `test`.
