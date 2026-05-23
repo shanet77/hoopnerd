@@ -7,37 +7,30 @@ import {
 import databasePool from "@repo/database";
 import { validateMove, getConnectionDetails } from "@repo/logic";
 import { createGameRoom } from "../serverUtils";
+import { SocketBindingManager, SocketBinding } from "./SocketBindingManager";
+import { recordGameStats } from "./StatsRecorder";
 
-interface SocketBinding {
-  roomId: string;
-  playerId: number;
-}
+export type { SocketBinding } from "./SocketBindingManager";
 
 export class GameRoomRepository {
   private gameRooms: Map<string, GameRoomState> = new Map();
   private roomTimers: Map<string, NodeJS.Timeout> = new Map();
-  private socketRoomBindings: Map<string, SocketBinding> = new Map();
-  private disconnectGraceTimers: Map<string, NodeJS.Timeout> = new Map();
+  private socketBindings: SocketBindingManager;
 
-  private readonly DISCONNECT_GRACE_PERIOD_MS = Number(process.env.DISCONNECT_GRACE_MS) || 10000;
   private readonly TURN_TIMEOUT_MS = Number(process.env.TURN_TIMEOUT_MS) || 25000;
 
   constructor(
     private io: SocketIOServer,
     private playerService: PlayerService
-  ) {}
-
-  private getDisconnectGraceKey(roomId: string, playerId: number): string {
-    return `${roomId}:${playerId}`;
+  ) {
+    this.socketBindings = new SocketBindingManager(
+      io,
+      (roomId, playerId) => this.removePlayerFromRoom(roomId, playerId, 'disconnected')
+    );
   }
 
   clearDisconnectGraceTimer(roomId: string, playerId: number): void {
-    const key = this.getDisconnectGraceKey(roomId, playerId);
-    const timer = this.disconnectGraceTimers.get(key);
-    if (timer) {
-      clearTimeout(timer);
-      this.disconnectGraceTimers.delete(key);
-    }
+    this.socketBindings.clearDisconnectGraceTimer(roomId, playerId);
   }
 
   createRoom(roomId: string, friendsOnly = false): GameRoomState {
@@ -76,30 +69,15 @@ export class GameRoomRepository {
   }
 
   bindSocket(socketId: string, roomId: string, playerId: number): void {
-    this.clearDisconnectGraceTimer(roomId, playerId);
-
-    // Remove stale socket binding for same player
-    for (const [boundSocketId, binding] of this.socketRoomBindings.entries()) {
-      if (
-        binding.roomId === roomId &&
-        binding.playerId === playerId &&
-        boundSocketId !== socketId
-      ) {
-        this.socketRoomBindings.delete(boundSocketId);
-        const staleSocket = this.io.sockets.sockets.get(boundSocketId);
-        staleSocket?.disconnect(true);
-      }
-    }
-
-    this.socketRoomBindings.set(socketId, { roomId, playerId });
+    this.socketBindings.bindSocket(socketId, roomId, playerId);
   }
 
   getSocketBinding(socketId: string): SocketBinding | undefined {
-    return this.socketRoomBindings.get(socketId);
+    return this.socketBindings.getSocketBinding(socketId);
   }
 
   removeSocketBinding(socketId: string): void {
-    this.socketRoomBindings.delete(socketId);
+    this.socketBindings.removeSocketBinding(socketId);
   }
 
   async startGame(roomId: string): Promise<boolean> {
@@ -164,48 +142,9 @@ export class GameRoomRepository {
     }
 
     this.io.to(roomId).emit('game_over', { winner: room.winner, reason });
-    this.recordStatsForRoom(room).catch((error) => {
+    recordGameStats(room).catch((error) => {
       console.error('Error recording stats:', error);
     });
-  }
-
-  private async recordStatsForRoom(room: GameRoomState): Promise<void> {
-    if (room.statsRecorded) return;
-    room.statsRecorded = true;
-
-    const rows: Array<[string, string | null, string | null, number | null, number | null]> = [];
-
-    for (const move of room.moves) {
-      rows.push(['player', move.playerName, null, null, null]);
-    }
-
-    for (const connection of room.connections) {
-      if (connection.teamName) {
-        rows.push(['team', null, connection.teamName, null, null]);
-      }
-      if (connection.seasonYear) {
-        rows.push(['season', null, null, connection.seasonYear, null]);
-      }
-    }
-
-    rows.push(['streak', null, null, null, room.connections.length]);
-
-    if (rows.length === 0) return;
-
-    const placeholders = rows
-      .map((_, index) => {
-        const offset = index * 5;
-        return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`;
-      })
-      .join(', ');
-
-    await databasePool.query(
-      `
-        INSERT INTO stats_events (event_type, player_name, team_name, season_year, streak_count)
-        VALUES ${placeholders}
-      `,
-      rows.flat()
-    );
   }
 
   removePlayerFromRoom(roomId: string, playerId: number, reason: 'left' | 'disconnected'): void {
@@ -235,30 +174,7 @@ export class GameRoomRepository {
   }
 
   handleDisconnect(socketId: string): void {
-    const binding = this.socketRoomBindings.get(socketId);
-    if (binding) {
-      this.socketRoomBindings.delete(socketId);
-      const { roomId, playerId } = binding;
-      
-      this.clearDisconnectGraceTimer(roomId, playerId);
-
-      const key = this.getDisconnectGraceKey(roomId, playerId);
-      const timer = setTimeout(() => {
-        const stillBound = Array.from(this.socketRoomBindings.values()).some(
-          (activeBinding) =>
-            activeBinding.roomId === roomId &&
-            activeBinding.playerId === playerId
-        );
-
-        if (!stillBound) {
-          this.removePlayerFromRoom(roomId, playerId, 'disconnected');
-        }
-
-        this.disconnectGraceTimers.delete(key);
-      }, this.DISCONNECT_GRACE_PERIOD_MS);
-
-      this.disconnectGraceTimers.set(key, timer);
-    }
+    this.socketBindings.handleDisconnect(socketId);
   }
 
   async submitMove(
@@ -285,7 +201,6 @@ export class GameRoomRepository {
       return { success: false, message: 'Not your turn.' };
     }
 
-    // Check if player was already used
     const wasUsed = room.moves.some(move => move.playerId === connectedPlayer.id);
     if (wasUsed) {
       return { 
