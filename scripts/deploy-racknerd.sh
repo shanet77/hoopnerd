@@ -15,10 +15,9 @@ cd "${DEPLOY_TARGET_PATH}"
 
 if [ -d .git ]; then
   echo "Deploy context: user=$(whoami) path=$(pwd) image_tag=${IMAGE_TAG:-}"
-  git fetch origin main:refs/remotes/origin/main --prune
+  git remote prune origin || true
+  git fetch origin main
   git checkout -f main || git checkout -B main origin/main
-  # Ensure deploys are reproducible even if tracked files were edited on-host.
-  # This does not remove untracked files like .env.prod or Caddyfile.
   git reset --hard origin/main
   echo "Deploying commit: $(git rev-parse HEAD)"
 fi
