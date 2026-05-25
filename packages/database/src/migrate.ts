@@ -1,4 +1,4 @@
-import pool from './index';
+import pool from "./index";
 
 /**
  * Run all database migrations idempotently.
@@ -52,17 +52,35 @@ export async function runMigrations(): Promise<void> {
     ON stats_events (event_type, created_at DESC);
   `);
 
-  console.log('Database schema ensured (runMigrations).');
+  // Materialized view for player connection counts (used by CPU engine)
+  await pool.query(`
+    CREATE MATERIALIZED VIEW IF NOT EXISTS player_connection_counts AS
+    SELECT player_id, COUNT(DISTINCT teammate_id)::int AS connection_count
+    FROM (
+      SELECT r1.player_id, r2.player_id AS teammate_id
+      FROM rosters r1
+      JOIN rosters r2 ON r1.team_id = r2.team_id AND r1.season_year = r2.season_year
+      WHERE r1.player_id != r2.player_id
+    ) sub
+    GROUP BY player_id;
+  `);
+
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS player_connection_counts_player_id_idx
+    ON player_connection_counts (player_id);
+  `);
+
+  console.log("Database schema ensured (runMigrations).");
 }
 
 // CLI mode — run standalone, then close the pool
 if (require.main === module) {
   runMigrations()
     .then(() => {
-      console.log('Database schema created successfully!');
+      console.log("Database schema created successfully!");
     })
     .catch((error) => {
-      console.error('Error during migration:', error);
+      console.error("Error during migration:", error);
       process.exit(1);
     })
     .finally(() => pool.end());

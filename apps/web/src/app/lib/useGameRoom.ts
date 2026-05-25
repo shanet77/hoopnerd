@@ -8,11 +8,7 @@ import {
   JoinRoomRequest,
   SubmitMoveRequest,
 } from "@repo/types";
-import {
-  joinRoom,
-  submitMove,
-  leaveRoom,
-} from "./socket";
+import { joinRoom, submitMove, leaveRoom } from "./socket";
 import { trackEvent } from "./analytics";
 import {
   clearPlayerSession,
@@ -32,6 +28,7 @@ export function useGameRoom(
   const [timeRemaining, setTimeRemaining] = useState<number>(25);
   const [winner, setWinner] = useState<Player | null>(null);
   const [winReason, setWinReason] = useState<string>("");
+  const [cpuThinking, setCpuThinking] = useState(false);
 
   const [roomState, setRoomState] = useState<GameRoomState | null>(null);
   const [gameMessage, setGameMessage] = useState<string>("");
@@ -66,6 +63,9 @@ export function useGameRoom(
   useEffect(() => {
     hasTrackedJoinRef.current = false;
   }, [roomId, playerName]);
+
+  // Determine if opponent is CPU
+  const isCpuOpponent = roomState?.players.some((p) => p.isCpu) ?? false;
 
   // Socket event handlers
   useEffect(() => {
@@ -142,6 +142,7 @@ export function useGameRoom(
       setRoomState(state);
       setActivePlayer(state.players[state.currentPlayerIndex]);
       setTimeRemaining(25);
+      setCpuThinking(false);
       trackEvent("game_started", {
         player_count: state.players.length,
         friends_only: state.friendsOnly,
@@ -151,20 +152,25 @@ export function useGameRoom(
     socket.on("turn_changed", (player: Player) => {
       setActivePlayer(player);
       setTimeRemaining(25);
-      setGameMessage(`${player.name}'s turn!`);
+      setCpuThinking(false);
+      if (player.isCpu) {
+        // CPU's turn — cpu_thinking event will fire shortly
+      } else {
+        setGameMessage(`${player.name}'s turn!`);
+      }
+    });
+
+    socket.on("cpu_thinking", () => {
+      setCpuThinking(true);
+      setGameMessage("🤖 CPU is thinking...");
     });
 
     socket.on(
       "game_over",
-      ({
-        winner: gameWinner,
-        reason,
-      }: {
-        winner: Player;
-        reason: string;
-      }) => {
+      ({ winner: gameWinner, reason }: { winner: Player; reason: string }) => {
         setWinner(gameWinner);
         setWinReason(reason);
+        setCpuThinking(false);
         setGameMessage(`Game Over! ${gameWinner.name} wins!`);
         trackEvent("game_over", {
           winner_is_me:
@@ -178,6 +184,7 @@ export function useGameRoom(
       if (data.roomState) {
         setRoomState(data.roomState);
       }
+      setCpuThinking(false);
       setGameMessage(data.message);
     });
 
@@ -203,19 +210,14 @@ export function useGameRoom(
       socket.off("game_error");
       socket.off("game_started");
       socket.off("turn_changed");
+      socket.off("cpu_thinking");
       socket.off("game_over");
     };
   }, [socket, socketConnected, playerToken, roomId, playerName, myPlayerId]);
 
   // Initial join
   useEffect(() => {
-    if (
-      socket &&
-      socketConnected &&
-      roomId &&
-      playerName &&
-      !playerToken
-    ) {
+    if (socket && socketConnected && roomId && playerName && !playerToken) {
       const requestData: JoinRoomRequest = { roomId, playerName };
       joinRoom(socket, requestData)
         .then((response) => {
@@ -235,10 +237,7 @@ export function useGameRoom(
             if (typeof response.playerId === "number") {
               setMyPlayerId(response.playerId);
             }
-            if (
-              response.playerToken &&
-              typeof response.playerId === "number"
-            ) {
+            if (response.playerToken && typeof response.playerId === "number") {
               setPlayerSession(roomId, playerName, {
                 token: response.playerToken,
                 playerId: response.playerId,
@@ -336,6 +335,8 @@ export function useGameRoom(
     playerToken,
     myPlayerId,
     isMyTurn,
+    isCpuOpponent,
+    cpuThinking,
     handleSubmitMove,
     handleLeaveRoom,
     setGameMessage,

@@ -10,14 +10,11 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - app_network_dev
 
   db-seed:
     build:
@@ -34,56 +31,6 @@ services:
       DB_PASSWORD: postgres
     volumes:
       - ./datasets:/app/datasets
-    networks:
-      - app_network_dev
-
-  web:
-    container_name: hoopnerd-web-dev
-    image: node:24-alpine
-    working_dir: /app
-    command: sh -c "npx pnpm install && npx pnpm --filter web dev"
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3001
-      - NEXT_PUBLIC_API_HOST=http://localhost:3001
-      - NEXT_PUBLIC_UMAMI_WEBSITE_ID=
-    volumes:
-      - .:/app
-      - web_node_modules:/app/node_modules
-    depends_on:
-      - postgres
-    networks:
-      - app_network_dev
-
-  api:
-    container_name: hoopnerd-api-dev
-    image: node:24-alpine
-    working_dir: /app
-    command: sh -c "npx pnpm install && npx pnpm --filter api dev"
-    ports:
-      - "3001:3001"
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/connectaball_dev
-      DB_HOST: postgres
-      DB_NAME: connectaball_dev
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_PORT: 5432
-    volumes:
-      - .:/app
-      - api_node_modules:/app/node_modules
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - app_network_dev
 
 volumes:
   postgres_data_dev:
-  web_node_modules:
-  api_node_modules:
-
-networks:
-  app_network_dev:
-    driver: bridge

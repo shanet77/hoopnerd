@@ -1,26 +1,30 @@
-import fs from 'fs';
-import path from 'path';
-import { Pool } from 'pg';
+import fs from "fs";
+import path from "path";
+import { Pool } from "pg";
 
-const TOP_SCORERS_PATH = path.resolve(__dirname, '../../..', 'datasets/top_scorers.csv');
+const TOP_SCORERS_PATH = path.resolve(
+  __dirname,
+  "../../..",
+  "datasets/top_scorers.csv",
+);
 const DEFAULT_TOP_SCORERS_LIMIT = 80;
 let topScorerNamesCache: string[] | null = null;
 
 const parseTopScorerNames = (csv: string, limit: number): string[] => {
   const lines = csv
     .split(/\r?\n/)
-    .map(line => line.trim())
+    .map((line) => line.trim())
     .filter(Boolean);
 
   const names: string[] = [];
   const seen = new Set<string>();
 
   for (const line of lines) {
-    if (line.toLowerCase().startsWith('rank,')) {
+    if (line.toLowerCase().startsWith("rank,")) {
       continue;
     }
 
-    const parts = line.split(',');
+    const parts = line.split(",");
     if (parts.length < 2) {
       continue;
     }
@@ -47,12 +51,12 @@ const loadTopScorerNames = async (limit: number): Promise<string[]> => {
   }
 
   try {
-    const csv = await fs.promises.readFile(TOP_SCORERS_PATH, 'utf8');
+    const csv = await fs.promises.readFile(TOP_SCORERS_PATH, "utf8");
     const names = parseTopScorerNames(csv, limit);
     topScorerNamesCache = names;
     return names;
   } catch (error) {
-    console.error('Failed to load top scorers list:', error);
+    console.error("Failed to load top scorers list:", error);
     topScorerNamesCache = [];
     return [];
   }
@@ -72,11 +76,14 @@ export interface FriendRelationship {
   createdAt: Date;
 }
 
+export type CpuDifficulty = "easy" | "medium" | "hard";
+
 export interface Player {
   id: number;
   name: string;
   position: string;
   socketId?: string;
+  isCpu?: boolean;
 }
 
 // WebSocket Event Types
@@ -156,6 +163,20 @@ export interface JoinMatchmakingResponse {
   playerId?: number;
 }
 
+export interface CreateCpuGameRequest {
+  playerName: string;
+  difficulty: CpuDifficulty;
+}
+
+export interface CreateCpuGameResponse {
+  success: boolean;
+  message: string;
+  roomId?: string;
+  roomState?: GameRoomState;
+  playerToken?: string;
+  playerId?: number;
+}
+
 export interface LeaveRoomRequest {
   roomId: string;
   playerToken: string;
@@ -166,6 +187,7 @@ export interface WebSocketEvents {
   join_room: (data: JoinRoomRequest) => void;
   join_matchmaking: (data: JoinMatchmakingRequest) => void;
   create_room: (friendsOnly?: boolean) => void;
+  create_cpu_game: (data: CreateCpuGameRequest) => void;
   leave_room: (data: LeaveRoomRequest) => void;
   submit_move: (data: SubmitMoveRequest) => void;
 
@@ -173,6 +195,7 @@ export interface WebSocketEvents {
   room_joined: (data: JoinRoomResponse) => void;
   matchmaking_result: (data: JoinMatchmakingResponse) => void;
   room_created: (data: CreateRoomResponse) => void;
+  cpu_game_created: (data: CreateCpuGameResponse) => void;
   move_submitted: (data: SubmitMoveResponse) => void;
   player_connected: (player: Player) => void;
   player_disconnected: (playerName: string) => void;
@@ -180,6 +203,7 @@ export interface WebSocketEvents {
   room_updated: (roomState: GameRoomState) => void;
   game_started: (state: GameRoomState) => void;
   turn_changed: (player: Player) => void;
+  cpu_thinking: () => void;
   game_over: (data: { winner: Player; reason: string }) => void;
 }
 
@@ -204,7 +228,7 @@ export interface StatsResponse {
 }
 
 export class PlayerService {
-  constructor(private db: DatabaseService) { }
+  constructor(private db: DatabaseService) {}
 
   async searchPlayers(query: string): Promise<Player[]> {
     const searchTerm = `%${query.trim()}%`;
@@ -240,7 +264,9 @@ export class PlayerService {
     return result.rows.length > 0 ? result.rows[0] : null;
   }
 
-  async getRandomTopScorer(limit: number = DEFAULT_TOP_SCORERS_LIMIT): Promise<Player | null> {
+  async getRandomTopScorer(
+    limit: number = DEFAULT_TOP_SCORERS_LIMIT,
+  ): Promise<Player | null> {
     const topScorerNames = await loadTopScorerNames(limit);
     if (topScorerNames.length === 0) {
       return null;

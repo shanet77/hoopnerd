@@ -49,6 +49,8 @@ function GamePage() {
     gameMessage,
     isConnected,
     isMyTurn,
+    isCpuOpponent,
+    cpuThinking,
     handleSubmitMove,
     handleLeaveRoom,
   } = useGameRoom(socket, socketConnected, roomId, playerName);
@@ -106,7 +108,11 @@ function GamePage() {
         />
 
         {winner ? (
-          <GameOverScreen winner={winner} winReason={winReason} onLeave={onLeave} />
+          <GameOverScreen
+            winner={winner}
+            winReason={winReason}
+            onLeave={onLeave}
+          />
         ) : roomState ? (
           <>
             <GameStatusBanner
@@ -114,6 +120,7 @@ function GamePage() {
               activePlayer={activePlayer}
               isMyTurn={isMyTurn}
               timeRemaining={timeRemaining}
+              isCpuOpponent={isCpuOpponent}
             />
 
             {gameMessage.includes("Invalid") ||
@@ -125,7 +132,8 @@ function GamePage() {
 
             {gameMessage &&
             !gameMessage.includes("Invalid") &&
-            gameMessage.includes("turn") ? (
+            (gameMessage.includes("turn") ||
+              gameMessage.includes("thinking")) ? (
               <FeedbackBanner variant="info">{gameMessage}</FeedbackBanner>
             ) : null}
 
@@ -195,11 +203,19 @@ function GamePage() {
             )}
 
             {!isMyTurn && roomState.gameStarted && (
-              <Card className="bg-gray-100 border-gray-200">
+              <Card
+                className={`${cpuThinking ? "bg-brand-50 border-brand-200" : "bg-gray-100 border-gray-200"}`}
+              >
                 <CardContent className="py-6 text-center">
-                  <div className="text-4xl mb-2">⏰</div>
+                  <div
+                    className={`text-4xl mb-2 ${cpuThinking ? "animate-pulse" : ""}`}
+                  >
+                    {cpuThinking ? "🤖" : "⏰"}
+                  </div>
                   <p className="font-bold text-gray-600">
-                    Waiting for {activePlayer?.name}&apos;s move...
+                    {cpuThinking
+                      ? "🤖 CPU is thinking..."
+                      : `Waiting for ${activePlayer?.name}'s move...`}
                   </p>
                 </CardContent>
               </Card>
@@ -273,7 +289,11 @@ function GameHeader({
       >
         ← Leave
       </Button>
-      <Badge variant={isConnected ? "success" : "error"} size="sm" aria-live="polite">
+      <Badge
+        variant={isConnected ? "success" : "error"}
+        size="sm"
+        aria-live="polite"
+      >
         {isConnected ? "Online" : "Offline"}
       </Badge>
       <div

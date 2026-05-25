@@ -1,4 +1,7 @@
-import { DatabaseService, Player, PlayerConnection } from '@repo/types';
+import { DatabaseService, Player, PlayerConnection } from "@repo/types";
+
+export { CpuEngine } from "./cpuEngine";
+export type { CpuEngineDependencies } from "./cpuEngine";
 
 /**
  * Validates a move in the game.
@@ -13,7 +16,7 @@ import { DatabaseService, Player, PlayerConnection } from '@repo/types';
 export async function validateMove(
   db: DatabaseService,
   playerAId: number,
-  playerBId?: number
+  playerBId?: number,
 ): Promise<boolean> {
   // If playerBId is not provided, this is the first move.
   // Validate that playerA exists.
@@ -35,7 +38,10 @@ export async function validateMove(
     WHERE id IN ($1, $2)
   `;
 
-  const playersCheckResult = await db.query(playersCheckQuery, [playerAId, playerBId]);
+  const playersCheckResult = await db.query(playersCheckQuery, [
+    playerAId,
+    playerBId,
+  ]);
 
   if (parseInt(playersCheckResult.rows[0].count) < 2) {
     return false;
@@ -67,10 +73,10 @@ export async function validateMove(
 export async function getConnectionDetails(
   db: DatabaseService,
   playerAId: number,
-  playerBId: number
+  playerBId: number,
 ): Promise<PlayerConnection | null> {
   const query = `
-    SELECT 
+    SELECT
       p1.id as from_id, p1.player_name as from_name, p1.position as from_position,
       p2.id as to_id, p2.player_name as to_name, p2.position as to_position,
       r1.season_year,
@@ -116,7 +122,7 @@ export async function getConnectionDetails(
  */
 export async function getPlayerById(
   db: DatabaseService,
-  playerId: number
+  playerId: number,
 ): Promise<Player | null> {
   const query = `
     SELECT id, player_name AS name, position

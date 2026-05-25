@@ -1,24 +1,42 @@
 import supertest from "supertest";
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from "@jest/globals";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+  jest,
+} from "@jest/globals";
 // Use short timeouts for faster integration tests
-process.env.TURN_TIMEOUT_MS = '1000';
-process.env.DISCONNECT_GRACE_MS = '500';
+process.env.TURN_TIMEOUT_MS = "1000";
+process.env.DISCONNECT_GRACE_MS = "500";
 
 import { createServer } from "../server";
-import { Server as HttpServer } from 'http';
-import { io, Socket } from 'socket.io-client';
+import { Server as HttpServer } from "http";
+import { io, Socket } from "socket.io-client";
 import { GameRoomState, Player } from "@repo/types";
 import { AddressInfo } from "net";
 import { getConnectionDetails, validateMove } from "@repo/logic";
 import type { Express } from "express";
 import databasePool from "@repo/database";
 
-// Mock the validateMove function from the @repo/logic package
-jest.mock('@repo/logic', () => ({
-  __esModule: true,
-  validateMove: jest.fn<typeof validateMove>(),
-  getConnectionDetails: jest.fn<typeof getConnectionDetails>(),
-}));
+// Mock the @repo/logic package
+jest.mock("@repo/logic", () => {
+  class MockCpuEngine {
+    constructor(_deps: any) {}
+    async getBestMove() {
+      return null;
+    }
+  }
+  return {
+    __esModule: true,
+    validateMove: jest.fn<typeof validateMove>(),
+    getConnectionDetails: jest.fn<typeof getConnectionDetails>(),
+    CpuEngine: MockCpuEngine,
+  };
+});
 jest.mock("@repo/database", () => ({
   __esModule: true,
   default: {
@@ -27,13 +45,15 @@ jest.mock("@repo/database", () => ({
 }));
 
 const mockValidateMove = validateMove as jest.Mock<typeof validateMove>;
-const mockGetConnectionDetails = getConnectionDetails as jest.Mock<typeof getConnectionDetails>;
+const mockGetConnectionDetails = getConnectionDetails as jest.Mock<
+  typeof getConnectionDetails
+>;
 const mockDbQuery = databasePool.query as unknown as jest.Mock<any>;
 
 // Helper function to create a socket client
 const createSocketClient = (port: number): Socket => {
   return io(`http://localhost:${port}`, {
-    transports: ['websocket'],
+    transports: ["websocket"],
     forceNew: true,
   });
 };
@@ -74,7 +94,7 @@ describe("API Server", () => {
       .get("/health")
       .expect(200)
       .then((res) => {
-        expect(res.body.status).toBe('OK');
+        expect(res.body.status).toBe("OK");
       });
   });
 
@@ -135,8 +155,8 @@ describe("API Server", () => {
           done();
         }
       };
-      client1.on('connect', onConnect);
-      client2.on('connect', onConnect);
+      client1.on("connect", onConnect);
+      client2.on("connect", onConnect);
     });
 
     afterEach(() => {
@@ -146,12 +166,12 @@ describe("API Server", () => {
 
     it("should allow a client to create a room and join it", (done) => {
       let roomId: string;
-      client1.emit('create_room');
-      client1.on('room_created', (response) => {
+      client1.emit("create_room");
+      client1.on("room_created", (response) => {
         roomId = response.roomId;
-        client1.emit('join_room', { roomId, playerName: player1.name });
+        client1.emit("join_room", { roomId, playerName: player1.name });
       });
-      client1.on('room_joined', (response) => {
+      client1.on("room_joined", (response) => {
         expect(response.success).toBe(true);
         expect(response.roomState.roomId).toBe(roomId);
         expect(response.roomState.players).toHaveLength(1); // Only Player1 joined so far
@@ -163,27 +183,28 @@ describe("API Server", () => {
       let roomId: string;
       let playersJoined = 0;
 
-      client1.emit('create_room');
-      client1.on('room_created', (response) => {
+      client1.emit("create_room");
+      client1.on("room_created", (response) => {
         roomId = response.roomId;
-        client1.emit('join_room', { roomId, playerName: player1.name });
+        client1.emit("join_room", { roomId, playerName: player1.name });
       });
 
-      client1.on('room_joined', (response) => {
+      client1.on("room_joined", (response) => {
         expect(response.success).toBe(true);
         playersJoined++;
-        if (playersJoined === 1) { // Client1 has joined
-          client2.emit('join_room', { roomId, playerName: player2.name });
+        if (playersJoined === 1) {
+          // Client1 has joined
+          client2.emit("join_room", { roomId, playerName: player2.name });
         }
       });
 
-      client2.on('room_joined', (response) => {
+      client2.on("room_joined", (response) => {
         expect(response.success).toBe(true);
         expect(response.roomState.roomId).toBe(roomId);
         expect(response.roomState.players).toHaveLength(2); // Now both players are in the room
       });
 
-      client1.on('game_started', (roomState: GameRoomState) => {
+      client1.on("game_started", (roomState: GameRoomState) => {
         expect(roomState.gameStarted).toBe(true);
         expect(roomState.players).toHaveLength(2);
         expect(roomState.currentPlayerIndex).toBeDefined();
@@ -309,30 +330,30 @@ describe("API Server", () => {
       let gameStarted = false;
       let playersJoined = 0;
 
-      client1.emit('create_room');
-      client1.on('room_created', (response) => {
+      client1.emit("create_room");
+      client1.on("room_created", (response) => {
         roomId = response.roomId;
-        client1.emit('join_room', { roomId, playerName: player1.name });
+        client1.emit("join_room", { roomId, playerName: player1.name });
       });
 
-      client1.on('room_joined', (response) => {
+      client1.on("room_joined", (response) => {
         expect(response.success).toBe(true);
         playersJoined++;
         if (playersJoined === 1) {
-          client2.emit('join_room', { roomId, playerName: player2.name });
+          client2.emit("join_room", { roomId, playerName: player2.name });
         }
       });
 
-      client1.on('game_started', () => {
+      client1.on("game_started", () => {
         if (!gameStarted) {
           gameStarted = true;
           // Do nothing to simulate a timeout
         }
       });
 
-      client1.on('game_over', (data) => {
+      client1.on("game_over", (data) => {
         expect(data.winner).toBeDefined();
-        expect(data.reason).toContain('timed out');
+        expect(data.reason).toContain("timed out");
         done();
       });
     }, 5000); // Uses TURN_TIMEOUT_MS=1000 (set via env at top of file)
@@ -341,31 +362,31 @@ describe("API Server", () => {
       let roomId: string;
       let gameStarted = false;
 
-      client1.emit('create_room');
-      client1.on('room_created', (response) => {
+      client1.emit("create_room");
+      client1.on("room_created", (response) => {
         roomId = response.roomId;
-        client1.emit('join_room', { roomId, playerName: player1.name });
+        client1.emit("join_room", { roomId, playerName: player1.name });
       });
 
-      client1.on('room_joined', (response) => {
+      client1.on("room_joined", (response) => {
         expect(response.success).toBe(true);
-        client2.emit('join_room', { roomId, playerName: player2.name });
+        client2.emit("join_room", { roomId, playerName: player2.name });
       });
 
-      client2.on('room_joined', (response) => {
+      client2.on("room_joined", (response) => {
         expect(response.success).toBe(true);
       });
 
-      client1.on('game_started', () => {
+      client1.on("game_started", () => {
         if (!gameStarted) {
           gameStarted = true;
           client2.disconnect(); // Disconnect client2
         }
       });
 
-      client1.on('game_over', (data) => {
+      client1.on("game_over", (data) => {
         expect(data.winner).toBeDefined();
-        expect(data.reason).toContain('disconnected');
+        expect(data.reason).toContain("disconnected");
         done();
       });
     }, 5000); // Uses DISCONNECT_GRACE_MS=500 (set via env at top of file)

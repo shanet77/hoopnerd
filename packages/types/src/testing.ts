@@ -5,11 +5,12 @@ export const buildTestPlayer = (overrides: Partial<Player> = {}): Player => ({
   name: overrides.name ?? "Test Player",
   position: overrides.position ?? "G",
   socketId: overrides.socketId,
+  isCpu: overrides.isCpu ?? false,
 });
 
 export const buildTestRoom = (
   roomId: string = "ROOM1",
-  overrides: Partial<GameRoomState> = {}
+  overrides: Partial<GameRoomState> = {},
 ): GameRoomState => ({
   roomId,
   players: overrides.players ?? [],

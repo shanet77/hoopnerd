@@ -27,9 +27,14 @@ export function PlayerList({ players, activePlayer }: PlayerListProps) {
               }`}
             >
               <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm">
-                {index + 1}
+                {player.isCpu ? "🤖" : index + 1}
               </div>
               <span className="font-bold">{player.name}</span>
+              {player.isCpu && (
+                <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded-full font-medium">
+                  CPU
+                </span>
+              )}
               {player.name === activePlayer?.name && (
                 <span className="text-xs">🎯</span>
               )}

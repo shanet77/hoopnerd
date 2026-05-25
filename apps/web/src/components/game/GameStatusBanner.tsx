@@ -11,6 +11,7 @@ interface GameStatusBannerProps {
   activePlayer: Player | null;
   isMyTurn: boolean;
   timeRemaining: number;
+  isCpuOpponent?: boolean;
 }
 
 export function GameStatusBanner({
@@ -18,8 +19,10 @@ export function GameStatusBanner({
   activePlayer,
   isMyTurn,
   timeRemaining,
+  isCpuOpponent,
 }: GameStatusBannerProps) {
   const isUrgent = timeRemaining <= 5;
+  const isCpuTurn = activePlayer?.isCpu ?? false;
 
   return (
     <Card className="bg-white">
@@ -33,7 +36,11 @@ export function GameStatusBanner({
             size="lg"
             aria-live="polite"
           >
-            {isMyTurn ? "🎯 Your Turn!" : activePlayer?.name}
+            {isMyTurn
+              ? "🎯 Your Turn!"
+              : isCpuTurn
+                ? `🤖 ${activePlayer?.name}`
+                : activePlayer?.name}
           </Badge>
         </div>
         <TimerBar value={timeRemaining} max={25} urgentThreshold={5} />

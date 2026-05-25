@@ -14,6 +14,7 @@ import {
   useSocket,
   createRoom,
   joinMatchmaking,
+  createCpuGame,
 } from "./lib/socket";
 import { useLobbyStats } from "./lib/useLobbyStats";
 import { trackEvent } from "./lib/analytics";
@@ -45,6 +46,10 @@ function LobbyPage() {
   const [playerName, setPlayerName] = useState<string>("");
   const [feedbackMessage, setFeedbackMessage] = useState<string>("");
   const [isMatchmaking, setIsMatchmaking] = useState(false);
+  const [cpuDifficulty, setCpuDifficulty] = useState<
+    "easy" | "medium" | "hard"
+  >("medium");
+  const [isCpuQueuing, setIsCpuQueuing] = useState(false);
   const { stats, error: statsError } = useLobbyStats();
   const router = useRouter();
 
@@ -70,17 +75,25 @@ function LobbyPage() {
     try {
       const response = await createRoom(socket!, friendsOnly);
       if (response.success) {
-        trackEvent("room_created", { mode: friendsOnly ? "friends_only" : "public" });
+        trackEvent("room_created", {
+          mode: friendsOnly ? "friends_only" : "public",
+        });
         const query = friendsOnly ? `&friendsOnly=true` : "";
-        router.push(`/room/${response.roomId}?playerName=${playerName}${query}`);
+        router.push(
+          `/room/${response.roomId}?playerName=${playerName}${query}`,
+        );
       } else {
         setFeedbackMessage(`Failed to create room: ${response.message}`);
-        trackEvent("room_create_failed", { mode: friendsOnly ? "friends_only" : "public" });
+        trackEvent("room_create_failed", {
+          mode: friendsOnly ? "friends_only" : "public",
+        });
       }
     } catch (error) {
       console.error("Error creating room:", error);
       setFeedbackMessage("An error occurred while creating the room.");
-      trackEvent("room_create_error", { mode: friendsOnly ? "friends_only" : "public" });
+      trackEvent("room_create_error", {
+        mode: friendsOnly ? "friends_only" : "public",
+      });
     }
   };
 
@@ -100,7 +113,11 @@ function LobbyPage() {
         trackEvent("matchmaking_joined_room", {
           joined_existing_room: response.joinedExisting,
         });
-        if (response.roomId && response.playerToken && typeof response.playerId === "number") {
+        if (
+          response.roomId &&
+          response.playerToken &&
+          typeof response.playerId === "number"
+        ) {
           setPlayerSession(response.roomId, playerName, {
             token: response.playerToken,
             playerId: response.playerId,
@@ -117,6 +134,42 @@ function LobbyPage() {
       trackEvent("matchmaking_error");
     } finally {
       setIsMatchmaking(false);
+    }
+  };
+
+  const handleCpuGame = async () => {
+    if (!requireSocket() || !requireName()) return;
+
+    setIsCpuQueuing(true);
+    setFeedbackMessage("Starting CPU game...");
+    trackEvent("cpu_game_started", { difficulty: cpuDifficulty });
+
+    try {
+      const response = await createCpuGame(socket!, {
+        playerName,
+        difficulty: cpuDifficulty,
+      });
+      if (response.success && response.roomId) {
+        trackEvent("cpu_game_created", { difficulty: cpuDifficulty });
+        if (response.playerToken && typeof response.playerId === "number") {
+          setPlayerSession(response.roomId, playerName, {
+            token: response.playerToken,
+            playerId: response.playerId,
+          });
+        }
+        router.push(
+          `/room/${response.roomId}?playerName=${playerName}&cpuMode=true&cpuDifficulty=${cpuDifficulty}`,
+        );
+      } else {
+        setFeedbackMessage(`Failed to start CPU game: ${response.message}`);
+        trackEvent("cpu_game_failed", { difficulty: cpuDifficulty });
+      }
+    } catch (error) {
+      console.error("Error starting CPU game:", error);
+      setFeedbackMessage("An error occurred while starting CPU game.");
+      trackEvent("cpu_game_error", { difficulty: cpuDifficulty });
+    } finally {
+      setIsCpuQueuing(false);
     }
   };
 
@@ -160,7 +213,10 @@ function LobbyPage() {
                   <span className="text-sm font-bold text-gray-500 uppercase tracking-wide">
                     Status
                   </span>
-                  <Badge variant={isConnected ? "success" : "error"} aria-live="polite">
+                  <Badge
+                    variant={isConnected ? "success" : "error"}
+                    aria-live="polite"
+                  >
                     {isConnected ? "Connected" : "Disconnected"}
                   </Badge>
                 </div>
@@ -210,6 +266,42 @@ function LobbyPage() {
               >
                 {isMatchmaking ? "🔍 Searching..." : "Find Match"}
               </Button>
+            </LobbyActionCard>
+
+            <LobbyActionCard
+              title="Play vs CPU"
+              description="Practice against an AI opponent"
+            >
+              <div className="space-y-3">
+                <div className="flex justify-center gap-2">
+                  {(["easy", "medium", "hard"] as const).map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => setCpuDifficulty(level)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                        cpuDifficulty === level
+                          ? "bg-brand-600 text-white shadow-md"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                    >
+                      {level === "easy"
+                        ? "🟢 Easy"
+                        : level === "medium"
+                          ? "🟡 Medium"
+                          : "🔴 Hard"}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  onClick={handleCpuGame}
+                  disabled={!isConnected || isCpuQueuing || !playerName}
+                  variant="primary"
+                  className="w-full"
+                >
+                  {isCpuQueuing ? "🤖 Starting..." : "Play vs CPU"}
+                </Button>
+              </div>
             </LobbyActionCard>
 
             <LobbyActionCard
