@@ -59,6 +59,8 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-https://hoopnerd.xyz,https://www.hoopnerd.xyz}
     expose:
       - "3001"
+    volumes:
+      - ./datasets:/app/datasets:ro
     networks:
       - edge
       - internal
