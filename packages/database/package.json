@@ -12,6 +12,7 @@
     "clean": "rm -rf dist",
     "dev": "tsc -w",
     "seed": "pnpm run build && node dist/seed.js",
+    "ingest:transactions": "pnpm run build && node dist/ingestTransactions.js --season 2026",
     "migrate": "node src/migrate.ts",
     "lint": "eslint \"src/**/*.ts*\" --max-warnings 0",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest"

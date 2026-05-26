@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as csv from 'csv-parser';
 import pool from './index';
+import { ingestTransactions } from './ingestTransactions';
 
 const waitForDatabase = async (retries = 10, delayMs = 3000) => {
   for (let attempt = 1; attempt <= retries; attempt += 1) {
@@ -122,84 +123,79 @@ function splitTeamName(fullTeamName: string) {
 async function seedDatabase() {
   try {
     await waitForDatabase();
-
-    // Ensure tables and constraints exist before checking/starting seeding
     await ensureSchema();
 
     const alreadySeeded = await hasSeededData();
     if (alreadySeeded) {
-      console.log('Database already seeded. Skipping seed step.');
-      return;
-    }
+      console.log('Database already seeded. Skipping CSV step.');
+    } else {
+      const file = 'player_season_info.csv';
+      const filePath = path.join(datasetsDir, file);
+      console.log(`Processing file: ${filePath}`);
 
-    const file = 'player_season_info.csv';
-    const filePath = path.join(datasetsDir, file);
-    console.log(`Processing file: ${filePath}`);
+      const results: any[] = [];
 
-    const results: any[] = [];
+      await new Promise<void>((resolve, reject) => {
+        fs.createReadStream(filePath)
+          .pipe(csv.default())
+          .on('data', (data: any) => results.push(data))
+          .on('end', () => {
+            console.log(`Parsed ${results.length} records from ${file}`);
+            resolve();
+          })
+          .on('error', reject);
+      });
 
-    // Parse the CSV file
-    await new Promise<void>((resolve, reject) => {
-      fs.createReadStream(filePath)
-        .pipe(csv.default())
-        .on('data', (data: any) => results.push(data))
-        .on('end', () => {
-          console.log(`Parsed ${results.length} records from ${file}`);
-          resolve();
-        })
-        .on('error', reject);
-    });
+      for (const row of results) {
+        if (row.lg !== 'NBA') continue;
 
-    // Process each record
-    for (const row of results) {
-      if (row.lg !== 'NBA') continue;
+        const teamAbbreviation = String(row.team || '').toUpperCase();
+        if (!teamAbbreviation) continue;
 
-      const teamAbbreviation = String(row.team || '').toUpperCase();
-      if (!teamAbbreviation) continue;
+        const fullTeamName = getTeamName(teamAbbreviation);
+        const { city, teamName } = splitTeamName(fullTeamName);
+        const resolvedTeamName = teamName || fullTeamName;
+        const resolvedCity = city || fullTeamName;
+        const seasonYear = Number.parseInt(row.season, 10);
 
-      const fullTeamName = getTeamName(teamAbbreviation);
-      const { city, teamName } = splitTeamName(fullTeamName);
-      const resolvedTeamName = teamName || fullTeamName;
-      const resolvedCity = city || fullTeamName;
-      const seasonYear = Number.parseInt(row.season, 10);
+        if (!resolvedTeamName || !resolvedCity) {
+          console.warn('Skipping row due to missing team info:', {
+            season: row.season,
+            lg: row.lg,
+            team: row.team,
+            player: row.player,
+            player_id: row.player_id,
+            resolvedTeamName,
+            resolvedCity,
+          });
+          continue;
+        }
 
-      // Insert team if it doesn't exist
-      if (!resolvedTeamName || !resolvedCity) {
-        console.warn('Skipping row due to missing team info:', {
-          season: row.season,
-          lg: row.lg,
-          team: row.team,
-          player: row.player,
-          player_id: row.player_id,
-          resolvedTeamName,
-          resolvedCity,
-        });
-        continue;
+        const teamResult = await pool.query(
+          'INSERT INTO teams (team_name, city, abbreviation) VALUES ($1, $2, $3) ON CONFLICT (abbreviation) DO UPDATE SET team_name = EXCLUDED.team_name, city = EXCLUDED.city RETURNING id',
+          [resolvedTeamName, resolvedCity, teamAbbreviation]
+        );
+
+        const teamId = teamResult.rows[0].id;
+
+        const playerResult = await pool.query(
+          'INSERT INTO players (player_name, position) VALUES ($1, $2) ON CONFLICT (player_name) DO UPDATE SET position = EXCLUDED.position RETURNING id',
+          [row.player, row.pos]
+        );
+
+        const playerId = playerResult.rows[0].id;
+
+        await pool.query(
+          'INSERT INTO rosters (player_id, team_id, season_year) VALUES ($1, $2, $3) ON CONFLICT (player_id, team_id, season_year) DO UPDATE SET season_year = EXCLUDED.season_year',
+          [playerId, teamId, seasonYear]
+        );
       }
 
-      const teamResult = await pool.query(
-        'INSERT INTO teams (team_name, city, abbreviation) VALUES ($1, $2, $3) ON CONFLICT (abbreviation) DO UPDATE SET team_name = EXCLUDED.team_name, city = EXCLUDED.city RETURNING id',
-        [resolvedTeamName, resolvedCity, teamAbbreviation]
-      );
-
-      const teamId = teamResult.rows[0].id;
-
-      // Insert player if it doesn't exist, or get the existing player's ID
-      const playerResult = await pool.query(
-        'INSERT INTO players (player_name, position) VALUES ($1, $2) ON CONFLICT (player_name) DO UPDATE SET position = EXCLUDED.position RETURNING id',
-        [row.player, row.pos]
-      );
-
-      const playerId = playerResult.rows[0].id;
-
-      // Insert roster entry
-      await pool.query(
-        'INSERT INTO rosters (player_id, team_id, season_year) VALUES ($1, $2, $3) ON CONFLICT (player_id, team_id, season_year) DO UPDATE SET season_year = EXCLUDED.season_year',
-        [playerId, teamId, seasonYear]
-      );
+      console.log('CSV seeding completed successfully!');
     }
 
-    console.log('Database seeding completed successfully!');
+    console.log('Starting transaction ingestion...');
+    await ingestTransactions(2026);
   } catch (error) {
     console.error('Error during seeding:', error);
     process.exit(1);
