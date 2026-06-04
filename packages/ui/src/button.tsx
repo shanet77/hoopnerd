@@ -15,7 +15,7 @@ export const Button = ({
   ...rest
 }: ButtonProps) => {
   const baseStyles =
-    "font-bold py-3 px-6 rounded-2xl transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shadow-[0_4px_0_var(--shadow-color)] hover:translate-y-[-2px] hover:shadow-[0_6px_0_var(--shadow-color)] active:translate-y-[2px] active:shadow-[0_1px_0_var(--shadow-color)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white";
+    "font-bold py-3 px-6 rounded-2xl transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white";
 
   const sizeStyles = {
     sm: "py-2 px-4 text-sm",
@@ -35,23 +35,10 @@ export const Button = ({
       "bg-transparent border-3 border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-700",
   };
 
-  const shadowColors = {
-    primary: "rgba(255, 75, 35, 0.4)",
-    secondary: "rgba(0, 0, 0, 0.1)",
-    success: "rgba(88, 204, 2, 0.4)",
-    danger: "rgba(255, 75, 75, 0.4)",
-    outline: "rgba(0, 0, 0, 0.1)",
-  };
-
-  const style = {
-    "--shadow-color": shadowColors[variant],
-  } as React.CSSProperties;
-
   return (
     <button
       type={type}
       className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
-      style={style}
       {...rest}
     >
       {children}

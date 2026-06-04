@@ -13,6 +13,7 @@ interface LobbyActionCardProps {
   title: string;
   description: string;
   variant?: "default" | "highlight";
+  connected?: boolean;
   children: React.ReactNode;
 }
 
@@ -20,6 +21,7 @@ export function LobbyActionCard({
   title,
   description,
   variant = "default",
+  connected,
   children,
 }: LobbyActionCardProps) {
   const isHighlight = variant === "highlight";
@@ -35,6 +37,15 @@ export function LobbyActionCard({
         <CardTitle
           className={isHighlight ? "text-success-dark" : undefined}
         >
+          {typeof connected === "boolean" && (
+            <span
+              className={`inline-block w-2.5 h-2.5 rounded-full mr-2 align-middle ${
+                connected ? "bg-success" : "bg-error"
+              }`}
+              aria-label={connected ? "Connected" : "Disconnected"}
+              title={connected ? "Connected" : "Disconnected"}
+            />
+          )}
           {title}
         </CardTitle>
         <CardDescription>{description}</CardDescription>

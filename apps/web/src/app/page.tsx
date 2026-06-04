@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Card, CardContent } from "@repo/ui/card";
-import { Badge } from "@repo/ui/badge";
 import { LeaderboardList } from "@repo/ui/leaderboard-list";
 import { FeedbackBanner } from "@repo/ui/feedback-banner";
 import {
@@ -204,30 +203,16 @@ function LobbyPage() {
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
           <div className="space-y-6">
-            <Card hover>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-gray-500 uppercase tracking-wide">
-                    Status
-                  </span>
-                  <Badge
-                    variant={isConnected ? "success" : "error"}
-                    aria-live="polite"
-                  >
-                    {isConnected ? "Connected" : "Disconnected"}
-                  </Badge>
-                </div>
-                {feedbackMessage && (
-                  <FeedbackBanner variant="warning">
-                    {feedbackMessage}
-                  </FeedbackBanner>
-                )}
-              </CardContent>
-            </Card>
+            {feedbackMessage && (
+              <FeedbackBanner variant="warning">
+                {feedbackMessage}
+              </FeedbackBanner>
+            )}
 
             <LobbyActionCard
               title="Who's Playing?"
               description="Enter your name to get started"
+              connected={isConnected}
             >
               <Input
                 id="playerName"
