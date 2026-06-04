@@ -210,7 +210,7 @@ function GamePage() {
                   <div
                     className={`text-4xl mb-2 ${cpuThinking ? "animate-pulse" : ""}`}
                   >
-                    {cpuThinking ? "🤖" : "⏰"}
+                    {cpuThinking ? "🧠" : "⏰"}
                   </div>
                   <p className="font-bold text-gray-600">
                     {cpuThinking

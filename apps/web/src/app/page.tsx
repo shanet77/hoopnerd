@@ -275,7 +275,7 @@ function LobbyPage() {
                 variant="primary"
                 className="w-full"
               >
-                {isCpuQueuing ? "🤖 Starting..." : "Play vs CPU"}
+                {isCpuQueuing ? "Starting..." : "Play vs CPU"}
               </Button>
             </LobbyActionCard>
 

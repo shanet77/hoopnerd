@@ -8,7 +8,7 @@ const CPU_THINKING_DELAY_MS = {
   max: 2000,
 };
 
-const CPU_PLAYER_NAME = "CPU";
+const CPU_PLAYER_NAME = "BronBot";
 
 /**
  * Orchestrates CPU game creation and turn execution.
