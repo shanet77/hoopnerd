@@ -46,9 +46,6 @@ function LobbyPage() {
   const [playerName, setPlayerName] = useState<string>("");
   const [feedbackMessage, setFeedbackMessage] = useState<string>("");
   const [isMatchmaking, setIsMatchmaking] = useState(false);
-  const [cpuDifficulty, setCpuDifficulty] = useState<
-    "easy" | "medium" | "hard"
-  >("medium");
   const [isCpuQueuing, setIsCpuQueuing] = useState(false);
   const { stats, error: statsError } = useLobbyStats();
   const router = useRouter();
@@ -142,15 +139,15 @@ function LobbyPage() {
 
     setIsCpuQueuing(true);
     setFeedbackMessage("Starting CPU game...");
-    trackEvent("cpu_game_started", { difficulty: cpuDifficulty });
+    trackEvent("cpu_game_started", { difficulty: "easy" });
 
     try {
       const response = await createCpuGame(socket!, {
         playerName,
-        difficulty: cpuDifficulty,
+        difficulty: "easy",
       });
       if (response.success && response.roomId) {
-        trackEvent("cpu_game_created", { difficulty: cpuDifficulty });
+        trackEvent("cpu_game_created", { difficulty: "easy" });
         if (response.playerToken && typeof response.playerId === "number") {
           setPlayerSession(response.roomId, playerName, {
             token: response.playerToken,
@@ -158,16 +155,16 @@ function LobbyPage() {
           });
         }
         router.push(
-          `/room/${response.roomId}?playerName=${playerName}&cpuMode=true&cpuDifficulty=${cpuDifficulty}`,
+          `/room/${response.roomId}?playerName=${playerName}&cpuMode=true&cpuDifficulty=easy`,
         );
       } else {
         setFeedbackMessage(`Failed to start CPU game: ${response.message}`);
-        trackEvent("cpu_game_failed", { difficulty: cpuDifficulty });
+        trackEvent("cpu_game_failed", { difficulty: "easy" });
       }
     } catch (error) {
       console.error("Error starting CPU game:", error);
       setFeedbackMessage("An error occurred while starting CPU game.");
-      trackEvent("cpu_game_error", { difficulty: cpuDifficulty });
+      trackEvent("cpu_game_error", { difficulty: "easy" });
     } finally {
       setIsCpuQueuing(false);
     }
@@ -272,36 +269,14 @@ function LobbyPage() {
               title="Play vs CPU"
               description="Practice against an AI opponent"
             >
-              <div className="space-y-3">
-                <div className="flex justify-center gap-2">
-                  {(["easy", "medium", "hard"] as const).map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      onClick={() => setCpuDifficulty(level)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                        cpuDifficulty === level
-                          ? "bg-brand-600 text-white shadow-md"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
-                    >
-                      {level === "easy"
-                        ? "🟢 Easy"
-                        : level === "medium"
-                          ? "🟡 Medium"
-                          : "🔴 Hard"}
-                    </button>
-                  ))}
-                </div>
-                <Button
-                  onClick={handleCpuGame}
-                  disabled={!isConnected || isCpuQueuing || !playerName}
-                  variant="primary"
-                  className="w-full"
-                >
-                  {isCpuQueuing ? "🤖 Starting..." : "Play vs CPU"}
-                </Button>
-              </div>
+              <Button
+                onClick={handleCpuGame}
+                disabled={!isConnected || isCpuQueuing || !playerName}
+                variant="primary"
+                className="w-full"
+              >
+                {isCpuQueuing ? "🤖 Starting..." : "Play vs CPU"}
+              </Button>
             </LobbyActionCard>
 
             <LobbyActionCard

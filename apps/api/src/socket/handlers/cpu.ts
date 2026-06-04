@@ -35,16 +35,7 @@ export function registerCpuGameHandlers(
       }
 
       const normalizedName = (result as any).normalizedName;
-      const difficulty = data.difficulty || "medium";
-
-      // Validate difficulty
-      if (!["easy", "medium", "hard"].includes(difficulty)) {
-        socket.emit("cpu_game_created", {
-          success: false,
-          message: "Invalid difficulty. Choose easy, medium, or hard.",
-        });
-        return;
-      }
+      const difficulty = "easy";
 
       // Generate a room ID
       const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();

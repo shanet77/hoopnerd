@@ -82,114 +82,7 @@ describe("CpuEngine", () => {
       });
     });
 
-    describe("medium difficulty", () => {
-      it("prefers players with fewer connections", async () => {
-        // First query: get valid candidates
-        mockDb.query.mockResolvedValueOnce({ rows: candidates });
-
-        // Second query: connection counts per candidate
-        mockDb.query.mockResolvedValueOnce({
-          rows: [
-            { id: 3, connection_count: "5" }, // Chris Bosh: fewest
-            { id: 2, connection_count: "10" }, // Dwyane Wade
-            { id: 4, connection_count: "15" }, // Kyrie Irving: most
-          ],
-        });
-
-        const result = await engine.getBestMove(lastPlayer, usedIds, "medium");
-
-        expect(result).not.toBeNull();
-        expect(result!.id).toBe(3); // Should pick Chris Bosh (fewest connections)
-        expect(mockDb.query).toHaveBeenCalledTimes(2);
-      });
-
-      it("never returns an already-used player", async () => {
-        mockDb.query.mockResolvedValueOnce({ rows: candidates });
-        mockDb.query.mockResolvedValueOnce({
-          rows: [
-            { id: 2, connection_count: "3" },
-            { id: 4, connection_count: "7" },
-          ],
-        });
-
-        const result = await engine.getBestMove(lastPlayer, usedIds, "medium");
-
-        expect(result).not.toBeNull();
-        expect(usedIds).not.toContain(result!.id);
-      });
-    });
-
-    describe("hard difficulty", () => {
-      it("picks the candidate that minimizes opponent's options", async () => {
-        // First query: get valid candidates
-        mockDb.query.mockResolvedValueOnce({ rows: candidates });
-
-        // Second query: opponent options per candidate (excluding used IDs)
-        mockDb.query.mockResolvedValueOnce({
-          rows: [
-            { candidate_id: 2, opponent_options: "3" }, // Dwyane Wade: fewest options for opponent
-            { candidate_id: 4, opponent_options: "8" }, // Kyrie Irving
-            { candidate_id: 3, opponent_options: "12" }, // Chris Bosh: most options
-          ],
-        });
-
-        const result = await engine.getBestMove(lastPlayer, usedIds, "hard");
-
-        expect(result).not.toBeNull();
-        expect(result!.id).toBe(2); // Should pick Dwyane Wade (fewest opponent options)
-        expect(mockDb.query).toHaveBeenCalledTimes(2);
-      });
-
-      it("excludes used player IDs from opponent option counts", async () => {
-        mockDb.query.mockResolvedValueOnce({ rows: candidates });
-        mockDb.query.mockResolvedValueOnce({
-          rows: [
-            { candidate_id: 3, opponent_options: "0" },
-            { candidate_id: 2, opponent_options: "1" },
-          ],
-        });
-
-        const result = await engine.getBestMove(lastPlayer, usedIds, "hard");
-
-        expect(result).not.toBeNull();
-        // The hard query should have usedPlayerIds as the second parameter
-        const hardQueryCall = mockDb.query.mock.calls[1];
-        expect(hardQueryCall[1]).toEqual([
-          candidates.map((c) => c.id),
-          usedIds,
-        ]);
-      });
-
-      it("never returns an already-used player", async () => {
-        mockDb.query.mockResolvedValueOnce({ rows: candidates });
-        mockDb.query.mockResolvedValueOnce({
-          rows: [
-            { candidate_id: 2, opponent_options: "5" },
-            { candidate_id: 4, opponent_options: "8" },
-          ],
-        });
-
-        const result = await engine.getBestMove(lastPlayer, usedIds, "hard");
-
-        expect(result).not.toBeNull();
-        expect(usedIds).not.toContain(result!.id);
-      });
-    });
-
     describe("edge cases", () => {
-      it("defaults to random when unknown difficulty is provided", async () => {
-        mockDb.query.mockResolvedValueOnce({ rows: candidates });
-
-        const result = await engine.getBestMove(
-          lastPlayer,
-          usedIds,
-          "invalid" as any,
-        );
-
-        expect(result).not.toBeNull();
-        expect(candidates).toContainEqual(result);
-      });
-
       it("handles single candidate correctly", async () => {
         const singleCandidate = [candidates[0]];
         mockDb.query.mockResolvedValueOnce({ rows: singleCandidate });
@@ -205,7 +98,7 @@ describe("CpuEngine", () => {
         const result = await engine.getBestMove(
           lastPlayer,
           [...usedIds, 2, 3, 4],
-          "hard",
+          "easy",
         );
 
         expect(result).toBeNull();

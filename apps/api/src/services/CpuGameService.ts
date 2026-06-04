@@ -68,7 +68,7 @@ export class CpuGameService {
 
     const cpuPlayer: Player = {
       id: generatePlayerId(room),
-      name: `${CPU_PLAYER_NAME} (${difficulty})`,
+      name: CPU_PLAYER_NAME,
       position: "C",
       isCpu: true,
     };

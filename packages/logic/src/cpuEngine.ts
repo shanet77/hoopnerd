@@ -40,11 +40,6 @@ export class CpuEngine {
 
     switch (difficulty) {
       case "easy":
-        return this.pickRandom(candidates);
-      case "medium":
-        return this.pickByConnectionCount(candidates);
-      case "hard":
-        return this.pickByLookahead(candidates, usedPlayerIds);
       default:
         return this.pickRandom(candidates);
     }

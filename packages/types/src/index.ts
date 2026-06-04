@@ -76,7 +76,7 @@ export interface FriendRelationship {
   createdAt: Date;
 }
 
-export type CpuDifficulty = "easy" | "medium" | "hard";
+export type CpuDifficulty = "easy";
 
 export interface Player {
   id: number;
