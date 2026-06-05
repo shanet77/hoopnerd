@@ -105,7 +105,8 @@ function GamePage() {
           roomId={roomId}
           isConnected={isConnected}
           onLeave={onLeave}
-          seasonYear={roomState?.seasonYear}
+          seasonYearMin={roomState?.seasonYearMin}
+          seasonYearMax={roomState?.seasonYearMax}
         />
 
         {winner ? (
@@ -183,8 +184,8 @@ function GamePage() {
                         roomState.startingPlayer?.name}
                     </strong>{" "}
                     who shared a team
-                    {roomState.seasonYear !== undefined
-                      ? ` during the ${roomState.seasonYear} season`
+                    {roomState.seasonYearMin !== undefined && roomState.seasonYearMax !== undefined
+                      ? ` during ${roomState.seasonYearMin}–${roomState.seasonYearMax} seasons`
                       : " and season"}
                     !
                   </p>
@@ -267,12 +268,14 @@ function GameHeader({
   roomId,
   isConnected,
   onLeave,
-  seasonYear,
+  seasonYearMin,
+  seasonYearMax,
 }: {
   roomId: string;
   isConnected: boolean;
   onLeave: () => void;
-  seasonYear?: number;
+  seasonYearMin?: number;
+  seasonYearMax?: number;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -320,9 +323,9 @@ function GameHeader({
             {copied ? "Copied!" : "Copy"}
           </button>
         </div>
-        {seasonYear !== undefined && (
+        {seasonYearMin !== undefined && seasonYearMax !== undefined && (
           <Badge variant="info" size="sm">
-            {seasonYear}
+            {seasonYearMin}–{seasonYearMax}
           </Badge>
         )}
       </div>

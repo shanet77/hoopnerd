@@ -113,7 +113,8 @@ export interface GameRoomState {
   lastConnectedPlayer?: Player | null;
   friendsOnly: boolean;
   statsRecorded?: boolean;
-  seasonYear?: number;
+  seasonYearMin?: number;
+  seasonYearMax?: number;
 }
 
 export interface JoinRoomRequest {
@@ -167,7 +168,8 @@ export interface JoinMatchmakingResponse {
 export interface CreateCpuGameRequest {
   playerName: string;
   difficulty: CpuDifficulty;
-  seasonYear?: number;
+  seasonYearMin?: number;
+  seasonYearMax?: number;
 }
 
 export interface CreateCpuGameResponse {
@@ -268,24 +270,28 @@ export class PlayerService {
 
   async getRandomTopScorer(
     limit: number = DEFAULT_TOP_SCORERS_LIMIT,
-    seasonYear?: number,
+    seasonYearMin?: number,
+    seasonYearMax?: number,
   ): Promise<Player | null> {
     const topScorerNames = await loadTopScorerNames(limit);
     if (topScorerNames.length === 0) {
       return null;
     }
 
-    if (seasonYear !== undefined) {
+    if (seasonYearMin !== undefined && seasonYearMax !== undefined) {
       const sql = `
         SELECT id, player_name AS name, position
         FROM players
         WHERE player_name = ANY($1)
-          AND id IN (SELECT DISTINCT player_id FROM rosters WHERE season_year = $2)
+          AND id IN (
+            SELECT DISTINCT player_id FROM rosters
+            WHERE season_year >= $2 AND season_year <= $3
+          )
         ORDER BY RANDOM()
         LIMIT 1
       `;
 
-      const result = await this.db.query(sql, [topScorerNames, seasonYear]);
+      const result = await this.db.query(sql, [topScorerNames, seasonYearMin, seasonYearMax]);
       return result.rows.length > 0 ? result.rows[0] : null;
     }
 

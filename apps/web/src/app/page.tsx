@@ -24,6 +24,15 @@ import { LobbyActionCard } from "../components/lobby/LobbyActionCard";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 
+const SEASON_PRESETS = [
+	{ label: "All Time", min: undefined, max: undefined },
+	{ label: "80s", min: 1980, max: 1989 },
+	{ label: "90s", min: 1990, max: 1999 },
+	{ label: "2000s", min: 2000, max: 2009 },
+	{ label: "2010s", min: 2010, max: 2019 },
+	{ label: "2020s", min: 2020, max: 2026 },
+];
+
 export default function Web() {
 	return (
 		<ClientOnly>
@@ -48,8 +57,11 @@ function LobbyPage() {
 	const [isMatchmaking, setIsMatchmaking] = useState(false);
 	const [isCpuQueuing, setIsCpuQueuing] = useState(false);
 	const { stats, error: statsError } = useLobbyStats();
-	const { minYear, maxYear, loading: seasonsLoading } = useAvailableSeasons();
-	const [selectedSeason, setSelectedSeason] = useState<number | undefined>(
+	const { seasons, minYear, maxYear, loading: seasonsLoading } = useAvailableSeasons();
+	const [seasonYearMin, setSeasonYearMin] = useState<number | undefined>(
+		undefined,
+	);
+	const [seasonYearMax, setSeasonYearMax] = useState<number | undefined>(
 		undefined,
 	);
 	const router = useRouter();
@@ -148,8 +160,11 @@ function LobbyPage() {
 		setIsCpuQueuing(true);
 		setFeedbackMessage("Starting CPU game...");
 		const trackProps: Record<string, string | number> = { difficulty: "easy" };
-		if (selectedSeason !== undefined) {
-			trackProps.seasonYear = selectedSeason;
+		if (seasonYearMin !== undefined) {
+			trackProps.seasonYearMin = seasonYearMin;
+		}
+		if (seasonYearMax !== undefined) {
+			trackProps.seasonYearMax = seasonYearMax;
 		}
 		trackEvent("cpu_game_started", trackProps);
 
@@ -157,13 +172,15 @@ function LobbyPage() {
 			const response = await createCpuGame(socket!, {
 				playerName,
 				difficulty: "easy",
-				seasonYear: selectedSeason,
+				seasonYearMin,
+				seasonYearMax,
 			});
 			if (response.success && response.roomId) {
-				if (selectedSeason !== undefined) {
+				if (seasonYearMin !== undefined && seasonYearMax !== undefined) {
 					trackEvent("cpu_game_created", {
 						difficulty: "easy",
-						seasonYear: selectedSeason,
+						seasonYearMin,
+						seasonYearMax,
 					});
 				} else {
 					trackEvent("cpu_game_created", { difficulty: "easy" });
@@ -175,18 +192,19 @@ function LobbyPage() {
 					});
 				}
 				const seasonParam =
-					selectedSeason !== undefined
-						? `&seasonYear=${selectedSeason}`
+					seasonYearMin !== undefined && seasonYearMax !== undefined
+						? `&seasonYearMin=${seasonYearMin}&seasonYearMax=${seasonYearMax}`
 						: "";
 				router.push(
 					`/room/${response.roomId}?playerName=${playerName}&cpuMode=true&cpuDifficulty=easy${seasonParam}`,
 				);
 			} else {
 				setFeedbackMessage(`Failed to start CPU game: ${response.message}`);
-				if (selectedSeason !== undefined) {
+				if (seasonYearMin !== undefined && seasonYearMax !== undefined) {
 					trackEvent("cpu_game_failed", {
 						difficulty: "easy",
-						seasonYear: selectedSeason,
+						seasonYearMin,
+						seasonYearMax,
 					});
 				} else {
 					trackEvent("cpu_game_failed", { difficulty: "easy" });
@@ -195,10 +213,11 @@ function LobbyPage() {
 		} catch (error) {
 			console.error("Error starting CPU game:", error);
 			setFeedbackMessage("An error occurred while starting CPU game.");
-			if (selectedSeason !== undefined) {
+			if (seasonYearMin !== undefined && seasonYearMax !== undefined) {
 				trackEvent("cpu_game_error", {
 					difficulty: "easy",
-					seasonYear: selectedSeason,
+					seasonYearMin,
+					seasonYearMax,
 				});
 			} else {
 				trackEvent("cpu_game_error", { difficulty: "easy" });
@@ -293,11 +312,8 @@ function LobbyPage() {
 							title="Play vs CPU"
 							description="Practice against the CPU"
 						>
-							<div className="mb-4">
-								<label
-									htmlFor="season-input"
-									className="mb-2 text-sm font-bold text-gray-700 uppercase tracking-wide block"
-								>
+							<div className="mb-4 space-y-3">
+								<label className="text-sm font-bold text-gray-700 uppercase tracking-wide block">
 									Season
 									{minYear && maxYear && (
 										<span className="ml-1 text-xs font-normal text-gray-400 lowercase normal-case tracking-normal">
@@ -305,31 +321,65 @@ function LobbyPage() {
 										</span>
 									)}
 								</label>
-								<input
-									id="season-input"
-									type="number"
-									min={minYear}
-									max={maxYear}
-									value={selectedSeason ?? ""}
-									onChange={(e) => {
-										const val = e.target.value;
-										setSelectedSeason(
-											val === "" ? undefined : Number(val),
+								<div className="flex flex-wrap gap-1.5">
+									{SEASON_PRESETS.map((preset) => {
+										const isActive =
+											seasonYearMin === preset.min &&
+											seasonYearMax === preset.max;
+										return (
+											<button
+												key={preset.label}
+												type="button"
+												onClick={() => {
+													setSeasonYearMin(preset.min);
+													setSeasonYearMax(preset.max);
+												}}
+												disabled={seasonsLoading}
+												className={`
+													px-3 py-1.5 text-xs font-bold rounded-full border-2 transition-all duration-150
+													${isActive
+														? "bg-brand-100 text-brand-700 border-brand-300"
+														: "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:text-gray-700"
+													}
+													disabled:opacity-40 disabled:cursor-not-allowed
+												`}
+											>
+												{preset.label}
+											</button>
 										);
-									}}
-									disabled={seasonsLoading}
-									placeholder="All Seasons"
-									className={`
-										w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl
-										text-gray-800 text-base transition-all duration-200
-										shadow-[inset_0_2px_4px_rgba(0,0,0,0.04)]
-										placeholder:text-gray-400
-										focus:border-brand-400 focus:bg-white focus:outline-none
-										focus-visible:ring-4 focus-visible:ring-brand-300 focus-visible:ring-offset-1
-										focus:shadow-[0_0_0_4px_rgba(14,165,233,0.15),inset_0_2px_4px_rgba(0,0,0,0.04)]
-										disabled:bg-gray-100 disabled:cursor-not-allowed
-									`}
-								/>
+									})}
+								</div>
+								<div className="flex gap-2 items-center">
+									<input
+										id="season-year-min"
+										type="number"
+										min={minYear}
+										max={maxYear}
+										value={seasonYearMin ?? ""}
+										onChange={(e) => {
+											const val = e.target.value;
+											setSeasonYearMin(val === "" ? undefined : Number(val));
+										}}
+										disabled={seasonsLoading}
+										placeholder="From"
+										className="w-full px-3 py-2 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 text-sm transition-all duration-200 placeholder:text-gray-400 focus:border-brand-400 focus:bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300 focus-visible:ring-offset-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
+									/>
+									<span className="text-gray-400 font-bold text-sm">–</span>
+									<input
+										id="season-year-max"
+										type="number"
+										min={minYear}
+										max={maxYear}
+										value={seasonYearMax ?? ""}
+										onChange={(e) => {
+											const val = e.target.value;
+											setSeasonYearMax(val === "" ? undefined : Number(val));
+										}}
+										disabled={seasonsLoading}
+										placeholder="To"
+										className="w-full px-3 py-2 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 text-sm transition-all duration-200 placeholder:text-gray-400 focus:border-brand-400 focus:bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300 focus-visible:ring-offset-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
+									/>
+								</div>
 							</div>
 							<Button
 								onClick={handleCpuGame}

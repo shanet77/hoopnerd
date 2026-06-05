@@ -106,34 +106,36 @@ describe("CpuEngine", () => {
     });
 
     describe("season filtering", () => {
-      it("passes seasonYear to getValidCandidates query", async () => {
+      it("passes seasonYearMin/seasonYearMax to getValidCandidates query", async () => {
         mockDb.query.mockResolvedValueOnce({ rows: candidates });
 
-        await engine.getBestMove(lastPlayer, usedIds, "easy", 2023);
+        await engine.getBestMove(lastPlayer, usedIds, "easy", 2020, 2023);
 
         expect(mockDb.query).toHaveBeenCalledTimes(1);
         const sql = mockDb.query.mock.calls[0][0];
-        expect(sql).toContain("r1.season_year = $3");
+        expect(sql).toContain("r1.season_year >= $3 AND r1.season_year <= $4");
         const params = mockDb.query.mock.calls[0][1];
-        expect(params).toEqual([lastPlayer.id, usedIds, 2023]);
+        expect(params).toEqual([lastPlayer.id, usedIds, 2020, 2023]);
       });
 
-      it("getValidCandidates omits season clause when seasonYear is undefined", async () => {
+      it("getValidCandidates omits season clause when both are undefined", async () => {
         mockDb.query.mockResolvedValueOnce({ rows: candidates });
 
         await engine.getValidCandidates(1, usedIds);
 
         const sql = mockDb.query.mock.calls[0][0];
-        expect(sql).not.toContain("r1.season_year = $3");
+        expect(sql).not.toContain("season_year >=");
       });
 
-      it("getValidCandidates includes season clause when seasonYear is provided", async () => {
+      it("getValidCandidates includes season clause when both provided", async () => {
         mockDb.query.mockResolvedValueOnce({ rows: [] });
 
-        await engine.getValidCandidates(1, usedIds, 2023);
+        await engine.getValidCandidates(1, usedIds, 2010, 2020);
 
         const sql = mockDb.query.mock.calls[0][0];
-        expect(sql).toContain("r1.season_year = $3");
+        expect(sql).toContain("r1.season_year >= $3 AND r1.season_year <= $4");
+        const params = mockDb.query.mock.calls[0][1];
+        expect(params).toEqual([1, usedIds, 2010, 2020]);
       });
     });
   });

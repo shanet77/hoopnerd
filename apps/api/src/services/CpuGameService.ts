@@ -59,7 +59,8 @@ export class CpuGameService {
     humanPlayerName: string,
     difficulty: CpuDifficulty,
     humanSocketId: string,
-    seasonYear?: number,
+    seasonYearMin?: number,
+    seasonYearMax?: number,
   ): {
     room: GameRoomState;
     humanPlayer: Player;
@@ -67,8 +68,9 @@ export class CpuGameService {
   } {
     const room = this.roomRepository.createRoom(roomId, false);
 
-    if (seasonYear !== undefined) {
-      room.seasonYear = seasonYear;
+    if (seasonYearMin !== undefined && seasonYearMax !== undefined) {
+      room.seasonYearMin = seasonYearMin;
+      room.seasonYearMax = seasonYearMax;
     }
 
     const cpuPlayer: Player = {
@@ -162,7 +164,8 @@ export class CpuGameService {
           lastPlayer,
           Array.from(usedPlayerIds),
           difficulty,
-          roomState.seasonYear,
+          roomState.seasonYearMin,
+          roomState.seasonYearMax,
         ),
         new Promise<void>((resolve) => setTimeout(resolve, delay)),
       ]);

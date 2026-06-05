@@ -21,20 +21,23 @@ export class CpuEngine {
    * @param lastConnectedPlayer - The player to connect FROM
    * @param usedPlayerIds - IDs already used in this game (including starting player and all moves)
    * @param difficulty - CPU difficulty level
-   * @param seasonYear - Optional season year to restrict valid candidates to
+   * @param seasonYearMin - Optional start of season range
+   * @param seasonYearMax - Optional end of season range
    * @returns The chosen Player or null
    */
   async getBestMove(
     lastConnectedPlayer: Player,
     usedPlayerIds: number[],
     difficulty: CpuDifficulty,
-    seasonYear?: number,
+    seasonYearMin?: number,
+    seasonYearMax?: number,
   ): Promise<Player | null> {
     // Get all valid candidates (players who shared team+season and not yet used)
     const candidates = await this.getValidCandidates(
       lastConnectedPlayer.id,
       usedPlayerIds,
-      seasonYear,
+      seasonYearMin,
+      seasonYearMax,
     );
 
     if (candidates.length === 0) {
@@ -54,16 +57,17 @@ export class CpuEngine {
   async getValidCandidates(
     playerId: number,
     usedPlayerIds: number[],
-    seasonYear?: number,
+    seasonYearMin?: number,
+    seasonYearMax?: number,
   ): Promise<Player[]> {
     const { db } = this.deps;
 
     const params: (number | number[])[] = [playerId, usedPlayerIds];
     let seasonClause = "";
 
-    if (seasonYear !== undefined) {
-      seasonClause = "AND r1.season_year = $3";
-      params.push(seasonYear);
+    if (seasonYearMin !== undefined && seasonYearMax !== undefined) {
+      seasonClause = "AND r1.season_year >= $3 AND r1.season_year <= $4";
+      params.push(seasonYearMin, seasonYearMax);
     }
 
     const sql = `

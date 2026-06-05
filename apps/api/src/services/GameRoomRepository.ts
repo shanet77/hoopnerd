@@ -96,7 +96,8 @@ export class GameRoomRepository {
 
       const startingPlayer = await this.playerService.getRandomTopScorer(
         undefined,
-        room.seasonYear,
+        room.seasonYearMin,
+        room.seasonYearMax,
       );
       if (!startingPlayer) {
         room.gameStarted = false;
@@ -260,7 +261,8 @@ export class GameRoomRepository {
         databasePool,
         room.lastConnectedPlayer.id,
         connectedPlayer.id,
-        room.seasonYear,
+        room.seasonYearMin,
+        room.seasonYearMax,
       );
 
       if (!isValidMove) {
@@ -276,7 +278,8 @@ export class GameRoomRepository {
         databasePool,
         room.lastConnectedPlayer.id,
         connectedPlayer.id,
-        room.seasonYear,
+        room.seasonYearMin,
+        room.seasonYearMax,
       );
       if (connection) {
         room.connections.push(connection);
@@ -336,7 +339,7 @@ export class GameRoomRepository {
     );
 
     // Validate the move
-    validateMove(databasePool, room.lastConnectedPlayer!.id, connectedPlayer.id, room.seasonYear)
+    validateMove(databasePool, room.lastConnectedPlayer!.id, connectedPlayer.id, room.seasonYearMin, room.seasonYearMax)
       .then(async (isValid) => {
         if (!isValid) {
           // CPU made an invalid move somehow — forfeit
@@ -371,7 +374,8 @@ export class GameRoomRepository {
             databasePool,
             room.lastConnectedPlayer.id,
             connectedPlayer.id,
-            room.seasonYear,
+            room.seasonYearMin,
+            room.seasonYearMax,
           );
         }
 

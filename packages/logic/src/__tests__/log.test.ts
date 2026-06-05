@@ -82,28 +82,28 @@ describe("@repo/logic", () => {
     await expect(validateMove(mockDb as any, 1)).rejects.toThrow("DB down");
   });
 
-  it("validates move with seasonYear filter when players share that season", async () => {
+  it("validates move with season range when players share that season", async () => {
     mockDb.query
       .mockResolvedValueOnce({ rows: [{ count: "2" }] })
       .mockResolvedValueOnce({ rows: [{ season_year: 2023, team_name: "Lakers" }] });
 
-    await expect(validateMove(mockDb as any, 1, 2, 2023)).resolves.toBe(true);
+    await expect(validateMove(mockDb as any, 1, 2, 2020, 2025)).resolves.toBe(true);
     expect(mockDb.query).toHaveBeenNthCalledWith(
       2,
-      expect.stringContaining("r1.season_year = $3"),
-      [1, 2, 2023],
+      expect.stringContaining("r1.season_year >= $3 AND r1.season_year <= $4"),
+      [1, 2, 2020, 2025],
     );
   });
 
-  it("fails move with seasonYear when players share team but in different season", async () => {
+  it("fails move with season range when players share team but outside range", async () => {
     mockDb.query
       .mockResolvedValueOnce({ rows: [{ count: "2" }] })
       .mockResolvedValueOnce({ rows: [] });
 
-    await expect(validateMove(mockDb as any, 1, 2, 2023)).resolves.toBe(false);
+    await expect(validateMove(mockDb as any, 1, 2, 2020, 2025)).resolves.toBe(false);
   });
 
-  it("getConnectionDetails filters by seasonYear when provided", async () => {
+  it("getConnectionDetails filters by season range when provided", async () => {
     mockDb.query.mockResolvedValueOnce({
       rows: [
         {
@@ -120,7 +120,7 @@ describe("@repo/logic", () => {
     });
 
     await expect(
-      getConnectionDetails(mockDb as any, 1, 2, 2023),
+      getConnectionDetails(mockDb as any, 1, 2, 2020, 2025),
     ).resolves.toEqual({
       fromPlayer: { id: 1, name: "LeBron James", position: "SF" },
       toPlayer: { id: 2, name: "Anthony Davis", position: "PF" },
@@ -128,8 +128,8 @@ describe("@repo/logic", () => {
       teamName: "Lakers",
     });
     expect(mockDb.query).toHaveBeenCalledWith(
-      expect.stringContaining("r1.season_year = $3"),
-      [1, 2, 2023],
+      expect.stringContaining("r1.season_year >= $3 AND r1.season_year <= $4"),
+      [1, 2, 2020, 2025],
     );
   });
 });
