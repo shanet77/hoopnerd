@@ -19,6 +19,8 @@ jest.mock("./lib/analytics", () => ({
 }));
 
 jest.mock("./lib/playerSession", () => ({
+  getPlayerName: () => "",
+  setPlayerName: jest.fn(),
   setPlayerSession: (...args: any[]) => setPlayerSessionMock(...args),
 }));
 

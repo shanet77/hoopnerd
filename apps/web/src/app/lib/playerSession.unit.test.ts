@@ -1,7 +1,9 @@
 import { describe, expect, it } from "@jest/globals";
 import {
   clearPlayerSession,
+  getPlayerName,
   getPlayerSession,
+  setPlayerName,
   setPlayerSession,
 } from "./playerSession";
 
@@ -25,5 +27,37 @@ describe("playerSession", () => {
     });
     clearPlayerSession("room2", "Tony Parker");
     expect(getPlayerSession("room2", "Tony Parker")).toBeUndefined();
+  });
+
+  describe("player name persistence", () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it("stores and retrieves a player name", () => {
+      setPlayerName("  LeBron James  ");
+      expect(getPlayerName()).toBe("LeBron James");
+    });
+
+    it("returns empty string when no name is stored", () => {
+      expect(getPlayerName()).toBe("");
+    });
+
+    it("removes the name when setting an empty or whitespace-only value", () => {
+      setPlayerName("Steph Curry");
+      expect(getPlayerName()).toBe("Steph Curry");
+
+      setPlayerName("");
+      expect(getPlayerName()).toBe("");
+
+      setPlayerName("   ");
+      expect(getPlayerName()).toBe("");
+    });
+
+    it("overwrites a previously stored name", () => {
+      setPlayerName("Kobe Bryant");
+      setPlayerName("Shaq");
+      expect(getPlayerName()).toBe("Shaq");
+    });
   });
 });

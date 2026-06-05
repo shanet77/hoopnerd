@@ -22,3 +22,20 @@ export const setPlayerSession = (
 export const clearPlayerSession = (roomId: string, playerName: string) => {
   playerSessions.delete(getKey(roomId, playerName));
 };
+
+const NAME_KEY = "hoopnerd_player_name";
+
+export const getPlayerName = (): string => {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(NAME_KEY) || "";
+};
+
+export const setPlayerName = (name: string): void => {
+  if (typeof window === "undefined") return;
+  const trimmed = name.trim();
+  if (trimmed) {
+    localStorage.setItem(NAME_KEY, trimmed);
+  } else {
+    localStorage.removeItem(NAME_KEY);
+  }
+};

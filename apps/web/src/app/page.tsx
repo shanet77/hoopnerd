@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
@@ -17,7 +17,7 @@ import {
 } from "./lib/socket";
 import { useLobbyStats } from "./lib/useLobbyStats";
 import { trackEvent } from "./lib/analytics";
-import { setPlayerSession } from "./lib/playerSession";
+import { getPlayerName, setPlayerName, setPlayerSession } from "./lib/playerSession";
 import ClientOnly from "../components/ClientOnly";
 import { LobbyActionCard } from "../components/lobby/LobbyActionCard";
 
@@ -42,12 +42,16 @@ function SocketProviderWrapper() {
 function LobbyPage() {
   const { socket, isConnected } = useSocket();
   const [roomId, setRoomId] = useState<string>("");
-  const [playerName, setPlayerName] = useState<string>("");
+  const [playerName, setPlayerNameState] = useState<string>(() => getPlayerName());
   const [feedbackMessage, setFeedbackMessage] = useState<string>("");
   const [isMatchmaking, setIsMatchmaking] = useState(false);
   const [isCpuQueuing, setIsCpuQueuing] = useState(false);
   const { stats, error: statsError } = useLobbyStats();
   const router = useRouter();
+
+  useEffect(() => {
+    setPlayerName(playerName);
+  }, [playerName]);
 
   const requireName = () => {
     if (!playerName) {
@@ -219,7 +223,7 @@ function LobbyPage() {
                 label="Your name"
                 value={playerName}
                 onChange={(e) => {
-                  setPlayerName(e.target.value);
+                  setPlayerNameState(e.target.value);
                   if (feedbackMessage.includes("name")) {
                     setFeedbackMessage("");
                   }
