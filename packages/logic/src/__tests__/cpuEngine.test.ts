@@ -104,5 +104,37 @@ describe("CpuEngine", () => {
         expect(result).toBeNull();
       });
     });
+
+    describe("season filtering", () => {
+      it("passes seasonYear to getValidCandidates query", async () => {
+        mockDb.query.mockResolvedValueOnce({ rows: candidates });
+
+        await engine.getBestMove(lastPlayer, usedIds, "easy", 2023);
+
+        expect(mockDb.query).toHaveBeenCalledTimes(1);
+        const sql = mockDb.query.mock.calls[0][0];
+        expect(sql).toContain("r1.season_year = $3");
+        const params = mockDb.query.mock.calls[0][1];
+        expect(params).toEqual([lastPlayer.id, usedIds, 2023]);
+      });
+
+      it("getValidCandidates omits season clause when seasonYear is undefined", async () => {
+        mockDb.query.mockResolvedValueOnce({ rows: candidates });
+
+        await engine.getValidCandidates(1, usedIds);
+
+        const sql = mockDb.query.mock.calls[0][0];
+        expect(sql).not.toContain("r1.season_year = $3");
+      });
+
+      it("getValidCandidates includes season clause when seasonYear is provided", async () => {
+        mockDb.query.mockResolvedValueOnce({ rows: [] });
+
+        await engine.getValidCandidates(1, usedIds, 2023);
+
+        const sql = mockDb.query.mock.calls[0][0];
+        expect(sql).toContain("r1.season_year = $3");
+      });
+    });
   });
 });

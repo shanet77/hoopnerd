@@ -105,6 +105,7 @@ function GamePage() {
           roomId={roomId}
           isConnected={isConnected}
           onLeave={onLeave}
+          seasonYear={roomState?.seasonYear}
         />
 
         {winner ? (
@@ -181,7 +182,11 @@ function GamePage() {
                       {roomState.lastConnectedPlayer?.name ||
                         roomState.startingPlayer?.name}
                     </strong>{" "}
-                    who shared a team and season!
+                    who shared a team
+                    {roomState.seasonYear !== undefined
+                      ? ` during the ${roomState.seasonYear} season`
+                      : " and season"}
+                    !
                   </p>
                   <form onSubmit={onSubmitMove} className="space-y-4">
                     <PlayerSearch
@@ -262,10 +267,12 @@ function GameHeader({
   roomId,
   isConnected,
   onLeave,
+  seasonYear,
 }: {
   roomId: string;
   isConnected: boolean;
   onLeave: () => void;
+  seasonYear?: number;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -296,21 +303,28 @@ function GameHeader({
       >
         {isConnected ? "Online" : "Offline"}
       </Badge>
-      <div
-        className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border-2 border-gray-200"
-        role="group"
-        aria-label={`Room code ${roomId}`}
-      >
-        <span className="text-lg">🏀</span>
-        <span className="font-bold text-gray-700">{roomId}</span>
-        <button
-          type="button"
-          onClick={copyRoomCode}
-          className="text-xs font-bold text-brand-600 hover:text-brand-800 transition-colors ml-1"
-          aria-label="Copy room code"
+      <div className="flex items-center gap-2">
+        <div
+          className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border-2 border-gray-200"
+          role="group"
+          aria-label={`Room code ${roomId}`}
         >
-          {copied ? "Copied!" : "Copy"}
-        </button>
+          <span className="text-lg">🏀</span>
+          <span className="font-bold text-gray-700">{roomId}</span>
+          <button
+            type="button"
+            onClick={copyRoomCode}
+            className="text-xs font-bold text-brand-600 hover:text-brand-800 transition-colors ml-1"
+            aria-label="Copy room code"
+          >
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
+        {seasonYear !== undefined && (
+          <Badge variant="info" size="sm">
+            {seasonYear}
+          </Badge>
+        )}
       </div>
     </div>
   );

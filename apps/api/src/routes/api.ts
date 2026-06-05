@@ -51,6 +51,25 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
     res.json({ status: "OK", timestamp: new Date().toISOString() });
   });
 
+  router.get("/api/seasons", async (_req: Request, res: Response) => {
+    try {
+      const result = await databasePool.query(
+        `SELECT DISTINCT season_year
+         FROM rosters
+         ORDER BY season_year DESC`,
+      );
+
+      const seasons = result.rows.map(
+        (row: { season_year: number }) => row.season_year,
+      );
+
+      res.json(seasons);
+    } catch (error) {
+      console.error("Seasons query error:", error);
+      res.status(500).json({ error: "Failed to fetch seasons" });
+    }
+  });
+
   router.get("/api/stats", async (req: Request, res: Response) => {
     const windowDays = parseWindowDays(req.query.windowDays);
     const timezone = parseTimezone(req.query.tz);

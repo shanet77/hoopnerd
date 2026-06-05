@@ -21,17 +21,20 @@ export class CpuEngine {
    * @param lastConnectedPlayer - The player to connect FROM
    * @param usedPlayerIds - IDs already used in this game (including starting player and all moves)
    * @param difficulty - CPU difficulty level
+   * @param seasonYear - Optional season year to restrict valid candidates to
    * @returns The chosen Player or null
    */
   async getBestMove(
     lastConnectedPlayer: Player,
     usedPlayerIds: number[],
     difficulty: CpuDifficulty,
+    seasonYear?: number,
   ): Promise<Player | null> {
     // Get all valid candidates (players who shared team+season and not yet used)
     const candidates = await this.getValidCandidates(
       lastConnectedPlayer.id,
       usedPlayerIds,
+      seasonYear,
     );
 
     if (candidates.length === 0) {
@@ -51,8 +54,17 @@ export class CpuEngine {
   async getValidCandidates(
     playerId: number,
     usedPlayerIds: number[],
+    seasonYear?: number,
   ): Promise<Player[]> {
     const { db } = this.deps;
+
+    const params: (number | number[])[] = [playerId, usedPlayerIds];
+    let seasonClause = "";
+
+    if (seasonYear !== undefined) {
+      seasonClause = "AND r1.season_year = $3";
+      params.push(seasonYear);
+    }
 
     const sql = `
       SELECT DISTINCT p.id, p.player_name AS name, p.position
@@ -60,11 +72,11 @@ export class CpuEngine {
       JOIN rosters r2 ON r1.team_id = r2.team_id AND r1.season_year = r2.season_year
       JOIN players p ON r2.player_id = p.id
       WHERE r1.player_id = $1
-        AND p.id != ALL($2::int[])
+        AND p.id != ALL($2::int[])${seasonClause ? " " + seasonClause : ""}
       ORDER BY p.player_name
     `;
 
-    const result = await db.query(sql, [playerId, usedPlayerIds]);
+    const result = await db.query(sql, params);
     return result.rows;
   }
 

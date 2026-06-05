@@ -16,6 +16,7 @@ import {
 	createCpuGame,
 } from "./lib/socket";
 import { useLobbyStats } from "./lib/useLobbyStats";
+import { useAvailableSeasons } from "./lib/useAvailableSeasons";
 import { trackEvent } from "./lib/analytics";
 import { getPlayerName, setPlayerName, setPlayerSession } from "./lib/playerSession";
 import ClientOnly from "../components/ClientOnly";
@@ -47,6 +48,10 @@ function LobbyPage() {
 	const [isMatchmaking, setIsMatchmaking] = useState(false);
 	const [isCpuQueuing, setIsCpuQueuing] = useState(false);
 	const { stats, error: statsError } = useLobbyStats();
+	const { minYear, maxYear, loading: seasonsLoading } = useAvailableSeasons();
+	const [selectedSeason, setSelectedSeason] = useState<number | undefined>(
+		undefined,
+	);
 	const router = useRouter();
 
 	useEffect(() => {
@@ -142,32 +147,62 @@ function LobbyPage() {
 
 		setIsCpuQueuing(true);
 		setFeedbackMessage("Starting CPU game...");
-		trackEvent("cpu_game_started", { difficulty: "easy" });
+		const trackProps: Record<string, string | number> = { difficulty: "easy" };
+		if (selectedSeason !== undefined) {
+			trackProps.seasonYear = selectedSeason;
+		}
+		trackEvent("cpu_game_started", trackProps);
 
 		try {
 			const response = await createCpuGame(socket!, {
 				playerName,
 				difficulty: "easy",
+				seasonYear: selectedSeason,
 			});
 			if (response.success && response.roomId) {
-				trackEvent("cpu_game_created", { difficulty: "easy" });
+				if (selectedSeason !== undefined) {
+					trackEvent("cpu_game_created", {
+						difficulty: "easy",
+						seasonYear: selectedSeason,
+					});
+				} else {
+					trackEvent("cpu_game_created", { difficulty: "easy" });
+				}
 				if (response.playerToken && typeof response.playerId === "number") {
 					setPlayerSession(response.roomId, playerName, {
 						token: response.playerToken,
 						playerId: response.playerId,
 					});
 				}
+				const seasonParam =
+					selectedSeason !== undefined
+						? `&seasonYear=${selectedSeason}`
+						: "";
 				router.push(
-					`/room/${response.roomId}?playerName=${playerName}&cpuMode=true&cpuDifficulty=easy`,
+					`/room/${response.roomId}?playerName=${playerName}&cpuMode=true&cpuDifficulty=easy${seasonParam}`,
 				);
 			} else {
 				setFeedbackMessage(`Failed to start CPU game: ${response.message}`);
-				trackEvent("cpu_game_failed", { difficulty: "easy" });
+				if (selectedSeason !== undefined) {
+					trackEvent("cpu_game_failed", {
+						difficulty: "easy",
+						seasonYear: selectedSeason,
+					});
+				} else {
+					trackEvent("cpu_game_failed", { difficulty: "easy" });
+				}
 			}
 		} catch (error) {
 			console.error("Error starting CPU game:", error);
 			setFeedbackMessage("An error occurred while starting CPU game.");
-			trackEvent("cpu_game_error", { difficulty: "easy" });
+			if (selectedSeason !== undefined) {
+				trackEvent("cpu_game_error", {
+					difficulty: "easy",
+					seasonYear: selectedSeason,
+				});
+			} else {
+				trackEvent("cpu_game_error", { difficulty: "easy" });
+			}
 		} finally {
 			setIsCpuQueuing(false);
 		}
@@ -258,6 +293,44 @@ function LobbyPage() {
 							title="Play vs CPU"
 							description="Practice against the CPU"
 						>
+							<div className="mb-4">
+								<label
+									htmlFor="season-input"
+									className="mb-2 text-sm font-bold text-gray-700 uppercase tracking-wide block"
+								>
+									Season
+									{minYear && maxYear && (
+										<span className="ml-1 text-xs font-normal text-gray-400 lowercase normal-case tracking-normal">
+											({minYear}–{maxYear})
+										</span>
+									)}
+								</label>
+								<input
+									id="season-input"
+									type="number"
+									min={minYear}
+									max={maxYear}
+									value={selectedSeason ?? ""}
+									onChange={(e) => {
+										const val = e.target.value;
+										setSelectedSeason(
+											val === "" ? undefined : Number(val),
+										);
+									}}
+									disabled={seasonsLoading}
+									placeholder="All Seasons"
+									className={`
+										w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl
+										text-gray-800 text-base transition-all duration-200
+										shadow-[inset_0_2px_4px_rgba(0,0,0,0.04)]
+										placeholder:text-gray-400
+										focus:border-brand-400 focus:bg-white focus:outline-none
+										focus-visible:ring-4 focus-visible:ring-brand-300 focus-visible:ring-offset-1
+										focus:shadow-[0_0_0_4px_rgba(14,165,233,0.15),inset_0_2px_4px_rgba(0,0,0,0.04)]
+										disabled:bg-gray-100 disabled:cursor-not-allowed
+									`}
+								/>
+							</div>
 							<Button
 								onClick={handleCpuGame}
 								disabled={!isConnected || isCpuQueuing || !playerName}

@@ -59,12 +59,17 @@ export class CpuGameService {
     humanPlayerName: string,
     difficulty: CpuDifficulty,
     humanSocketId: string,
+    seasonYear?: number,
   ): {
     room: GameRoomState;
     humanPlayer: Player;
     cpuPlayer: Player;
   } {
     const room = this.roomRepository.createRoom(roomId, false);
+
+    if (seasonYear !== undefined) {
+      room.seasonYear = seasonYear;
+    }
 
     const cpuPlayer: Player = {
       id: generatePlayerId(room),
@@ -157,6 +162,7 @@ export class CpuGameService {
           lastPlayer,
           Array.from(usedPlayerIds),
           difficulty,
+          roomState.seasonYear,
         ),
         new Promise<void>((resolve) => setTimeout(resolve, delay)),
       ]);

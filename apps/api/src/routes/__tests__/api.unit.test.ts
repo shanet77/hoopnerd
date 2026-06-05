@@ -284,3 +284,54 @@ describe("API Routes — /api/stats", () => {
       });
   });
 });
+
+describe("API Routes — /api/seasons", () => {
+  beforeEach(() => {
+    mockDbQuery.mockReset();
+  });
+
+  it("returns distinct season years sorted descending", async () => {
+    mockDbQuery.mockResolvedValueOnce({
+      rows: [
+        { season_year: 2026 },
+        { season_year: 2025 },
+        { season_year: 2024 },
+      ],
+    });
+    const { app } = createTestApp();
+
+    await supertest(app)
+      .get("/api/seasons")
+      .expect(200)
+      .then((res) => {
+        expect(res.body).toEqual([2026, 2025, 2024]);
+        expect(mockDbQuery).toHaveBeenCalledWith(
+          expect.stringContaining("SELECT DISTINCT season_year"),
+        );
+      });
+  });
+
+  it("returns empty array when no seasons exist", async () => {
+    mockDbQuery.mockResolvedValueOnce({ rows: [] });
+    const { app } = createTestApp();
+
+    await supertest(app)
+      .get("/api/seasons")
+      .expect(200)
+      .then((res) => {
+        expect(res.body).toEqual([]);
+      });
+  });
+
+  it("returns 500 on database error", async () => {
+    mockDbQuery.mockRejectedValueOnce(new Error("db error"));
+    const { app } = createTestApp();
+
+    await supertest(app)
+      .get("/api/seasons")
+      .expect(500)
+      .then((res) => {
+        expect(res.body.error).toBe("Failed to fetch seasons");
+      });
+  });
+});

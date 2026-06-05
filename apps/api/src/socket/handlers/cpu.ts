@@ -36,6 +36,7 @@ export function registerCpuGameHandlers(
 
       const normalizedName = (result as any).normalizedName;
       const difficulty = "easy";
+      const seasonYear = data.seasonYear;
 
       // Generate a room ID
       const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -47,6 +48,7 @@ export function registerCpuGameHandlers(
           normalizedName,
           difficulty,
           socket.id,
+          seasonYear,
         );
 
         // Join the human's socket to the room

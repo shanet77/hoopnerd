@@ -7,16 +7,19 @@ export type { CpuEngineDependencies } from "./cpuEngine";
  * Validates a move in the game.
  * If only playerAId is provided, it's considered the first move and validates if the player exists.
  * If playerBId is also provided, it validates if the two players ever played together on the same team in the same season.
+ * If seasonYear is provided, the connection must have occurred in that specific season.
  *
  * @param db - Database service instance
  * @param playerAId - ID of the first player
  * @param playerBId - ID of the second player (optional)
+ * @param seasonYear - Optional season year to restrict the search to
  * @returns boolean indicating if the move is valid
  */
 export async function validateMove(
   db: DatabaseService,
   playerAId: number,
   playerBId?: number,
+  seasonYear?: number,
 ): Promise<boolean> {
   // If playerBId is not provided, this is the first move.
   // Validate that playerA exists.
@@ -47,7 +50,21 @@ export async function validateMove(
     return false;
   }
 
-  // Check if the players shared a team in any season
+  // Check if the players shared a team in the specified season (or any season)
+  if (seasonYear !== undefined) {
+    const query = `
+      SELECT r1.season_year, r1.team_id, t.team_name
+      FROM rosters r1
+      JOIN rosters r2 ON r1.team_id = r2.team_id AND r1.season_year = r2.season_year
+      JOIN teams t ON r1.team_id = t.id
+      WHERE r1.player_id = $1 AND r2.player_id = $2 AND r1.season_year = $3
+      LIMIT 1
+    `;
+
+    const result = await db.query(query, [playerAId, playerBId, seasonYear]);
+    return result.rows.length > 0;
+  }
+
   const query = `
     SELECT r1.season_year, r1.team_id, t.team_name
     FROM rosters r1
@@ -68,13 +85,23 @@ export async function validateMove(
  * @param db - Database service instance
  * @param playerAId - ID of the first player
  * @param playerBId - ID of the second player
+ * @param seasonYear - Optional season year to restrict the search to
  * @returns PlayerConnection object or null if no connection exists
  */
 export async function getConnectionDetails(
   db: DatabaseService,
   playerAId: number,
   playerBId: number,
+  seasonYear?: number,
 ): Promise<PlayerConnection | null> {
+  const params: (number)[] = [playerAId, playerBId];
+  let seasonClause = "";
+
+  if (seasonYear !== undefined) {
+    seasonClause = "AND r1.season_year = $3";
+    params.push(seasonYear);
+  }
+
   const query = `
     SELECT
       p1.id as from_id, p1.player_name as from_name, p1.position as from_position,
@@ -86,11 +113,11 @@ export async function getConnectionDetails(
     JOIN teams t ON r1.team_id = t.id
     JOIN players p1 ON r1.player_id = p1.id
     JOIN players p2 ON r2.player_id = p2.id
-    WHERE r1.player_id = $1 AND r2.player_id = $2
+    WHERE r1.player_id = $1 AND r2.player_id = $2 ${seasonClause}
     LIMIT 1
   `;
 
-  const result = await db.query(query, [playerAId, playerBId]);
+  const result = await db.query(query, params);
 
   if (result.rows.length === 0) {
     return null;

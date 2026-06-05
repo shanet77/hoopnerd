@@ -29,6 +29,16 @@ jest.mock("./lib/socket", () => ({
   useSocket: () => ({ socket: {}, isConnected: true }),
   createRoom: (...args: any[]) => createRoomMock(...args),
   joinMatchmaking: (...args: any[]) => joinMatchmakingMock(...args),
+  createCpuGame: jest.fn(),
+}));
+
+jest.mock("./lib/useAvailableSeasons", () => ({
+  useAvailableSeasons: () => ({
+    seasons: [],
+    minYear: 1950,
+    maxYear: 2026,
+    loading: false,
+  }),
 }));
 
 describe("Lobby page", () => {
