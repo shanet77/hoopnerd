@@ -128,7 +128,13 @@ jobs:
           echo "Using registry host: ${REGISTRY_HOST}"
           REGISTRY_PASSWORD_B64="$(printf '%s' "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')"
 
-          ssh -i "${key_file}" -o StrictHostKeyChecking=accept-new "${DOCKERNODE_USER}@${DOCKERNODE_HOST}" \
+          ssh -i "${key_file}" \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=30 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=4 \
+            -o BatchMode=yes \
+            "${DOCKERNODE_USER}@${DOCKERNODE_HOST}" \
             "export DOCKERNODE_PATH='${DOCKERNODE_PATH}' REPO_URL='${REPO_URL}' TARGET_SHA='${GITHUB_SHA}' IMAGE_TAG='${IMAGE_TAG}' REGISTRY_HOST='${REGISTRY_HOST}' REGISTRY_USERNAME='${REGISTRY_USERNAME}' REGISTRY_PASSWORD_B64='${REGISTRY_PASSWORD_B64}' REGISTRY_NAMESPACE='${REGISTRY_NAMESPACE}' NEXT_PUBLIC_API_URL='${NEXT_PUBLIC_API_URL}' NEXT_PUBLIC_API_HOST='${NEXT_PUBLIC_API_HOST}' NEXT_PUBLIC_UMAMI_WEBSITE_ID='${NEXT_PUBLIC_UMAMI_WEBSITE_ID}'; bash -s" \
             <<'EOF_REMOTE'
           set -euo pipefail
@@ -211,10 +217,10 @@ jobs:
       - name: Deploy to Racknerd over SSH
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_USER: <deploy-user>
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          PATH_ON_VPS: ${{ secrets.PATH_ON_VPS }}
+          DEPLOY_PATH: /home/USER/project/hoopnerd
+          PATH_ON_VPS: /home/USER/project/hoopnerd
           REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
           REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
@@ -234,6 +240,12 @@ jobs:
           printf '%s\n' "${DEPLOY_SSH_KEY}" > "${key_file}"
           chmod 600 "${key_file}"
 
-          ssh -i "${key_file}" -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" \
+          ssh -i "${key_file}" \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=30 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=4 \
+            -o BatchMode=yes \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "export DEPLOY_PATH='${DEPLOY_PATH}' PATH_ON_VPS='${PATH_ON_VPS}' IMAGE_TAG='${IMAGE_TAG}' REGISTRY_URL='${REGISTRY_URL}' REGISTRY_USERNAME='${REGISTRY_USERNAME}' REGISTRY_PASSWORD='${REGISTRY_PASSWORD}' REGISTRY_NAMESPACE='${REGISTRY_NAMESPACE}'; bash -s" \
             < scripts/deploy-racknerd.sh

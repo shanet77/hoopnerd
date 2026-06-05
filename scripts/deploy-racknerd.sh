@@ -11,15 +11,40 @@ REGISTRY_NAMESPACE="${REGISTRY_NAMESPACE:-}"
 API_IMAGE="${API_IMAGE:-}"
 WEB_IMAGE="${WEB_IMAGE:-}"
 
+echo "=== deploy-racknerd starting ==="
+echo "user=$(whoami) target_path=${DEPLOY_TARGET_PATH} image_tag=${IMAGE_TAG}"
+
+# Ensure deploy directory exists
+if [ ! -d "${DEPLOY_TARGET_PATH}" ]; then
+  echo "ERROR: Deploy path ${DEPLOY_TARGET_PATH} does not exist"
+  echo "Create it and clone the repo first:"
+  echo "  mkdir -p ${DEPLOY_TARGET_PATH}"
+  echo "  git clone <repo-url> ${DEPLOY_TARGET_PATH}"
+  exit 1
+fi
+
 cd "${DEPLOY_TARGET_PATH}"
 
 if [ -d .git ]; then
-  echo "Deploy context: user=$(whoami) path=$(pwd) image_tag=${IMAGE_TAG:-}"
+  echo "Pulling latest main..."
   git remote prune origin || true
   git fetch origin main
   git checkout -f main || git checkout -B main origin/main
   git reset --hard origin/main
   echo "Deploying commit: $(git rev-parse HEAD)"
+else
+  echo "ERROR: ${DEPLOY_TARGET_PATH} is not a git repository"
+  exit 1
+fi
+
+# Verify required files exist
+if [ ! -f docker-compose.prod.yml ]; then
+  echo "ERROR: docker-compose.prod.yml not found in ${DEPLOY_TARGET_PATH}"
+  exit 1
+fi
+if [ ! -f .env.prod ]; then
+  echo "ERROR: .env.prod not found in ${DEPLOY_TARGET_PATH}"
+  exit 1
 fi
 
 REGISTRY_HOST="${REGISTRY_URL#https://}"
