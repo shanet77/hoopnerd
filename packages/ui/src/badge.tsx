@@ -17,8 +17,8 @@ export const Badge = ({
     success: "bg-success-light text-success-dark",
     error: "bg-error-light text-error-dark",
     warning: "bg-warning-light text-warning-dark",
-    info: "bg-brand-100 text-brand-700",
-    neutral: "bg-gray-200 text-gray-600",
+    info: "bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300",
+    neutral: "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300",
     basketball: "bg-basketball text-white",
   };
 

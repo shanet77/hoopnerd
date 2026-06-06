@@ -21,6 +21,7 @@ import { trackEvent } from "./lib/analytics";
 import { getPlayerName, setPlayerName, setPlayerSession } from "./lib/playerSession";
 import ClientOnly from "../components/ClientOnly";
 import { LobbyActionCard } from "../components/lobby/LobbyActionCard";
+import { ThemeToggle } from "../components/ThemeToggle";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 
@@ -247,14 +248,17 @@ function LobbyPage() {
 	const nameMissing = !playerName;
 
 	return (
-		<main id="main-content" className="min-h-screen bg-gray-50 py-8 px-4">
+		<main id="main-content" className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
 			<div className="max-w-5xl mx-auto space-y-6">
 				<div className="text-center space-y-2">
-					<h1 className="font-title text-4xl font-bold text-gray-800 tracking-tight">
-						HoopNerd
-					</h1>
-					<p className="text-gray-500 font-medium">Who played with who?</p>
-					<p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+					<div className="flex items-center justify-center gap-4">
+						<h1 className="font-title text-4xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
+							HoopNerd
+						</h1>
+						<ThemeToggle />
+					</div>
+					<p className="text-gray-500 dark:text-gray-400 font-medium">Who played with who?</p>
+					<p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
 						Alpha • v{APP_VERSION}
 					</p>
 				</div>
@@ -283,11 +287,11 @@ function LobbyPage() {
 									}
 								}}
 								placeholder="King James, Black Mamba, Chef Curry..."
-								className="text-sm text-gray-600"
+								className="text-sm text-gray-600 dark:text-gray-300"
 								autoFocus
 							/>
 							{nameMissing && (
-								<p className="mt-2 text-xs text-gray-400 font-medium text-center">
+								<p className="mt-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-center">
 									Enter your name to unlock game actions
 								</p>
 							)}
@@ -313,10 +317,10 @@ function LobbyPage() {
 							description="Practice against the CPU"
 						>
 							<div className="mb-4 space-y-3">
-								<label className="text-sm font-bold text-gray-700 uppercase tracking-wide block">
+								<label className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide block">
 									Season
 									{minYear && maxYear && (
-										<span className="ml-1 text-xs font-normal text-gray-400 lowercase normal-case tracking-normal">
+										<span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500 lowercase normal-case tracking-normal">
 											({minYear}–{maxYear})
 										</span>
 									)}
@@ -338,8 +342,8 @@ function LobbyPage() {
 												className={`
 													px-3 py-1.5 text-xs font-bold rounded-full border-2 transition-all duration-150
 													${isActive
-														? "bg-brand-100 text-brand-700 border-brand-300"
-														: "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:text-gray-700"
+														? "bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 border-brand-300"
+														: "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-200"
 													}
 													disabled:opacity-40 disabled:cursor-not-allowed
 												`}
@@ -362,9 +366,9 @@ function LobbyPage() {
 										}}
 										disabled={seasonsLoading}
 										placeholder="From"
-										className="w-full px-3 py-2 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 text-sm transition-all duration-200 placeholder:text-gray-400 focus:border-brand-400 focus:bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300 focus-visible:ring-offset-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
+										className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-gray-800 dark:text-gray-100 text-sm transition-all duration-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-brand-400 dark:focus:border-brand-500 focus:bg-white dark:focus:bg-gray-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300 dark:focus-visible:ring-brand-700 focus-visible:ring-offset-1 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
 									/>
-									<span className="text-gray-400 font-bold text-sm">–</span>
+									<span className="text-gray-400 dark:text-gray-500 font-bold text-sm">–</span>
 									<input
 										id="season-year-max"
 										type="number"
@@ -377,7 +381,7 @@ function LobbyPage() {
 										}}
 										disabled={seasonsLoading}
 										placeholder="To"
-										className="w-full px-3 py-2 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 text-sm transition-all duration-200 placeholder:text-gray-400 focus:border-brand-400 focus:bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300 focus-visible:ring-offset-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
+										className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-gray-800 dark:text-gray-100 text-sm transition-all duration-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-brand-400 dark:focus:border-brand-500 focus:bg-white dark:focus:bg-gray-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300 dark:focus-visible:ring-brand-700 focus-visible:ring-offset-1 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
 									/>
 								</div>
 							</div>
@@ -429,7 +433,7 @@ function LobbyPage() {
 						</LobbyActionCard>
 
 						<div className="text-center pt-4">
-							<p className="text-xs text-gray-400 font-medium">
+							<p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
 								How to play: Connect players who played together on the same
 								team in the same season!
 							</p>
@@ -437,8 +441,8 @@ function LobbyPage() {
 					</div>
 
 					<div className="space-y-6">
-						<Card hover className="bg-white border-2 border-gray-200">
-							<CardContent className="space-y-4 text-sm text-gray-600">
+						<Card hover className="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700">
+							<CardContent className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
 								<div className="text-center">
 									<div className="inline-flex items-center justify-center w-12 h-12 bg-success-light rounded-2xl mx-auto mb-2 shadow-[0_4px_0_rgba(88,204,2,0.25)]">
 										<Image
@@ -449,17 +453,17 @@ function LobbyPage() {
 											className="h-7 w-7 object-contain"
 										/>
 									</div>
-									<h2 className="font-title text-xl font-bold text-gray-800">
+									<h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100">
 										Weekly Leaderboard
 									</h2>
-									<p className="text-gray-500 text-sm">
+									<p className="text-gray-500 dark:text-gray-400 text-sm">
 										Last 7 days • Top 5 only
 									</p>
 								</div>
 
 								{!stats && !statsError && (
 									<p
-										className="text-center text-gray-400"
+										className="text-center text-gray-400 dark:text-gray-500"
 										role="status"
 										aria-live="polite"
 									>
@@ -467,23 +471,23 @@ function LobbyPage() {
 									</p>
 								)}
 								{!stats && statsError && (
-									<p className="text-center text-amber-600" role="alert">
+									<p className="text-center text-amber-600 dark:text-amber-400" role="alert">
 										Stats currently unavailable.
 									</p>
 								)}
 
 								{stats && (
 									<div className="space-y-4">
-										<div className="flex items-center justify-between rounded-2xl border-2 border-success/20 bg-success-light/40 px-4 py-3">
+										<div className="flex items-center justify-between rounded-2xl border-2 border-success/20 bg-success-light/40 dark:bg-success-dark/20 px-4 py-3">
 											<div>
-												<p className="text-xs font-bold uppercase tracking-wide text-success-dark">
+												<p className="text-xs font-bold uppercase tracking-wide text-success-dark dark:text-success-light">
 													Longest Streak
 												</p>
-												<p className="text-lg font-bold text-gray-800">
+												<p className="text-lg font-bold text-gray-800 dark:text-gray-100">
 													{stats.longestStreak} connections
 												</p>
 											</div>
-											<div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl shadow-sm">
+											<div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 text-xl shadow-sm">
 												🔥
 											</div>
 										</div>
@@ -513,7 +517,7 @@ function LobbyPage() {
 											}))}
 										/>
 
-										<p className="text-center text-xs text-gray-400">
+										<p className="text-center text-xs text-gray-400 dark:text-gray-500">
 											Updated {new Date(stats.updatedAt).toLocaleString()}
 										</p>
 									</div>

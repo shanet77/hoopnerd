@@ -21,20 +21,20 @@ export function MoveHistory({ moves }: MoveHistoryProps) {
           {moves.map((move, index) => (
             <div
               key={index}
-              className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
+              className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl"
             >
-              <div className="w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center font-bold text-brand-700">
+              <div className="w-8 h-8 bg-brand-100 dark:bg-brand-900/40 rounded-full flex items-center justify-center font-bold text-brand-700 dark:text-brand-300">
                 {index + 1}
               </div>
               <div className="flex-1">
-                <span className="font-bold text-gray-800">
+                <span className="font-bold text-gray-800 dark:text-gray-100">
                   {move.playerName}
                 </span>
-                <span className="text-sm text-gray-500 ml-1">
+                <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">
                   ({move.position})
                 </span>
               </div>
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-gray-400 dark:text-gray-500">
                 Move #{index + 1}
               </span>
             </div>

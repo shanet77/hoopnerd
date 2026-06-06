@@ -30,12 +30,12 @@ export function LobbyActionCard({
     <Card
       hover
       className={
-        isHighlight ? "bg-success-light/30 border-success/30" : undefined
+        isHighlight ? "bg-success-light/30 dark:bg-success-dark/20 border-success/30 dark:border-success/20" : undefined
       }
     >
       <CardHeader className="text-center pb-2">
         <CardTitle
-          className={isHighlight ? "text-success-dark" : undefined}
+          className={isHighlight ? "text-success-dark dark:text-success-light" : undefined}
         >
           {typeof connected === "boolean" && (
             <span

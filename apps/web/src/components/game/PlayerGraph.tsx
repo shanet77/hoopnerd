@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useMemo, useState } from "react";
+import { useTheme } from "next-themes";
 import { Player, PlayerConnection } from "@repo/types";
 
 interface PlayerGraphProps {
@@ -24,6 +25,8 @@ export function PlayerGraph({
   const containerRef = useRef<HTMLDivElement>(null);
   const nodeSpacing = 90;
   const [canvasSize, setCanvasSize] = useState({ width, height: 320 });
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   const orderedPlayers = useMemo(() => {
     const players: Player[] = [];
@@ -116,7 +119,20 @@ export function PlayerGraph({
 
     ctx.clearRect(0, 0, displayWidth, displayHeight);
 
-    ctx.strokeStyle = "#6366f1";
+    // Theme-aware canvas colors
+    const isDark = document.documentElement.classList.contains("dark");
+    const COLORS = {
+      edgeStroke: isDark ? "#818cf8" : "#6366f1",
+      labelBg: isDark ? "#1e1b4b" : "#eef2ff",
+      labelBorder: isDark ? "#4338ca" : "#c7d2fe",
+      labelText: isDark ? "#c7d2fe" : "#3730a3",
+      startingNodeFill: isDark ? "#4ade80" : "#22c55e",
+      regularNodeFill: isDark ? "#818cf8" : "#6366f1",
+      nodeStroke: isDark ? "#c7d2fe" : "#1e1b4b",
+      nodeText: "#ffffff",
+    };
+
+    ctx.strokeStyle = COLORS.edgeStroke;
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
 
@@ -169,13 +185,13 @@ export function PlayerGraph({
           const labelTop = labelY - labelHeight / 2;
 
           drawRoundedRect(ctx, labelLeft, labelTop, labelWidth, labelHeight, 8);
-          ctx.fillStyle = "#eef2ff";
+          ctx.fillStyle = COLORS.labelBg;
           ctx.fill();
-          ctx.strokeStyle = "#c7d2fe";
+          ctx.strokeStyle = COLORS.labelBorder;
           ctx.lineWidth = 1;
           ctx.stroke();
 
-          ctx.fillStyle = "#3730a3";
+          ctx.fillStyle = COLORS.labelText;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(labelText, labelX, labelY);
@@ -201,32 +217,32 @@ export function PlayerGraph({
       drawRoundedRect(ctx, nodeLeft, nodeTop, nodeWidth, nodeHeight, 14);
 
       if (isStartingPlayer) {
-        ctx.fillStyle = "#22c55e";
+        ctx.fillStyle = COLORS.startingNodeFill;
       } else {
-        ctx.fillStyle = "#6366f1";
+        ctx.fillStyle = COLORS.regularNodeFill;
       }
       ctx.fill();
       
-      ctx.strokeStyle = "#1e1b4b";
+      ctx.strokeStyle = COLORS.nodeStroke;
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = COLORS.nodeText;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
       ctx.fillText(node.player.name, node.x, node.y);
     });
-  }, [nodePositions, connections, startingPlayer, canvasSize.width, canvasSize.height]);
+  }, [nodePositions, connections, startingPlayer, canvasSize.width, canvasSize.height, isDark]);
 
   if (!startingPlayer && connections.length === 0) {
     return (
       <div
         ref={containerRef}
-        className="player-graph-container h-64 md:h-80 lg:h-96 p-4 bg-gray-50 rounded-lg border border-gray-200"
+        className="player-graph-container h-64 md:h-80 lg:h-96 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
         aria-label="Player connection graph"
       >
-        <p className="text-gray-500 text-center">Game will start with a random player...</p>
+        <p className="text-gray-500 dark:text-gray-400 text-center">Game will start with a random player...</p>
       </div>
     );
   }
@@ -234,7 +250,7 @@ export function PlayerGraph({
   return (
     <div
       ref={containerRef}
-      className="player-graph-container h-64 md:h-80 lg:h-96 bg-white rounded-lg border border-gray-200 overflow-hidden"
+      className="player-graph-container h-64 md:h-80 lg:h-96 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
       aria-label="Player connection graph"
     >
       <canvas

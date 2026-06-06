@@ -97,7 +97,7 @@ export function PlayerSearch({
         {searchResults.length > 0 && (
           <div
             ref={listboxRef}
-            className="mt-2 bg-white border-2 border-gray-200 rounded-xl divide-y divide-gray-100 max-h-60 overflow-y-auto"
+            className="mt-2 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl divide-y divide-gray-100 dark:divide-gray-700 max-h-60 overflow-y-auto"
             role="listbox"
             aria-label="Player search results"
           >
@@ -107,21 +107,21 @@ export function PlayerSearch({
                 type="button"
                 className={`p-3 cursor-pointer transition-colors flex items-center gap-3 w-full text-left ${
                   index === highlightedIndex
-                    ? "bg-brand-50"
-                    : "hover:bg-brand-50"
+                    ? "bg-brand-50 dark:bg-brand-900/30"
+                    : "hover:bg-brand-50 dark:hover:bg-brand-900/30"
                 }`}
                 onClick={() => handleSelect(player)}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 aria-label={`Select ${player.name}${player.position ? `, ${player.position}` : ""}`}
               >
-                <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-brand-100 dark:bg-brand-900/40 rounded-full flex items-center justify-center">
                   <span className="text-lg">🏀</span>
                 </div>
                 <div>
-                  <span className="font-bold text-gray-800 block">
+                  <span className="font-bold text-gray-800 dark:text-gray-100 block">
                     {player.name}
                   </span>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     {player.position}
                   </span>
                 </div>
@@ -131,7 +131,7 @@ export function PlayerSearch({
         )}
 
         {searchQuery.length >= 2 && searchResults.length === 0 && (
-          <p className="mt-2 text-sm text-gray-400 text-center py-2">
+          <p className="mt-2 text-sm text-gray-400 dark:text-gray-500 text-center py-2">
             No players found
           </p>
         )}

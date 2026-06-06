@@ -9,7 +9,7 @@ interface FeedbackBannerProps {
 const variantStyles = {
   error: "bg-error-light border-error/30 text-error-dark",
   warning: "bg-warning-light border-warning/30 text-warning-dark",
-  info: "bg-brand-100 border-brand/30 text-brand-700",
+  info: "bg-brand-100 dark:bg-brand-900/40 border-brand/30 text-brand-700 dark:text-brand-300",
   success: "bg-success-light border-success/30 text-success-dark",
 };
 

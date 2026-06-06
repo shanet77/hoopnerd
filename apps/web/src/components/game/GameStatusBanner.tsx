@@ -28,7 +28,7 @@ export function GameStatusBanner({
     <Card className="bg-white">
       <CardContent className="py-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+          <span className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             Current Turn
           </span>
           <Badge
@@ -47,12 +47,12 @@ export function GameStatusBanner({
         <div className="flex justify-between mt-2">
           <span
             className={`font-bold text-2xl ${
-              isUrgent ? "text-error countdown-pulse" : "text-gray-700"
+              isUrgent ? "text-error countdown-pulse" : "text-gray-700 dark:text-gray-300"
             }`}
           >
             {timeRemaining}s
           </span>
-          <span className="text-sm text-gray-500 font-medium">
+          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">
             {roomState.moves.length} moves made
           </span>
         </div>

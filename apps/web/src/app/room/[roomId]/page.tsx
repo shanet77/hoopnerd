@@ -77,15 +77,15 @@ function GamePage() {
     return (
       <main
         id="main-content"
-        className="min-h-screen bg-gray-50 flex items-center justify-center p-4"
+        className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4"
       >
         <Card className="max-w-md w-full text-center">
           <CardContent className="py-12 space-y-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 rounded-2xl animate-pulse">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 dark:bg-brand-900/40 rounded-2xl animate-pulse">
               <span className="text-3xl">🏀</span>
             </div>
             <CardTitle>Connecting...</CardTitle>
-            <p className="text-gray-500" role="status" aria-live="polite">
+            <p className="text-gray-500 dark:text-gray-400" role="status" aria-live="polite">
               Setting up your game!
             </p>
           </CardContent>
@@ -95,7 +95,7 @@ function GamePage() {
   }
 
   return (
-    <main id="main-content" className="min-h-screen bg-gray-50 py-6 px-4">
+    <main id="main-content" className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 px-4">
       <div className="max-w-2xl mx-auto space-y-4">
         <p className="sr-only" role="status" aria-live="polite">
           {gameMessage}
@@ -141,21 +141,21 @@ function GamePage() {
 
             <Card>
               <CardContent className="py-4">
-                <h2 className="font-title text-xl font-bold text-gray-800 mb-2">
+                <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">
                   Player Chain
                 </h2>
-                <p className="text-gray-500 text-sm mb-4">
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
                   Build the longest chain of connected players!
                 </p>
                 {roomState.gameStarted && roomState.startingPlayer ? (
-                  <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-100">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border-2 border-gray-100 dark:border-gray-800">
                     <PlayerGraph
                       startingPlayer={roomState.startingPlayer}
                       connections={roomState.connections}
                     />
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                     <span className="text-4xl block mb-2">⏳</span>
                     Waiting for game to start...
                   </div>
@@ -169,15 +169,15 @@ function GamePage() {
             />
 
             {isMyTurn && roomState.gameStarted && (
-              <Card className="bg-success-light/30 border-success/30">
+              <Card className="bg-success-light/30 dark:bg-success-dark/20 border-success/30">
                 <CardContent className="py-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-2xl">🎯</span>
-                    <h2 className="font-title text-xl font-bold text-gray-800">
+                    <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100">
                       Make Your Move
                     </h2>
                   </div>
-                  <p className="text-gray-500 text-sm mb-4">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
                     Connect a player to{" "}
                     <strong>
                       {roomState.lastConnectedPlayer?.name ||
@@ -210,7 +210,7 @@ function GamePage() {
 
             {!isMyTurn && roomState.gameStarted && (
               <Card
-                className={`${cpuThinking ? "bg-brand-50 border-brand-200" : "bg-gray-100 border-gray-200"}`}
+                className={`${cpuThinking ? "bg-brand-50 dark:bg-brand-900/40 border-brand-200" : "bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600"}`}
               >
                 <CardContent className="py-6 text-center">
                   <div
@@ -218,7 +218,7 @@ function GamePage() {
                   >
                     {cpuThinking ? "🧠" : "⏰"}
                   </div>
-                  <p className="font-bold text-gray-600">
+                  <p className="font-bold text-gray-600 dark:text-gray-300">
                     {cpuThinking
                       ? "🤖 CPU is thinking..."
                       : `Waiting for ${activePlayer?.name}'s move...`}
@@ -228,13 +228,13 @@ function GamePage() {
             )}
 
             {!roomState.gameStarted && (
-              <Card className="bg-warning-light/30 border-warning/30">
+              <Card className="bg-warning-light/30 dark:bg-warning-dark/20 border-warning/30">
                 <CardContent className="py-6 text-center">
                   <div className="text-4xl mb-2">👥</div>
-                  <p className="font-bold text-warning-dark">
+                  <p className="font-bold text-warning-dark dark:text-warning-light">
                     Waiting for more players...
                   </p>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                     Share the room code with friends!
                   </p>
                 </CardContent>
@@ -246,13 +246,13 @@ function GamePage() {
         ) : (
           <Card className="text-center py-8">
             <CardContent>
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 rounded-2xl animate-pulse mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 dark:bg-brand-900/40 rounded-2xl animate-pulse mb-4">
                 <span className="text-3xl">🏀</span>
               </div>
               <CardTitle>Joining Room...</CardTitle>
-              <p className="text-gray-500 mt-2">Getting everything ready!</p>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">Getting everything ready!</p>
               {gameMessage && (
-                <p className="text-sm font-semibold text-warning-dark mt-3">
+                <p className="text-sm font-semibold text-warning-dark dark:text-warning-light mt-3">
                   {gameMessage}
                 </p>
               )}
@@ -308,12 +308,12 @@ function GameHeader({
       </Badge>
       <div className="flex items-center gap-2">
         <div
-          className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border-2 border-gray-200"
+          className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-xl border-2 border-gray-200 dark:border-gray-700"
           role="group"
           aria-label={`Room code ${roomId}`}
         >
           <span className="text-lg">🏀</span>
-          <span className="font-bold text-gray-700">{roomId}</span>
+          <span className="font-bold text-gray-700 dark:text-gray-300">{roomId}</span>
           <button
             type="button"
             onClick={copyRoomCode}
@@ -344,14 +344,14 @@ function GameOverScreen({
 }) {
   return (
     <div className="space-y-6">
-      <Card className="text-center py-8 bg-warning-light/50 border-warning/30">
+      <Card className="text-center py-8 bg-warning-light/50 dark:bg-warning-dark/20 border-warning/30">
         <div className="inline-flex items-center justify-center w-24 h-24 bg-warning rounded-full mx-auto mb-4 shadow-lg animate-bounce">
           <span className="text-5xl">🏆</span>
         </div>
-        <CardTitle className="text-3xl text-warning-dark mb-2">
+        <CardTitle className="text-3xl text-warning-dark dark:text-warning-light mb-2">
           {winner.name} Wins!
         </CardTitle>
-        <p className="text-gray-600 font-medium">{winReason}</p>
+        <p className="text-gray-600 dark:text-gray-300 font-medium">{winReason}</p>
       </Card>
       <div className="flex gap-3">
         <Button variant="secondary" className="flex-1" onClick={onLeave}>

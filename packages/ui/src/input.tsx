@@ -13,14 +13,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className={`flex flex-col ${className}`}>
         {label && (
-          <label htmlFor={id} className="mb-2 text-sm font-bold text-gray-700 uppercase tracking-wide">
+          <label htmlFor={id} className="mb-2 text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
             {label}
           </label>
         )}
         <div className="relative">
           {icon && (
             <div
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
               aria-hidden="true"
             >
               {icon}
@@ -32,15 +32,15 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             aria-invalid={Boolean(error)}
             aria-describedby={error && errorId ? errorId : undefined}
             className={`
-              w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl
-              text-gray-800 text-base transition-all duration-200
+              w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl
+              text-gray-800 dark:text-gray-100 text-base transition-all duration-200
               shadow-[inset_0_2px_4px_rgba(0,0,0,0.04)]
-              placeholder:text-gray-400
-              focus:border-brand-400 focus:bg-white focus:outline-none
-              focus-visible:ring-4 focus-visible:ring-brand-300 focus-visible:ring-offset-1
+              placeholder:text-gray-400 dark:placeholder:text-gray-500
+              focus:border-brand-400 dark:focus:border-brand-500 focus:bg-white dark:focus:bg-gray-900 focus:outline-none
+              focus-visible:ring-4 focus-visible:ring-brand-300 dark:focus-visible:ring-brand-700 focus-visible:ring-offset-1
               focus:shadow-[0_0_0_4px_rgba(14,165,233,0.15),inset_0_2px_4px_rgba(0,0,0,0.04)]
-              disabled:bg-gray-100 disabled:cursor-not-allowed
-              read-only:bg-gray-100 read-only:text-gray-500 read-only:border-gray-300 read-only:cursor-pointer
+              disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed
+              read-only:bg-gray-100 dark:read-only:bg-gray-800 read-only:text-gray-500 dark:read-only:text-gray-400 read-only:border-gray-300 dark:read-only:border-gray-600 read-only:cursor-pointer
               ${error ? "border-error focus:border-error focus:shadow-[0_0_0_4px_rgba(255,75,75,0.15)]" : ""}
               ${icon ? "pl-10" : ""}
             `}
@@ -50,7 +50,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {error && (
           <p
             id={errorId}
-            className="mt-2 text-sm font-bold text-error flex items-center gap-1"
+            className="mt-2 text-sm font-bold text-error dark:text-error-light flex items-center gap-1"
             role="alert"
           >
             <span>⚠</span> {error}

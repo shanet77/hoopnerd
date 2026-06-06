@@ -4,6 +4,7 @@ import Script from "next/script";
 import { Oswald } from "next/font/google";
 import UmamiPageviewTracker from "./lib/UmamiPageviewTracker";
 import { isUmamiEnabled, umamiWebsiteId } from "./lib/analytics";
+import { ThemeProvider } from "./lib/theme";
 
 const oswald = Oswald({
   subsets: ["latin"],
@@ -26,23 +27,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={oswald.variable}>
-        <a href="#main-content" className="skip-link">
-          Skip to main content
-        </a>
-        {isUmamiEnabled ? (
-          <>
-            <Script
-              defer
-              src="https://cloud.umami.is/script.js"
-              data-website-id={umamiWebsiteId}
-              strategy="afterInteractive"
-            />
-            <UmamiPageviewTracker />
-          </>
-        ) : null}
-        {children}
+        <ThemeProvider>
+          <a href="#main-content" className="skip-link">
+            Skip to main content
+          </a>
+          {isUmamiEnabled ? (
+            <>
+              <Script
+                defer
+                src="https://cloud.umami.is/script.js"
+                data-website-id={umamiWebsiteId}
+                strategy="afterInteractive"
+              />
+              <UmamiPageviewTracker />
+            </>
+          ) : null}
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

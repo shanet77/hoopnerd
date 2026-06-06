@@ -16,7 +16,7 @@ export const TimerBar = ({
 
   return (
     <div
-      className="relative h-4 bg-gray-200 rounded-full overflow-hidden"
+      className="relative h-4 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
       role="progressbar"
       aria-label="Turn timer"
       aria-valuemin={0}
