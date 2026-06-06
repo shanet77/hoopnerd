@@ -6,10 +6,16 @@ DEPLOY_TARGET_PATH="${DEPLOY_PATH:-${PATH_ON_VPS:-}}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 REGISTRY_URL="${REGISTRY_URL:-}"
 REGISTRY_USERNAME="${REGISTRY_USERNAME:-}"
+REGISTRY_PASSWORD_B64="${REGISTRY_PASSWORD_B64:-}"
 REGISTRY_PASSWORD="${REGISTRY_PASSWORD:-}"
 REGISTRY_NAMESPACE="${REGISTRY_NAMESPACE:-}"
 API_IMAGE="${API_IMAGE:-}"
 WEB_IMAGE="${WEB_IMAGE:-}"
+
+# Decode base64 password if provided (CI sends it base64-encoded for shell safety)
+if [ -n "${REGISTRY_PASSWORD_B64}" ] && [ -z "${REGISTRY_PASSWORD}" ]; then
+  REGISTRY_PASSWORD="$(printf '%s' "${REGISTRY_PASSWORD_B64}" | base64 -d)"
+fi
 
 echo "=== deploy-racknerd starting ==="
 echo "user=$(whoami) target_path=${DEPLOY_TARGET_PATH} image_tag=${IMAGE_TAG}"
@@ -57,7 +63,11 @@ REGISTRY_HOST="${REGISTRY_HOST%/}"
 
 if [ -n "${REGISTRY_HOST}" ] && [ -n "${REGISTRY_USERNAME}" ] && [ -n "${REGISTRY_PASSWORD}" ]; then
   echo "Logging into ${REGISTRY_HOST}"
-  echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY_HOST}" -u "${REGISTRY_USERNAME}" --password-stdin
+  if echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY_HOST}" -u "${REGISTRY_USERNAME}" --password-stdin 2>&1; then
+    echo "Registry login successful"
+  else
+    echo "WARNING: Registry login failed. Continuing with existing credentials if available."
+  fi
 fi
 
 if [ -z "${API_IMAGE}" ] && [ -n "${REGISTRY_HOST}" ] && [ -n "${REGISTRY_NAMESPACE}" ]; then
@@ -75,6 +85,9 @@ export API_IMAGE
 export WEB_IMAGE
 export IMAGE_TAG
 
+echo "Using API_IMAGE=${API_IMAGE}"
+echo "Using WEB_IMAGE=${WEB_IMAGE}"
+
 # Run database migration + seed (seed skips if data already exists)
 echo "Ensuring database schema and seed data..."
 docker compose \
@@ -83,15 +96,25 @@ docker compose \
   --profile seed \
   run --rm db-seed
 
+echo "Pulling images..."
 docker compose \
   -f docker-compose.prod.yml \
   --env-file .env.prod \
   pull api web
 
+echo "Deploying containers..."
 docker compose \
   -f docker-compose.prod.yml \
   --env-file .env.prod \
   up -d --remove-orphans --force-recreate
+
+# Update local main-latest tags to point to the newly deployed images
+# This ensures future default-tag deploys use the latest
+echo "Updating local main-latest tags..."
+API_LATEST="$(echo "${API_IMAGE}" | cut -d: -f1):main-latest"
+WEB_LATEST="$(echo "${WEB_IMAGE}" | cut -d: -f1):main-latest"
+docker tag "${API_IMAGE}" "${API_LATEST}" 2>/dev/null || true
+docker tag "${WEB_IMAGE}" "${WEB_LATEST}" 2>/dev/null || true
 
 docker compose \
   -f docker-compose.prod.yml \

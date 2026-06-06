@@ -246,6 +246,9 @@ jobs:
           fi
           chmod 600 "${key_file}"
 
+          # Base64-encode password to safely pass via shell export (matching build job)
+          REGISTRY_PASSWORD_B64="$(printf '%s' "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')"
+
           ssh -i "${key_file}" \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=30 \
@@ -253,5 +256,5 @@ jobs:
             -o ServerAliveCountMax=4 \
             -o BatchMode=yes \
             "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "export DEPLOY_PATH='${DEPLOY_PATH}' PATH_ON_VPS='${PATH_ON_VPS}' IMAGE_TAG='${IMAGE_TAG}' REGISTRY_URL='${REGISTRY_URL}' REGISTRY_USERNAME='${REGISTRY_USERNAME}' REGISTRY_PASSWORD='${REGISTRY_PASSWORD}' REGISTRY_NAMESPACE='${REGISTRY_NAMESPACE}'; bash -s" \
+            "export DEPLOY_PATH='${DEPLOY_PATH}' PATH_ON_VPS='${PATH_ON_VPS}' IMAGE_TAG='${IMAGE_TAG}' REGISTRY_URL='${REGISTRY_URL}' REGISTRY_USERNAME='${REGISTRY_USERNAME}' REGISTRY_PASSWORD_B64='${REGISTRY_PASSWORD_B64}' REGISTRY_NAMESPACE='${REGISTRY_NAMESPACE}'; bash -s" \
             < scripts/deploy-racknerd.sh
