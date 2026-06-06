@@ -28,10 +28,13 @@ cd "${DEPLOY_TARGET_PATH}"
 if [ -d .git ]; then
   echo "Pulling latest main..."
   git remote prune origin || true
-  git fetch origin main
-  git checkout -f main || git checkout -B main origin/main
-  git reset --hard origin/main
-  echo "Deploying commit: $(git rev-parse HEAD)"
+  if git fetch origin main 2>&1; then
+    git checkout -f main || git checkout -B main origin/main
+    git reset --hard origin/main
+    echo "Deploying commit: $(git rev-parse HEAD)"
+  else
+    echo "WARNING: git fetch failed. Proceeding with existing checkout for config files."
+  fi
 else
   echo "ERROR: ${DEPLOY_TARGET_PATH} is not a git repository"
   exit 1
