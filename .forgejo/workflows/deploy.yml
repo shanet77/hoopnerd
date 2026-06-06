@@ -237,7 +237,12 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           key_file=~/.ssh/prod_deploy_key
-          printf '%s\n' "${DEPLOY_SSH_KEY}" > "${key_file}"
+          # Decode base64 if the key was stored encoded (starts with LS0t = "---" in b64)
+          if printf '%s' "${DEPLOY_SSH_KEY}" | grep -q '^LS0t'; then
+            printf '%s' "${DEPLOY_SSH_KEY}" | base64 -d > "${key_file}"
+          else
+            printf '%s\n' "${DEPLOY_SSH_KEY}" > "${key_file}"
+          fi
           chmod 600 "${key_file}"
 
           ssh -i "${key_file}" \
