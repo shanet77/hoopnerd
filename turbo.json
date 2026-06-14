@@ -1,5 +1,11 @@
 {
-  "$schema": "https://turborepo.dev/schema.json",
+  "$schema": "https://v2-9-18.turborepo.dev/schema.json",
+  "globalEnv": [
+    "SOCKET_SESSION_SECRET",
+    "TURN_TIMEOUT_MS",
+    "DISCONNECT_GRACE_MS",
+    "ENABLE_CPU_MODE"
+  ],
   "tasks": {
     "build": {
       "inputs": ["$TURBO_DEFAULT$", ".env*"],

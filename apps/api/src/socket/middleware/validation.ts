@@ -76,13 +76,10 @@ export function handleErrorOnSocket(
   error: unknown,
   defaultEventOrOptions?: string | HandleErrorOnSocketOptions
 ): boolean {
-  let defaultEvent = 'game_error';
   let legacyChannel = 'game_error';
 
-  if (typeof defaultEventOrOptions === 'string') {
-    defaultEvent = defaultEventOrOptions;
-  } else if (defaultEventOrOptions) {
-    defaultEvent = defaultEventOrOptions.defaultEvent ?? 'game_error';
+  if (defaultEventOrOptions && typeof defaultEventOrOptions !== 'string') {
+    const defaultEvent = defaultEventOrOptions.defaultEvent ?? 'game_error';
     legacyChannel = defaultEventOrOptions.legacyChannel ?? defaultEvent;
   }
 

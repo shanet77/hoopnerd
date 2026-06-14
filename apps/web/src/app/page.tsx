@@ -59,7 +59,7 @@ function LobbyPage() {
 	const [isMatchmaking, setIsMatchmaking] = useState(false);
 	const [isCpuQueuing, setIsCpuQueuing] = useState(false);
 	const { stats, error: statsError } = useLobbyStats();
-	const { seasons, minYear, maxYear, loading: seasonsLoading } = useAvailableSeasons();
+	const { minYear, maxYear, loading: seasonsLoading } = useAvailableSeasons();
 	const [seasonYearMin, setSeasonYearMin] = useState<number | undefined>(
 		undefined,
 	);

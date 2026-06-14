@@ -3,7 +3,7 @@
 import React from "react";
 import { Target, Bot } from "lucide-react";
 import { Player, GameRoomState } from "@repo/types";
-import { Card, CardContent, CardTitle } from "@repo/ui/card";
+import { Card, CardContent } from "@repo/ui/card";
 import { TimerBar } from "@repo/ui/timer-bar";
 import { Badge } from "@repo/ui/badge";
 
@@ -20,7 +20,6 @@ export function GameStatusBanner({
   activePlayer,
   isMyTurn,
   timeRemaining,
-  isCpuOpponent,
 }: GameStatusBannerProps) {
   const isUrgent = timeRemaining <= 5;
   const isCpuTurn = activePlayer?.isCpu ?? false;
