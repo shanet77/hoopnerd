@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Target } from "lucide-react";
 import { Player } from "@repo/types";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/card";
 
@@ -36,7 +37,7 @@ export function PlayerList({ players, activePlayer }: PlayerListProps) {
                 </span>
               )}
               {player.name === activePlayer?.name && (
-                <span className="text-xs">🎯</span>
+                <Target className="h-3.5 w-3.5" aria-label="Active player" />
               )}
             </div>
           ))}

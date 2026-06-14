@@ -4,43 +4,54 @@
 @source '../../../../packages/ui/src/**/*.{js,ts,jsx,tsx,mdx}';
 
 @theme {
-  --color-brand-50: #e0f2fe;
-  --color-brand-100: #bae6fd;
-  --color-brand-200: #7dd3fc;
-  --color-brand-300: #38bdf8;
-  --color-brand-400: #0ea5e9;
-  --color-brand-500: #0284c7;
-  --color-brand-600: #0369a1;
-  --color-brand-700: #075985;
-  --color-brand-800: #0c4a6e;
-  --color-brand-900: #0a3d5c;
+  /*
+    HoopNerd palette — basketball / hardwood, calmer than the old candy set.
+    Token NAMES are intentionally unchanged (brand-*, basketball*, success*,
+    error*, warning*, gray-*) so existing dark: utilities keep resolving.
+    Only the underlying hex values were retuned:
+      brand      -> deep court ink (navy-teal): ink text, focus rings, info tints
+      basketball -> signature orange (tuned for contrast)
+      success    -> emerald   error -> rose   warning -> amber (desaturated)
+      gray       -> warm neutral; gray-50 reads as paper, gray-900 as ink
+  */
 
-  --color-basketball: #ff6b35;
-  --color-basketball-light: #ff8c5a;
-  --color-basketball-dark: #e55a2b;
+  --color-brand-50: #eef4f9;
+  --color-brand-100: #d5e6f1;
+  --color-brand-200: #a9cbdf;
+  --color-brand-300: #74a6c5;
+  --color-brand-400: #447da6;
+  --color-brand-500: #2a6088;
+  --color-brand-600: #1d4a6e;
+  --color-brand-700: #143754;
+  --color-brand-800: #0f2a43;
+  --color-brand-900: #0a1e30;
 
-  --color-success: #58cc02;
-  --color-success-light: #d7ffb8;
-  --color-success-dark: #46a302;
+  --color-basketball: #f06a36;
+  --color-basketball-light: #f3906a;
+  --color-basketball-dark: #c8502b;
 
-  --color-error: #ff4b4b;
-  --color-error-light: #ffdfe0;
-  --color-error-dark: #e04444;
+  --color-success: #1b8a4e;
+  --color-success-light: #d7efe0;
+  --color-success-dark: #155f36;
 
-  --color-warning: #ffc800;
-  --color-warning-light: #fff0c2;
-  --color-warning-dark: #e6b400;
+  --color-error: #cf3f4b;
+  --color-error-light: #fbe1e3;
+  --color-error-dark: #9e2c39;
 
-  --color-gray-50: #f7f7f7;
-  --color-gray-100: #eeeeee;
-  --color-gray-200: #e1e1e1;
-  --color-gray-300: #c8c8c8;
-  --color-gray-400: #a3a3a3;
-  --color-gray-500: #777777;
-  --color-gray-600: #555555;
-  --color-gray-700: #3c3c3c;
-  --color-gray-800: #292929;
-  --color-gray-900: #1a1a1a;
+  --color-warning: #d99a1f;
+  --color-warning-light: #fbeccb;
+  --color-warning-dark: #a8740f;
+
+  --color-gray-50: #f8f7f4;
+  --color-gray-100: #efeee9;
+  --color-gray-200: #e2e0db;
+  --color-gray-300: #cdc9c2;
+  --color-gray-400: #a6a29a;
+  --color-gray-500: #78746b;
+  --color-gray-600: #54514b;
+  --color-gray-700: #3a3833;
+  --color-gray-800: #26251f;
+  --color-gray-900: #1a1a16;
 }
 
 @keyframes bouncy {
@@ -144,7 +155,7 @@
   z-index: 1000;
   padding: 0.75rem 1rem;
   border-radius: 0.75rem;
-  background: #0a3d5c;
+  background: var(--color-brand-900);
   color: #ffffff;
   font-weight: 700;
   @apply dark:bg-brand-700;

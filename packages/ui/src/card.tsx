@@ -19,7 +19,6 @@ export const Card = ({
         ${hover ? "hover:bg-gray-50/50 dark:hover:bg-gray-700/50" : ""}
         ${className}
       `}
-      style={{ animation: "slide-up 0.3s ease-out" }}
     >
       {children}
     </div>

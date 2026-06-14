@@ -1,6 +1,19 @@
 "use client";
 
 import { useState, FormEvent } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bot,
+  Brain,
+  CircleX,
+  Clock,
+  Hourglass,
+  Target,
+  Trophy,
+  Users,
+} from "lucide-react";
+import { Basketball } from "../../../components/icons/Basketball";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardTitle } from "@repo/ui/card";
@@ -81,12 +94,12 @@ function GamePage() {
       >
         <Card className="max-w-md w-full text-center">
           <CardContent className="py-12 space-y-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 dark:bg-brand-900/40 rounded-2xl animate-pulse">
-              <span className="text-3xl">🏀</span>
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 dark:bg-brand-900/40 rounded-2xl">
+              <Basketball className="h-8 w-8 text-basketball animate-spin" />
             </div>
             <CardTitle>Connecting...</CardTitle>
             <p className="text-gray-500 dark:text-gray-400" role="status" aria-live="polite">
-              Setting up your game!
+              Preparing your session.
             </p>
           </CardContent>
         </Card>
@@ -127,7 +140,7 @@ function GamePage() {
 
             {gameMessage.includes("Invalid") ||
             gameMessage.includes("not play with") ? (
-              <FeedbackBanner variant="error" icon="❌">
+              <FeedbackBanner variant="error" icon={<CircleX className="h-5 w-5" />}>
                 {gameMessage}
               </FeedbackBanner>
             ) : null}
@@ -145,7 +158,7 @@ function GamePage() {
                   Player Chain
                 </h2>
                 <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
-                  Build the longest chain of connected players!
+                  Build the longest chain of connected players.
                 </p>
                 {roomState.gameStarted && roomState.startingPlayer ? (
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border-2 border-gray-100 dark:border-gray-800">
@@ -156,8 +169,8 @@ function GamePage() {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <span className="text-4xl block mb-2">⏳</span>
-                    Waiting for game to start...
+                    <Hourglass className="block h-8 w-8 mx-auto mb-2" aria-hidden="true" />
+                    Waiting for the game to start...
                   </div>
                 )}
               </CardContent>
@@ -169,10 +182,12 @@ function GamePage() {
             />
 
             {isMyTurn && roomState.gameStarted && (
-              <Card className="bg-success-light/30 dark:bg-success-dark/20 border-success/30">
+              <Card className="border-success/30">
                 <CardContent className="py-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-2xl">🎯</span>
+                  <div className="flex items-center gap-3 rounded-xl bg-success/10 border border-success/20 px-4 py-3 mb-4">
+                    <span className="grid place-items-center h-9 w-9 rounded-lg bg-success text-white shrink-0">
+                      <Target className="h-5 w-5" />
+                    </span>
                     <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100">
                       Make Your Move
                     </h2>
@@ -185,9 +200,9 @@ function GamePage() {
                     </strong>{" "}
                     who shared a team
                     {roomState.seasonYearMin !== undefined && roomState.seasonYearMax !== undefined
-                      ? ` during ${roomState.seasonYearMin}–${roomState.seasonYearMax} seasons`
-                      : " and season"}
-                    !
+                      ? ` during the ${roomState.seasonYearMin}–${roomState.seasonYearMax} seasons`
+                      : " in the same season"}
+                    .
                   </p>
                   <form onSubmit={onSubmitMove} className="space-y-4">
                     <PlayerSearch
@@ -201,7 +216,13 @@ function GamePage() {
                       variant="success"
                       className="w-full text-lg py-4"
                     >
-                      {connectedPlayer ? "Submit Move →" : "Select a Player"}
+                      {connectedPlayer ? (
+                        <span className="inline-flex items-center justify-center gap-2">
+                          Submit Move <ArrowRight className="h-5 w-5" />
+                        </span>
+                      ) : (
+                        "Select a Player"
+                      )}
                     </Button>
                   </form>
                 </CardContent>
@@ -214,14 +235,23 @@ function GamePage() {
               >
                 <CardContent className="py-6 text-center">
                   <div
-                    className={`text-4xl mb-2 ${cpuThinking ? "animate-pulse" : ""}`}
+                    className={`flex justify-center mb-2 ${cpuThinking ? "animate-pulse" : ""}`}
                   >
-                    {cpuThinking ? "🧠" : "⏰"}
+                    {cpuThinking ? (
+                      <Brain className="h-8 w-8 text-brand-600 dark:text-brand-300" />
+                    ) : (
+                      <Clock className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+                    )}
                   </div>
                   <p className="font-bold text-gray-600 dark:text-gray-300">
-                    {cpuThinking
-                      ? "🤖 CPU is thinking..."
-                      : `Waiting for ${activePlayer?.name}'s move...`}
+                    {cpuThinking ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Bot className="h-4 w-4" />
+                        CPU is thinking...
+                      </span>
+                    ) : (
+                      `Waiting for ${activePlayer?.name}'s move...`
+                    )}
                   </p>
                 </CardContent>
               </Card>
@@ -230,12 +260,12 @@ function GamePage() {
             {!roomState.gameStarted && (
               <Card className="bg-warning-light/30 dark:bg-warning-dark/20 border-warning/30">
                 <CardContent className="py-6 text-center">
-                  <div className="text-4xl mb-2">👥</div>
+                  <Users className="h-8 w-8 mx-auto mb-2 text-warning-dark dark:text-warning-light" />
                   <p className="font-bold text-warning-dark dark:text-warning-light">
                     Waiting for more players...
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Share the room code with friends!
+                    Share the code to invite players.
                   </p>
                 </CardContent>
               </Card>
@@ -246,11 +276,11 @@ function GamePage() {
         ) : (
           <Card className="text-center py-8">
             <CardContent>
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 dark:bg-brand-900/40 rounded-2xl animate-pulse mb-4">
-                <span className="text-3xl">🏀</span>
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 dark:bg-brand-900/40 rounded-2xl mb-4">
+                <Basketball className="h-8 w-8 text-basketball animate-spin" />
               </div>
               <CardTitle>Joining Room...</CardTitle>
-              <p className="text-gray-500 dark:text-gray-400 mt-2">Getting everything ready!</p>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">Loading room details.</p>
               {gameMessage && (
                 <p className="text-sm font-semibold text-warning-dark dark:text-warning-light mt-3">
                   {gameMessage}
@@ -297,7 +327,10 @@ function GameHeader({
         onClick={onLeave}
         aria-label="Leave room and return to lobby"
       >
-        ← Leave
+        <span className="inline-flex items-center gap-1.5">
+          <ArrowLeft className="h-4 w-4" />
+          Leave
+        </span>
       </Button>
       <Badge
         variant={isConnected ? "success" : "error"}
@@ -312,7 +345,7 @@ function GameHeader({
           role="group"
           aria-label={`Room code ${roomId}`}
         >
-          <span className="text-lg">🏀</span>
+          <Basketball className="h-5 w-5 text-basketball" />
           <span className="font-bold text-gray-700 dark:text-gray-300">{roomId}</span>
           <button
             type="button"
@@ -345,8 +378,8 @@ function GameOverScreen({
   return (
     <div className="space-y-6">
       <Card className="text-center py-8 bg-warning-light/50 dark:bg-warning-dark/20 border-warning/30">
-        <div className="inline-flex items-center justify-center w-24 h-24 bg-warning rounded-full mx-auto mb-4 shadow-lg animate-bounce">
-          <span className="text-5xl">🏆</span>
+        <div className="inline-flex items-center justify-center w-20 h-20 bg-warning rounded-full mx-auto mb-4 shadow-lg ring-4 ring-warning/30">
+          <Trophy className="h-10 w-10 text-white" />
         </div>
         <CardTitle className="text-3xl text-warning-dark dark:text-warning-light mb-2">
           {winner.name} Wins!

@@ -1,4 +1,5 @@
 import React from "react";
+import { TriangleAlert } from "lucide-react";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -38,10 +39,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               placeholder:text-gray-400 dark:placeholder:text-gray-500
               focus:border-brand-400 dark:focus:border-brand-500 focus:bg-white dark:focus:bg-gray-900 focus:outline-none
               focus-visible:ring-4 focus-visible:ring-brand-300 dark:focus-visible:ring-brand-700 focus-visible:ring-offset-1
-              focus:shadow-[0_0_0_4px_rgba(14,165,233,0.15),inset_0_2px_4px_rgba(0,0,0,0.04)]
+              focus:shadow-[0_0_0_4px_rgba(68,125,166,0.16),inset_0_2px_4px_rgba(0,0,0,0.04)]
               disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed
               read-only:bg-gray-100 dark:read-only:bg-gray-800 read-only:text-gray-500 dark:read-only:text-gray-400 read-only:border-gray-300 dark:read-only:border-gray-600 read-only:cursor-pointer
-              ${error ? "border-error focus:border-error focus:shadow-[0_0_0_4px_rgba(255,75,75,0.15)]" : ""}
+              ${error ? "border-error focus:border-error focus:shadow-[0_0_0_4px_rgba(207,63,75,0.16)]" : ""}
               ${icon ? "pl-10" : ""}
             `}
             {...rest}
@@ -53,7 +54,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className="mt-2 text-sm font-bold text-error dark:text-error-light flex items-center gap-1"
             role="alert"
           >
-            <span>⚠</span> {error}
+            <TriangleAlert className="h-4 w-4 shrink-0" aria-hidden="true" /> {error}
           </p>
         )}
       </div>

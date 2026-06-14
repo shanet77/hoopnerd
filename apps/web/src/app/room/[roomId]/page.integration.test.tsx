@@ -32,6 +32,6 @@ describe("Room page", () => {
   it("shows connecting state before socket is available", () => {
     render(<Room />);
     expect(screen.getByText(/connecting/i)).toBeInTheDocument();
-    expect(screen.getByText(/setting up your game/i)).toBeInTheDocument();
+    expect(screen.getByText(/preparing your session/i)).toBeInTheDocument();
   });
 });

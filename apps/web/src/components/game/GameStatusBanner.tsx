@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Target, Bot } from "lucide-react";
 import { Player, GameRoomState } from "@repo/types";
 import { Card, CardContent, CardTitle } from "@repo/ui/card";
 import { TimerBar } from "@repo/ui/timer-bar";
@@ -37,9 +38,19 @@ export function GameStatusBanner({
             aria-live="polite"
           >
             {isMyTurn
-              ? "🎯 Your Turn!"
+              ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Target className="h-4 w-4" />
+                  Your turn
+                </span>
+              )
               : isCpuTurn
-                ? `🤖 ${activePlayer?.name}`
+                ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Bot className="h-4 w-4" />
+                    {activePlayer?.name}
+                  </span>
+                )
                 : activePlayer?.name}
           </Badge>
         </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, FormEvent } from "react";
 import Image from "next/image";
+import { LoaderCircle, Flame } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
@@ -308,7 +309,7 @@ function LobbyPage() {
 								variant="success"
 								className="w-full"
 							>
-								{isMatchmaking ? "🔍 Searching..." : "Find Match"}
+								{isMatchmaking ? <span className="inline-flex items-center gap-2"><LoaderCircle className="h-5 w-5 animate-spin" />Searching...</span> : "Find Match"}
 							</Button>
 						</LobbyActionCard>
 
@@ -435,7 +436,7 @@ function LobbyPage() {
 						<div className="text-center pt-4">
 							<p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
 								How to play: Connect players who played together on the same
-								team in the same season!
+								team in the same season.
 							</p>
 						</div>
 					</div>
@@ -444,7 +445,7 @@ function LobbyPage() {
 						<Card hover className="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700">
 							<CardContent className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
 								<div className="text-center">
-									<div className="inline-flex items-center justify-center w-12 h-12 bg-success-light rounded-2xl mx-auto mb-2 shadow-[0_4px_0_rgba(88,204,2,0.25)]">
+									<div className="inline-flex items-center justify-center w-12 h-12 bg-success-light rounded-2xl mx-auto mb-2 shadow-[0_4px_0_rgba(27,138,78,0.22)]">
 										<Image
 											src="/larry_obrien.svg"
 											alt="Larry O'Brien Trophy"
@@ -487,8 +488,8 @@ function LobbyPage() {
 													{stats.longestStreak} connections
 												</p>
 											</div>
-											<div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 text-xl shadow-sm">
-												🔥
+											<div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm">
+												<Flame className="h-5 w-5 text-basketball" />
 											</div>
 										</div>
 

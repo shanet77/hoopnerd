@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useCallback } from "react";
+import { CircleUser, Search } from "lucide-react";
 import { Player } from "@repo/types";
 import { Input } from "@repo/ui/input";
 import { usePlayerSearch } from "../../app/lib/usePlayerSearch";
@@ -78,7 +79,7 @@ export function PlayerSearch({
           readOnly
           onClick={() => searchInputRef.current?.focus()}
           placeholder="Currently Selected Player"
-          icon={<span>👤</span>}
+          icon={<CircleUser className="h-5 w-5" />}
         />
       </div>
 
@@ -90,7 +91,7 @@ export function PlayerSearch({
           onChange={(e) => handleSearchChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type a player name..."
-          icon={<span>🔍</span>}
+          icon={<Search className="h-5 w-5" />}
           ref={searchInputRef}
         />
 
@@ -114,8 +115,8 @@ export function PlayerSearch({
                 onMouseEnter={() => setHighlightedIndex(index)}
                 aria-label={`Select ${player.name}${player.position ? `, ${player.position}` : ""}`}
               >
-                <div className="w-10 h-10 bg-brand-100 dark:bg-brand-900/40 rounded-full flex items-center justify-center">
-                  <span className="text-lg">🏀</span>
+                <div className="w-10 h-10 bg-brand-100 dark:bg-brand-900/40 rounded-full flex items-center justify-center font-bold text-brand-700 dark:text-brand-300">
+                  {player.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
                   <span className="font-bold text-gray-800 dark:text-gray-100 block">
