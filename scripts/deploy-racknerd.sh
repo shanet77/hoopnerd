@@ -108,6 +108,46 @@ docker compose \
   --env-file .env.prod \
   up -d --remove-orphans --force-recreate
 
+echo "Verifying deployed containers run the expected images..."
+verify_service_image() {
+  local service="$1" expected_image="$2"
+  local container running_status running_image expected_image_id
+  container="$(docker compose -f docker-compose.prod.yml --env-file .env.prod ps -q "${service}")" || container=""
+  if [ -z "${container}" ]; then
+    echo "ERROR: no container exists for service '${service}' after deploy" >&2
+    return 1
+  fi
+  running_status="$(docker inspect "${container}" --format '{{.State.Status}}')" || running_status="unknown"
+  running_image="$(docker inspect "${container}" --format '{{.Image}}')" || running_image=""
+  expected_image_id="$(docker image inspect "${expected_image}" --format '{{.Id}}')" || expected_image_id=""
+  if [ "${running_status}" != "running" ]; then
+    echo "ERROR: service '${service}' is not running (status='${running_status}')" >&2
+    return 1
+  fi
+  if [ -z "${expected_image_id}" ]; then
+    echo "ERROR: expected image '${expected_image}' is not present locally; was it pulled?" >&2
+    return 1
+  fi
+  if [ "${running_image}" != "${expected_image_id}" ]; then
+    echo "ERROR: service '${service}' is running image ${running_image}" >&2
+    echo "       but expected ${expected_image_id} (${expected_image})." >&2
+    echo "       The new image was NOT rolled out — refusing to report success." >&2
+    return 1
+  fi
+  echo "OK: service '${service}' is running expected image (${expected_image})."
+  return 0
+}
+
+VERIFY_FAILED=0
+verify_service_image api "${API_IMAGE}" || VERIFY_FAILED=1
+verify_service_image web "${WEB_IMAGE}" || VERIFY_FAILED=1
+
+if [ "${VERIFY_FAILED}" = "1" ]; then
+  echo "=== DEPLOY VERIFICATION FAILED: deployed images do not match expected ===" >&2
+  docker compose -f docker-compose.prod.yml --env-file .env.prod ps >&2 || true
+  exit 1
+fi
+
 # Update local main-latest tags to point to the newly deployed images
 # This ensures future default-tag deploys use the latest
 echo "Updating local main-latest tags..."
