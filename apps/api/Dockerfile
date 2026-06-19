@@ -1,5 +1,11 @@
 # syntax=docker/dockerfile:1.7
 ARG NODE_VERSION=24
+
+# Build-time version metadata — declare globally so all stages see them
+ARG APP_VERSION
+ARG GIT_SHA
+ARG BUILD_TIME
+
 FROM node:${NODE_VERSION}-slim AS base
 
 # The web Dockerfile is copy-pasted into our main docs at /docs/handbook/deploying-with-docker.
@@ -7,14 +13,6 @@ FROM node:${NODE_VERSION}-slim AS base
 
 # Shared toolchain for all stages
 RUN corepack enable && corepack prepare pnpm@10.30.1 --activate && npm i -g turbo
-
-# App version injected at build time (e.g., 0.11.142)
-ARG APP_VERSION
-ARG GIT_SHA
-ARG BUILD_TIME
-ENV APP_VERSION=${APP_VERSION:-unknown}
-ENV GIT_SHA=${GIT_SHA:-unknown}
-ENV BUILD_TIME=${BUILD_TIME:-unknown}
 
 FROM base AS prepare
 WORKDIR /app
@@ -43,6 +41,14 @@ RUN pnpm turbo run build --filter=api...
 
 FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
+
+# Re-declare build args for the runner stage (fresh image doesn't inherit from base)
+ARG APP_VERSION
+ARG GIT_SHA
+ARG BUILD_TIME
+ENV APP_VERSION=${APP_VERSION:-unknown}
+ENV GIT_SHA=${GIT_SHA:-unknown}
+ENV BUILD_TIME=${BUILD_TIME:-unknown}
 
 # Don't run production as root
 RUN addgroup --system --gid 1001 expressjs
