@@ -7,6 +7,6 @@ module.exports = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, "../../"),
   env: {
-    NEXT_PUBLIC_APP_VERSION: version,
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || version,
   },
 };
