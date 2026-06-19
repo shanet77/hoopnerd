@@ -24,7 +24,7 @@ import ClientOnly from "../components/ClientOnly";
 import { LobbyActionCard } from "../components/lobby/LobbyActionCard";
 import { ThemeToggle } from "../components/ThemeToggle";
 
-const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "unknown";
 
 const SEASON_PRESETS = [
 	{ label: "All Time", min: undefined, max: undefined },
