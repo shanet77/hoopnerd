@@ -8,6 +8,14 @@ FROM node:${NODE_VERSION}-slim AS base
 # Shared toolchain for all stages
 RUN corepack enable && corepack prepare pnpm@10.30.1 --activate && npm i -g turbo
 
+# App version injected at build time (e.g., 0.11.142)
+ARG APP_VERSION
+ARG GIT_SHA
+ARG BUILD_TIME
+ENV APP_VERSION=${APP_VERSION:-unknown}
+ENV GIT_SHA=${GIT_SHA:-unknown}
+ENV BUILD_TIME=${BUILD_TIME:-unknown}
+
 FROM base AS prepare
 WORKDIR /app
 COPY . .

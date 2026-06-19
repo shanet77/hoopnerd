@@ -51,6 +51,14 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
     res.json({ status: "OK", timestamp: new Date().toISOString() });
   });
 
+  router.get("/api/version", (_req: Request, res: Response) => {
+    res.json({
+      version: process.env.APP_VERSION || null,
+      sha: process.env.GIT_SHA || null,
+      builtAt: process.env.BUILD_TIME || null,
+    });
+  });
+
   router.get("/api/seasons", async (_req: Request, res: Response) => {
     try {
       const result = await databasePool.query(

@@ -75,7 +75,33 @@ jobs:
       - linux-amd64
     outputs:
       image_tag: ${{ steps.resolve_image_tag.outputs.image_tag }}
+      version: ${{ steps.resolve_version.outputs.version }}
     steps:
+      - name: Checkout repository
+        run: |
+          set -euo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}"
+          cd "${GITHUB_WORKSPACE}"
+          repo_host="${GITHUB_SERVER_URL#https://}"
+          repo_url="https://${repo_host}/${GITHUB_REPOSITORY}.git"
+          if [ ! -d .git ]; then
+            git init
+            git remote add origin "${repo_url}"
+          else
+            git remote set-url origin "${repo_url}"
+          fi
+          git fetch --tags origin main
+          git checkout --detach FETCH_HEAD
+
+      - name: Resolve version
+        id: resolve_version
+        run: |
+          set -euo pipefail
+          cd "${GITHUB_WORKSPACE}"
+          VERSION="$(bash scripts/version.sh)"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: ${VERSION}"
+
       - name: Resolve deployment image tag
         id: resolve_image_tag
         run: |
@@ -102,6 +128,8 @@ jobs:
           NEXT_PUBLIC_API_HOST: ${{ vars.NEXT_PUBLIC_API_HOST }}
           NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${{ vars.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
           IMAGE_TAG: ${{ steps.resolve_image_tag.outputs.image_tag }}
+          VERSION: ${{ steps.resolve_version.outputs.version }}
+          GIT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           : "${DOCKERNODE_HOST:?DOCKERNODE_HOST is required}"
@@ -112,6 +140,7 @@ jobs:
           : "${REGISTRY_USERNAME:?REGISTRY_USERNAME is required}"
           : "${REGISTRY_PASSWORD:?REGISTRY_PASSWORD is required}"
           : "${REGISTRY_NAMESPACE:?REGISTRY_NAMESPACE is required}"
+          : "${VERSION:?VERSION is required}"
 
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
@@ -126,6 +155,8 @@ jobs:
           REGISTRY_HOST="${REGISTRY_HOST%%/*}"
           REGISTRY_HOST="${REGISTRY_HOST%/}"
           echo "Using registry host: ${REGISTRY_HOST}"
+          echo "Building version: ${VERSION}"
+          BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           REGISTRY_PASSWORD_B64="$(printf '%s' "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')"
 
           ssh -i "${key_file}" \
@@ -135,7 +166,7 @@ jobs:
             -o ServerAliveCountMax=4 \
             -o BatchMode=yes \
             "${DOCKERNODE_USER}@${DOCKERNODE_HOST}" \
-            "export DOCKERNODE_PATH='${DOCKERNODE_PATH}' REPO_URL='${REPO_URL}' TARGET_SHA='${GITHUB_SHA}' IMAGE_TAG='${IMAGE_TAG}' REGISTRY_HOST='${REGISTRY_HOST}' REGISTRY_USERNAME='${REGISTRY_USERNAME}' REGISTRY_PASSWORD_B64='${REGISTRY_PASSWORD_B64}' REGISTRY_NAMESPACE='${REGISTRY_NAMESPACE}' NEXT_PUBLIC_API_URL='${NEXT_PUBLIC_API_URL}' NEXT_PUBLIC_API_HOST='${NEXT_PUBLIC_API_HOST}' NEXT_PUBLIC_UMAMI_WEBSITE_ID='${NEXT_PUBLIC_UMAMI_WEBSITE_ID}'; bash -s" \
+            "export DOCKERNODE_PATH='${DOCKERNODE_PATH}' REPO_URL='${REPO_URL}' TARGET_SHA='${GITHUB_SHA}' IMAGE_TAG='${IMAGE_TAG}' VERSION='${VERSION}' BUILD_TIME='${BUILD_TIME}' GIT_SHA='${GIT_SHA}' REGISTRY_HOST='${REGISTRY_HOST}' REGISTRY_USERNAME='${REGISTRY_USERNAME}' REGISTRY_PASSWORD_B64='${REGISTRY_PASSWORD_B64}' REGISTRY_NAMESPACE='${REGISTRY_NAMESPACE}' NEXT_PUBLIC_API_URL='${NEXT_PUBLIC_API_URL}' NEXT_PUBLIC_API_HOST='${NEXT_PUBLIC_API_HOST}' NEXT_PUBLIC_UMAMI_WEBSITE_ID='${NEXT_PUBLIC_UMAMI_WEBSITE_ID}'; bash -s" \
             <<'EOF_REMOTE'
           set -euo pipefail
 
@@ -153,21 +184,30 @@ jobs:
           curl -fsS --connect-timeout 10 "https://${REGISTRY_HOST}/v2/" >/dev/null || true
           echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY_HOST}" -u "${REGISTRY_USERNAME}" --password-stdin
 
+          echo "=== Building version: ${VERSION} ==="
+
           API_IMAGE_SHA="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:${IMAGE_TAG}"
           API_IMAGE_LATEST="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:main-latest"
+          API_IMAGE_VERSION="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:${VERSION}"
           WEB_IMAGE_SHA="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-web:${IMAGE_TAG}"
           WEB_IMAGE_LATEST="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-web:main-latest"
+          WEB_IMAGE_VERSION="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-web:${VERSION}"
 
           docker build \
             --platform linux/amd64 \
             --provenance=false \
             --sbom=false \
             --file apps/api/Dockerfile \
+            --build-arg APP_VERSION="${VERSION}" \
+            --build-arg GIT_SHA="${GIT_SHA}" \
+            --build-arg BUILD_TIME="${BUILD_TIME}" \
             --tag "${API_IMAGE_SHA}" \
             --tag "${API_IMAGE_LATEST}" \
+            --tag "${API_IMAGE_VERSION}" \
             .
           docker push "${API_IMAGE_SHA}"
           docker push "${API_IMAGE_LATEST}"
+          docker push "${API_IMAGE_VERSION}"
 
           docker build \
             --platform linux/amd64 \
@@ -177,11 +217,14 @@ jobs:
             --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
             --build-arg NEXT_PUBLIC_API_HOST="${NEXT_PUBLIC_API_HOST}" \
             --build-arg NEXT_PUBLIC_UMAMI_WEBSITE_ID="${NEXT_PUBLIC_UMAMI_WEBSITE_ID}" \
+            --build-arg NEXT_PUBLIC_APP_VERSION="${VERSION}" \
             --tag "${WEB_IMAGE_SHA}" \
             --tag "${WEB_IMAGE_LATEST}" \
+            --tag "${WEB_IMAGE_VERSION}" \
             .
           docker push "${WEB_IMAGE_SHA}"
           docker push "${WEB_IMAGE_LATEST}"
+          docker push "${WEB_IMAGE_VERSION}"
           EOF_REMOTE
 
       - name: Skip build (redeploy existing tag)
@@ -197,6 +240,8 @@ jobs:
       - build_images_prod
     runs-on:
       - linux-amd64
+    outputs:
+      version: ${{ steps.resolve_version.outputs.version }}
     steps:
       - name: Checkout repository
         run: |
@@ -211,8 +256,18 @@ jobs:
           else
             git remote set-url origin "${repo_url}"
           fi
-          git fetch --depth=1 origin "${GITHUB_SHA}"
+          # Fetch tags too — needed for version.sh to resolve semver
+          git fetch --tags origin main
           git checkout --detach FETCH_HEAD
+
+      - name: Resolve version
+        id: resolve_version
+        run: |
+          set -euo pipefail
+          cd "${GITHUB_WORKSPACE}"
+          VERSION="$(bash scripts/version.sh)"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: ${VERSION}"
 
       - name: Deploy to Racknerd over SSH
         env:
@@ -226,6 +281,7 @@ jobs:
           REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
           REGISTRY_NAMESPACE: ${{ secrets.REGISTRY_NAMESPACE || vars.REGISTRY_NAMESPACE }}
           IMAGE_TAG: ${{ needs.build_images_prod.outputs.image_tag }}
+          APP_VERSION: ${{ steps.resolve_version.outputs.version }}
         run: |
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}"
@@ -233,6 +289,7 @@ jobs:
           : "${DEPLOY_USER:?DEPLOY_USER is required}"
           : "${DEPLOY_SSH_KEY:?DEPLOY_SSH_KEY is required}"
           : "${IMAGE_TAG:?IMAGE_TAG is required}"
+          : "${APP_VERSION:?APP_VERSION is required}"
 
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
@@ -256,6 +313,8 @@ jobs:
             echo "ERROR: scripts/deploy-racknerd.sh is missing from the checkout" >&2
             exit 1
           fi
+
+          echo "Deploying version: ${APP_VERSION}"
 
           # Base64-encode password to safely pass via shell export (matching build job)
           REGISTRY_PASSWORD_B64="$(printf '%s' "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')"
@@ -281,7 +340,7 @@ jobs:
             -o ServerAliveCountMax=4 \
             -o BatchMode=yes \
             "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "export DEPLOY_PATH='${DEPLOY_PATH}' PATH_ON_VPS='${PATH_ON_VPS}' IMAGE_TAG='${IMAGE_TAG}' REGISTRY_URL='${REGISTRY_URL}' REGISTRY_USERNAME='${REGISTRY_USERNAME}' REGISTRY_PASSWORD_B64='${REGISTRY_PASSWORD_B64}' REGISTRY_NAMESPACE='${REGISTRY_NAMESPACE}' DEPLOY_SCRIPT_B64='${DEPLOY_SCRIPT_B64}'; bash -s" \
+            "export DEPLOY_PATH='${DEPLOY_PATH}' PATH_ON_VPS='${PATH_ON_VPS}' IMAGE_TAG='${IMAGE_TAG}' APP_VERSION='${APP_VERSION}' REGISTRY_URL='${REGISTRY_URL}' REGISTRY_USERNAME='${REGISTRY_USERNAME}' REGISTRY_PASSWORD_B64='${REGISTRY_PASSWORD_B64}' REGISTRY_NAMESPACE='${REGISTRY_NAMESPACE}' DEPLOY_SCRIPT_B64='${DEPLOY_SCRIPT_B64}'; bash -s" \
             >"${DEPLOY_LOG}" 2>&1 <<'EOF_REMOTE'
           set -euo pipefail
           echo "=== remote bootstrap: host=$(hostname 2>/dev/null || echo unknown) ts=$(date -u +%Y-%m-%dT%H:%M:%SZ) pid=$$ ==="
@@ -313,3 +372,27 @@ jobs:
           fi
 
           echo "=== deploy_prod complete ==="
+
+      - name: Tag release
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd "${GITHUB_WORKSPACE}"
+          VERSION="${{ steps.resolve_version.outputs.version }}"
+          TAG_NAME="v${VERSION}"
+
+          # Check if this tag already exists (e.g., on retry)
+          if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+            echo "Tag ${TAG_NAME} already exists — skipping"
+            exit 0
+          fi
+
+          # Authenticate git push using the auto-provisioned GITHUB_TOKEN
+          REPO_URL_WITH_TOKEN="https://git:${GITHUB_TOKEN}@${GITHUB_SERVER_URL#https://}/${GITHUB_REPOSITORY}.git"
+          git remote set-url origin "${REPO_URL_WITH_TOKEN}"
+
+          git tag "${TAG_NAME}"
+          git push origin "${TAG_NAME}"
+          echo "Created and pushed tag ${TAG_NAME}"

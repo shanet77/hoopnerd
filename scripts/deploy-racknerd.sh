@@ -18,7 +18,7 @@ if [ -n "${REGISTRY_PASSWORD_B64}" ] && [ -z "${REGISTRY_PASSWORD}" ]; then
 fi
 
 echo "=== deploy-racknerd starting ==="
-echo "user=$(whoami) target_path=${DEPLOY_TARGET_PATH} image_tag=${IMAGE_TAG}"
+echo "user=$(whoami) target_path=${DEPLOY_TARGET_PATH} image_tag=${IMAGE_TAG} app_version=${APP_VERSION:-unknown}"
 
 # Ensure deploy directory exists
 if [ ! -d "${DEPLOY_TARGET_PATH}" ]; then
@@ -34,7 +34,7 @@ cd "${DEPLOY_TARGET_PATH}"
 if [ -d .git ]; then
   echo "Pulling latest main..."
   git remote prune origin || true
-  if git fetch origin main 2>&1; then
+  if git fetch --tags origin main 2>&1; then
     git checkout -f main || git checkout -B main origin/main
     git reset --hard origin/main
     echo "Deploying commit: $(git rev-parse HEAD)"
