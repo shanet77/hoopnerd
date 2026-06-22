@@ -24,7 +24,7 @@
     "express": "^5.2.1",
     "http": "0.0.1-security",
     "morgan": "^1.11.0",
-    "pg": "^8.21.0",
+    "pg": "^8.22.0",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
@@ -37,7 +37,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/morgan": "^1.9.10",
-    "@types/node": "^25.9.3",
+    "@types/node": "^25.9.4",
     "@types/supertest": "^7.2.0",
     "esbuild": "^0.28.1",
     "esbuild-register": "^3.6.0",

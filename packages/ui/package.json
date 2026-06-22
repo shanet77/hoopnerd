@@ -34,7 +34,7 @@
     "typescript": "6.0.2"
   },
   "dependencies": {
-    "lucide-react": "^1.18.0",
+    "lucide-react": "^1.21.0",
     "react": "^19.2.7"
   }
 }

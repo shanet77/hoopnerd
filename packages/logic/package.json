@@ -17,7 +17,7 @@
   "dependencies": {
     "@repo/database": "workspace:*",
     "@repo/types": "workspace:*",
-    "pg": "^8.21.0"
+    "pg": "^8.22.0"
   },
   "jest": {
     "preset": "@repo/jest-presets/node"
@@ -27,7 +27,7 @@
     "@repo/eslint-config": "workspace:*",
     "@repo/jest-presets": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^25.9.3",
+    "@types/node": "^25.9.4",
     "@types/pg": "^8.20.0",
     "eslint": "^10.5.0",
     "jest": "^30.4.2",
