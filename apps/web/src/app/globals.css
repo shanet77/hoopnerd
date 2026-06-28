@@ -132,6 +132,10 @@
   font-family: var(--font-oswald), sans-serif;
 }
 
+@utility slide-up {
+  animation: slide-up 0.4s ease-out both;
+}
+
 @utility countdown-pulse {
   animation: pulse-gentle 1s ease-in-out infinite;
 }

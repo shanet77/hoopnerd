@@ -37,6 +37,14 @@ describe("@repo/ui components", () => {
     expect(screen.getByText(/required/i)).toBeInTheDocument();
   });
 
+  it("renders the basketball button variant", () => {
+    render(<Button variant="basketball">Hoops</Button>);
+
+    expect(screen.getByRole("button", { name: "Hoops" })).toHaveClass(
+      "border-basketball",
+    );
+  });
+
   it("renders card and badge sections", () => {
     render(
       <Card>
@@ -51,5 +59,16 @@ describe("@repo/ui components", () => {
     expect(screen.getByText("Title")).toBeInTheDocument();
     expect(screen.getByText("Description")).toBeInTheDocument();
     expect(screen.getByText("Hot")).toHaveClass("bg-basketball");
+  });
+
+  it("renders a spotlight card with left accent border", () => {
+    const { container } = render(
+      <Card spotlight>
+        <CardTitle>Featured</CardTitle>
+      </Card>,
+    );
+
+    expect(container.firstChild).toHaveClass("border-l-basketball");
+    expect(screen.getByText("Featured")).toBeInTheDocument();
   });
 });
