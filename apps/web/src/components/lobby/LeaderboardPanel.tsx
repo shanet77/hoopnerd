@@ -6,6 +6,7 @@ import { Flame } from "lucide-react";
 import { StatsResponse } from "@repo/types";
 import { Card, CardContent } from "@repo/ui/card";
 import { LeaderboardList } from "@repo/ui/leaderboard-list";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 
 interface LeaderboardPanelProps {
   stats: StatsResponse | null;
@@ -68,30 +69,43 @@ export function LeaderboardPanel({ stats, statsError }: LeaderboardPanelProps) {
               </div>
             </div>
 
-            <LeaderboardList
-              title="Players"
-              badge="Top 5"
-              items={stats.players.slice(0, 5).map((p) => ({
-                label: p.name,
-                value: p.count,
-              }))}
-            />
-            <LeaderboardList
-              title="Teams"
-              badge="Top 5"
-              items={stats.teams.slice(0, 5).map((t) => ({
-                label: t.name,
-                value: t.count,
-              }))}
-            />
-            <LeaderboardList
-              title="Seasons"
-              badge="Top 5"
-              items={stats.seasons.slice(0, 5).map((s) => ({
-                label: String(s.seasonYear),
-                value: s.count,
-              }))}
-            />
+            <Tabs defaultValue="players">
+              <TabsList>
+                <TabsTrigger value="players">Players</TabsTrigger>
+                <TabsTrigger value="teams">Teams</TabsTrigger>
+                <TabsTrigger value="seasons">Seasons</TabsTrigger>
+              </TabsList>
+              <TabsContent value="players">
+                <LeaderboardList
+                  title="Players"
+                  badge="Top 5"
+                  items={stats.players.slice(0, 5).map((p) => ({
+                    label: p.name,
+                    value: p.count,
+                  }))}
+                />
+              </TabsContent>
+              <TabsContent value="teams">
+                <LeaderboardList
+                  title="Teams"
+                  badge="Top 5"
+                  items={stats.teams.slice(0, 5).map((t) => ({
+                    label: t.name,
+                    value: t.count,
+                  }))}
+                />
+              </TabsContent>
+              <TabsContent value="seasons">
+                <LeaderboardList
+                  title="Seasons"
+                  badge="Top 5"
+                  items={stats.seasons.slice(0, 5).map((s) => ({
+                    label: String(s.seasonYear),
+                    value: s.count,
+                  }))}
+                />
+              </TabsContent>
+            </Tabs>
 
             <p className="text-center text-xs text-gray-400 dark:text-gray-500">
               Updated {new Date(stats.updatedAt).toLocaleString()}

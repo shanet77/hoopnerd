@@ -15,8 +15,8 @@ importers:
         specifier: ^3.8.5
         version: 3.8.5
       turbo:
-        specifier: ^2.10.0
-        version: 2.10.0
+        specifier: ^2.10.2
+        version: 2.10.2
 
   apps/api:
     dependencies:
@@ -183,7 +183,7 @@ importers:
         version: 10.6.0(jiti@2.7.0)
       jest:
         specifier: ^30.4.2
-        version: 30.4.2(@types/node@25.9.4)
+        version: 30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1))
       jest-environment-jsdom:
         specifier: ^30.4.1
         version: 30.4.1
@@ -195,7 +195,7 @@ importers:
         version: 4.2.2
       ts-jest:
         specifier: ^29.4.11
-        version: 29.4.11(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(jest-util@30.4.1)(jest@30.4.2(@types/node@25.9.4))(typescript@6.0.2)
+        version: 29.4.11(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.4.1)(jest@30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1)))(typescript@6.0.2)
       typescript:
         specifier: 6.0.2
         version: 6.0.2
@@ -231,7 +231,7 @@ importers:
         version: 10.6.0(jiti@2.7.0)
       jest:
         specifier: ^30.4.2
-        version: 30.4.2(@types/node@25.9.4)
+        version: 30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1))
       pg:
         specifier: ^8.22.0
         version: 8.22.0
@@ -255,13 +255,13 @@ importers:
         version: 8.62.0(typescript@6.0.2)
       '@vercel/style-guide':
         specifier: ^6.0.0
-        version: 6.0.0(@next/eslint-plugin-next@16.2.9)(jest@30.4.2)(prettier@3.8.5)(typescript@6.0.2)
+        version: 6.0.0(@next/eslint-plugin-next@16.2.9)(jest@30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1)))(prettier@3.8.5)(typescript@6.0.2)
       eslint-config-prettier:
         specifier: ^10.1.8
         version: 10.1.8
       eslint-config-turbo:
         specifier: ^2.10.0
-        version: 2.10.0(turbo@2.10.0)
+        version: 2.10.0(turbo@2.10.2)
       eslint-plugin-only-warn:
         specifier: ^1.2.1
         version: 1.2.1
@@ -276,10 +276,10 @@ importers:
     dependencies:
       jest:
         specifier: ^30.4.2
-        version: 30.4.2(@types/node@25.9.4)
+        version: 30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1))
       ts-jest:
         specifier: ^29.4.11
-        version: 29.4.11(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(jest-util@30.4.1)(jest@30.4.2)(typescript@6.0.2)
+        version: 29.4.11(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.4.1)(jest@30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1)))(typescript@6.0.2)
 
   packages/logger:
     devDependencies:
@@ -303,7 +303,7 @@ importers:
         version: 10.6.0(jiti@2.7.0)
       jest:
         specifier: ^30.4.2
-        version: 30.4.2(@types/node@25.9.4)
+        version: 30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1))
       typescript:
         specifier: 6.0.2
         version: 6.0.2
@@ -343,7 +343,7 @@ importers:
         version: 10.6.0(jiti@2.7.0)
       jest:
         specifier: ^30.4.2
-        version: 30.4.2(@types/node@25.9.4)
+        version: 30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1))
       typescript:
         specifier: 6.0.2
         version: 6.0.2
@@ -377,7 +377,7 @@ importers:
         version: 10.6.0(jiti@2.7.0)
       jest:
         specifier: ^30.4.2
-        version: 30.4.2(@types/node@25.9.4)
+        version: 30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1))
       typescript:
         specifier: 6.0.2
         version: 6.0.2
@@ -425,13 +425,13 @@ importers:
         version: 10.6.0(jiti@2.7.0)
       jest:
         specifier: ^30.4.2
-        version: 30.4.2(@types/node@25.9.4)
+        version: 30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1))
       jest-environment-jsdom:
         specifier: ^30.4.1
         version: 30.4.1
       ts-jest:
         specifier: ^29.4.11
-        version: 29.4.11(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(jest-util@30.4.1)(jest@30.4.2)(typescript@6.0.2)
+        version: 29.4.11(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.4.1)(jest@30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1)))(typescript@6.0.2)
       typescript:
         specifier: 6.0.2
         version: 6.0.2
@@ -1518,33 +1518,33 @@ packages:
       '@types/react-dom':
         optional: true
 
-  '@turbo/darwin-64@2.10.0':
-    resolution: {integrity: sha512-EwvHThXzpY0KGd1/NAmuewI5D+aVa3Rl/OlxE36yfjUKb/+ySrfJrSlEFt8aD1OXwnnaHnQnPKHFndor0Zxlsg==}
+  '@turbo/darwin-64@2.10.2':
+    resolution: {integrity: sha512-wBM3ObqOWnKUDmg7QfUFDkDHPFUAJmrYlYqmEM8jMPAPA/I6wRJIbWimeQUqhOiQ8xPKhzyWM+xaiUP0wz8FEQ==}
     cpu: [x64]
     os: [darwin]
 
-  '@turbo/darwin-arm64@2.10.0':
-    resolution: {integrity: sha512-9d2fTyyG0lf5Wq1bwJA9qUaeecViMkLcdctWaMMmCkxZ/JqypmqOwK3W6vmejeKVgkr06gSoiX8bD+xN5Jpxcg==}
+  '@turbo/darwin-arm64@2.10.2':
+    resolution: {integrity: sha512-/Cq0joWnuMjDPfhjbFP4sv+C/7gkQ415zlaO4XUzD5EZxbtrKgXKvuuydMvogG8GeUnN1aDltW71RlmEfpjbyw==}
     cpu: [arm64]
     os: [darwin]
 
-  '@turbo/linux-64@2.10.0':
-    resolution: {integrity: sha512-sZBtjMuufitanjzi6UssoUpJMnnPlLMcdcJj3m3ptNsSq31Xh7MnjhwA5nWvLDTfEFg8GPcbYFXMo8vSdKRfqQ==}
+  '@turbo/linux-64@2.10.2':
+    resolution: {integrity: sha512-mMsf5IIhiKuceEXNstd25IbadjBXZ0amxzFOqliEzJX6HyeeHdBQPVSY583PWqYDyqM/FB8d5ZjkthfBSeuH3Q==}
     cpu: [x64]
     os: [linux]
 
-  '@turbo/linux-arm64@2.10.0':
-    resolution: {integrity: sha512-vkq/Z8R+1DQ+kifWFa810IjRy2NNBVvha3cg9sWA3nFh6nnGrHSMnnJKrzH7c/No9kq4Jb55Ru44YKsCSBgrKg==}
+  '@turbo/linux-arm64@2.10.2':
+    resolution: {integrity: sha512-Wcng1i2kaKmXutmwxT9MUoYZvdaIekXAdlGr4+0TpgbhGLw7nDuEcRBFrxb5BbRoX1d1q8SpdRxLc45TvDZIdQ==}
     cpu: [arm64]
     os: [linux]
 
-  '@turbo/windows-64@2.10.0':
-    resolution: {integrity: sha512-CRUEguLWxFQHptYZS7HjPhNhAFawfea07iR+xAQ5e4klgLrPCMdexBkXwSCwOxqTFknJ7RZFN3gOaADsw+Gttg==}
+  '@turbo/windows-64@2.10.2':
+    resolution: {integrity: sha512-SsNhM7Ho7EpAdwtrJKBOic9Hso23vu6Dp0gAfLOvUFjPzurr/sGQlXZEvr6z89ne4RDOypTwz5CBDrixpMKtXw==}
     cpu: [x64]
     os: [win32]
 
-  '@turbo/windows-arm64@2.10.0':
-    resolution: {integrity: sha512-dVHGaf9F8twzgibcBqKoADT/LLqf9++jDb+hq/LPWWaOmRpp4M+/pVOm7vy4z9D++xg8eaxWLT0+wQxFwhYu9A==}
+  '@turbo/windows-arm64@2.10.2':
+    resolution: {integrity: sha512-Gf+S7ICAdimT/n02bOuVWKvhHnct/HYjZg3oBNIz5hZ9ZyWHbQim9J3P5Qip8WpX0ksxF7eaBVziJCuLnjhqDg==}
     cpu: [arm64]
     os: [win32]
 
@@ -4515,8 +4515,8 @@ packages:
     peerDependencies:
       typescript: '>=2.8.0 || >= 3.2.0-dev || >= 3.3.0-dev || >= 3.4.0-dev || >= 3.5.0-dev || >= 3.6.0-dev || >= 3.6.0-beta || >= 3.7.0-dev || >= 3.7.0-beta'
 
-  turbo@2.10.0:
-    resolution: {integrity: sha512-o016H9PPtuH2deb3mh3Vci3Avfi9UYgM/RONQisY7HnloupP0IFSbFS3gFYJgFJP8nwBrByHWFQIDa8T2zIXPw==}
+  turbo@2.10.2:
+    resolution: {integrity: sha512-wTExrNrRjB8qzIcg+ZLm0A3GFNLDsWNwdS/RBXB0FPrBDyzk3i96Yx+TxWZC7a0k1SIreFB8ciUbxjmEqTH8IQ==}
     hasBin: true
 
   type-check@0.4.0:
@@ -5695,22 +5695,22 @@ snapshots:
       '@types/react': 19.2.17
       '@types/react-dom': 19.2.3(@types/react@19.2.17)
 
-  '@turbo/darwin-64@2.10.0':
+  '@turbo/darwin-64@2.10.2':
     optional: true
 
-  '@turbo/darwin-arm64@2.10.0':
+  '@turbo/darwin-arm64@2.10.2':
     optional: true
 
-  '@turbo/linux-64@2.10.0':
+  '@turbo/linux-64@2.10.2':
     optional: true
 
-  '@turbo/linux-arm64@2.10.0':
+  '@turbo/linux-arm64@2.10.2':
     optional: true
 
-  '@turbo/windows-64@2.10.0':
+  '@turbo/windows-64@2.10.2':
     optional: true
 
-  '@turbo/windows-arm64@2.10.0':
+  '@turbo/windows-arm64@2.10.2':
     optional: true
 
   '@tybys/wasm-util@0.10.3':
@@ -6143,7 +6143,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.12.2':
     optional: true
 
-  '@vercel/style-guide@6.0.0(@next/eslint-plugin-next@16.2.9)(jest@30.4.2)(prettier@3.8.5)(typescript@6.0.2)':
+  '@vercel/style-guide@6.0.0(@next/eslint-plugin-next@16.2.9)(jest@30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1)))(prettier@3.8.5)(typescript@6.0.2)':
     dependencies:
       '@babel/core': 7.29.7
       '@babel/eslint-parser': 7.29.7(@babel/core@7.29.7)
@@ -6151,13 +6151,13 @@ snapshots:
       '@typescript-eslint/eslint-plugin': 7.18.0(@typescript-eslint/parser@7.18.0(typescript@6.0.2))(typescript@6.0.2)
       '@typescript-eslint/parser': 7.18.0(typescript@6.0.2)
       eslint-config-prettier: 9.1.2
-      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2)))
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2)))
+      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.32.0)
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)
       eslint-plugin-eslint-comments: 3.2.0
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(typescript@6.0.2))(eslint-import-resolver-typescript@3.10.1)
-      eslint-plugin-jest: 27.9.0(@typescript-eslint/eslint-plugin@8.62.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))(typescript@6.0.2))(jest@30.4.2)(typescript@6.0.2)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))
+      eslint-plugin-jest: 27.9.0(@typescript-eslint/eslint-plugin@8.62.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))(typescript@6.0.2))(jest@30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1)))(typescript@6.0.2)
       eslint-plugin-jsx-a11y: 6.10.2
-      eslint-plugin-playwright: 1.8.3(eslint-plugin-jest@27.9.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(typescript@6.0.2))(typescript@6.0.2))(jest@30.4.2)(typescript@6.0.2))
+      eslint-plugin-playwright: 1.8.3(eslint-plugin-jest@27.9.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(typescript@6.0.2))(typescript@6.0.2))(jest@30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1)))(typescript@6.0.2))
       eslint-plugin-react: 7.37.5
       eslint-plugin-react-hooks: 4.6.2
       eslint-plugin-testing-library: 6.5.0(typescript@6.0.2)
@@ -6880,14 +6880,14 @@ snapshots:
 
   eslint-config-prettier@9.1.2: {}
 
-  eslint-config-turbo@2.10.0(turbo@2.10.0):
+  eslint-config-turbo@2.10.0(turbo@2.10.2):
     dependencies:
-      eslint-plugin-turbo: 2.10.0(turbo@2.10.0)
-      turbo: 2.10.0
+      eslint-plugin-turbo: 2.10.0(turbo@2.10.2)
+      turbo: 2.10.2
 
-  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))):
+  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.32.0):
     dependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(typescript@6.0.2))(eslint-import-resolver-typescript@3.10.1)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))
 
   eslint-import-resolver-node@0.3.10:
     dependencies:
@@ -6897,7 +6897,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))):
+  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0):
     dependencies:
       '@nolyfill/is-core-module': 1.0.39
       debug: 4.4.3(supports-color@5.5.0)
@@ -6907,17 +6907,16 @@ snapshots:
       tinyglobby: 0.2.17
       unrs-resolver: 1.12.2
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(typescript@6.0.2))(eslint-import-resolver-typescript@3.10.1)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.13.0(@typescript-eslint/parser@7.18.0(typescript@6.0.2))(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2)))):
+  eslint-module-utils@2.13.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))(eslint-import-resolver-node@0.3.10):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
-      '@typescript-eslint/parser': 7.18.0(typescript@6.0.2)
+      '@typescript-eslint/parser': 8.62.0(typescript@6.0.2)
       eslint-import-resolver-node: 0.3.10
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2)))
     transitivePeerDependencies:
       - supports-color
 
@@ -6926,7 +6925,7 @@ snapshots:
       escape-string-regexp: 1.0.5
       ignore: 5.3.2
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(typescript@6.0.2))(eslint-import-resolver-typescript@3.10.1):
+  eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2)):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -6936,7 +6935,7 @@ snapshots:
       debug: 3.2.7
       doctrine: 2.1.0
       eslint-import-resolver-node: 0.3.10
-      eslint-module-utils: 2.13.0(@typescript-eslint/parser@7.18.0(typescript@6.0.2))(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))))
+      eslint-module-utils: 2.13.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))(eslint-import-resolver-node@0.3.10)
       hasown: 2.0.4
       is-core-module: 2.16.2
       is-glob: 4.0.3
@@ -6948,18 +6947,18 @@ snapshots:
       string.prototype.trimend: 1.0.10
       tsconfig-paths: 3.15.0
     optionalDependencies:
-      '@typescript-eslint/parser': 7.18.0(typescript@6.0.2)
+      '@typescript-eslint/parser': 8.62.0(typescript@6.0.2)
     transitivePeerDependencies:
       - eslint-import-resolver-typescript
       - eslint-import-resolver-webpack
       - supports-color
 
-  eslint-plugin-jest@27.9.0(@typescript-eslint/eslint-plugin@8.62.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))(typescript@6.0.2))(jest@30.4.2)(typescript@6.0.2):
+  eslint-plugin-jest@27.9.0(@typescript-eslint/eslint-plugin@8.62.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))(typescript@6.0.2))(jest@30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1)))(typescript@6.0.2):
     dependencies:
       '@typescript-eslint/utils': 5.62.0(typescript@6.0.2)
     optionalDependencies:
       '@typescript-eslint/eslint-plugin': 8.62.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))(typescript@6.0.2)
-      jest: 30.4.2
+      jest: 30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1))
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -6984,11 +6983,11 @@ snapshots:
 
   eslint-plugin-only-warn@1.2.1: {}
 
-  eslint-plugin-playwright@1.8.3(eslint-plugin-jest@27.9.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(typescript@6.0.2))(typescript@6.0.2))(jest@30.4.2)(typescript@6.0.2)):
+  eslint-plugin-playwright@1.8.3(eslint-plugin-jest@27.9.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(typescript@6.0.2))(typescript@6.0.2))(jest@30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1)))(typescript@6.0.2)):
     dependencies:
       globals: 13.24.0
     optionalDependencies:
-      eslint-plugin-jest: 27.9.0(@typescript-eslint/eslint-plugin@8.62.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))(typescript@6.0.2))(jest@30.4.2)(typescript@6.0.2)
+      eslint-plugin-jest: 27.9.0(@typescript-eslint/eslint-plugin@8.62.0(@typescript-eslint/parser@8.62.0(typescript@6.0.2))(typescript@6.0.2))(jest@30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1)))(typescript@6.0.2)
 
   eslint-plugin-react-hooks@4.6.2: {}
 
@@ -7025,10 +7024,10 @@ snapshots:
       '@microsoft/tsdoc': 0.14.2
       '@microsoft/tsdoc-config': 0.16.2
 
-  eslint-plugin-turbo@2.10.0(turbo@2.10.0):
+  eslint-plugin-turbo@2.10.0(turbo@2.10.2):
     dependencies:
       dotenv: 16.0.3
-      turbo: 2.10.0
+      turbo: 2.10.2
 
   eslint-plugin-unicorn@51.0.1:
     dependencies:
@@ -7741,25 +7740,6 @@ snapshots:
       - babel-plugin-macros
       - supports-color
 
-  jest-cli@30.4.2(@types/node@25.9.4):
-    dependencies:
-      '@jest/core': 30.4.2(esbuild-register@3.6.0(esbuild@0.28.1))
-      '@jest/test-result': 30.4.1
-      '@jest/types': 30.4.1
-      chalk: 4.1.2
-      exit-x: 0.2.2
-      import-local: 3.2.0
-      jest-config: 30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1))
-      jest-util: 30.4.1
-      jest-validate: 30.4.1
-      yargs: 17.7.3
-    transitivePeerDependencies:
-      - '@types/node'
-      - babel-plugin-macros
-      - esbuild-register
-      - supports-color
-      - ts-node
-
   jest-cli@30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1)):
     dependencies:
       '@jest/core': 30.4.2(esbuild-register@3.6.0(esbuild@0.28.1))
@@ -8036,32 +8016,6 @@ snapshots:
       jest-util: 30.4.1
       merge-stream: 2.0.0
       supports-color: 8.1.1
-
-  jest@30.4.2:
-    dependencies:
-      '@jest/core': 30.4.2(esbuild-register@3.6.0(esbuild@0.28.1))
-      '@jest/types': 30.4.1
-      import-local: 3.2.0
-      jest-cli: 30.4.2(@types/node@25.9.4)
-    transitivePeerDependencies:
-      - '@types/node'
-      - babel-plugin-macros
-      - esbuild-register
-      - supports-color
-      - ts-node
-
-  jest@30.4.2(@types/node@25.9.4):
-    dependencies:
-      '@jest/core': 30.4.2(esbuild-register@3.6.0(esbuild@0.28.1))
-      '@jest/types': 30.4.1
-      import-local: 3.2.0
-      jest-cli: 30.4.2(@types/node@25.9.4)
-    transitivePeerDependencies:
-      - '@types/node'
-      - babel-plugin-macros
-      - esbuild-register
-      - supports-color
-      - ts-node
 
   jest@30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1)):
     dependencies:
@@ -9231,12 +9185,12 @@ snapshots:
     dependencies:
       typescript: 6.0.2
 
-  ts-jest@29.4.11(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(jest-util@30.4.1)(jest@30.4.2(@types/node@25.9.4))(typescript@6.0.2):
+  ts-jest@29.4.11(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.4.1)(jest@30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1)))(typescript@6.0.2):
     dependencies:
       bs-logger: 0.2.6
       fast-json-stable-stringify: 2.1.0
       handlebars: 4.7.9
-      jest: 30.4.2(@types/node@25.9.4)
+      jest: 30.4.2(@types/node@25.9.4)(esbuild-register@3.6.0(esbuild@0.28.1))
       json5: 2.2.3
       lodash.memoize: 4.1.2
       make-error: 1.3.6
@@ -9249,26 +9203,7 @@ snapshots:
       '@jest/transform': 30.4.1
       '@jest/types': 30.4.1
       babel-jest: 30.4.1(@babel/core@7.29.7)
-      jest-util: 30.4.1
-
-  ts-jest@29.4.11(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(jest-util@30.4.1)(jest@30.4.2)(typescript@6.0.2):
-    dependencies:
-      bs-logger: 0.2.6
-      fast-json-stable-stringify: 2.1.0
-      handlebars: 4.7.9
-      jest: 30.4.2
-      json5: 2.2.3
-      lodash.memoize: 4.1.2
-      make-error: 1.3.6
-      semver: 7.8.5
-      type-fest: 4.41.0
-      typescript: 6.0.2
-      yargs-parser: 21.1.1
-    optionalDependencies:
-      '@babel/core': 7.29.7
-      '@jest/transform': 30.4.1
-      '@jest/types': 30.4.1
-      babel-jest: 30.4.1(@babel/core@7.29.7)
+      esbuild: 0.28.1
       jest-util: 30.4.1
 
   tsconfig-paths@3.15.0:
@@ -9287,14 +9222,14 @@ snapshots:
       tslib: 1.14.1
       typescript: 6.0.2
 
-  turbo@2.10.0:
+  turbo@2.10.2:
     optionalDependencies:
-      '@turbo/darwin-64': 2.10.0
-      '@turbo/darwin-arm64': 2.10.0
-      '@turbo/linux-64': 2.10.0
-      '@turbo/linux-arm64': 2.10.0
-      '@turbo/windows-64': 2.10.0
-      '@turbo/windows-arm64': 2.10.0
+      '@turbo/darwin-64': 2.10.2
+      '@turbo/darwin-arm64': 2.10.2
+      '@turbo/linux-64': 2.10.2
+      '@turbo/linux-arm64': 2.10.2
+      '@turbo/windows-64': 2.10.2
+      '@turbo/windows-arm64': 2.10.2
 
   type-check@0.4.0:
     dependencies:

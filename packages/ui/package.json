@@ -8,6 +8,7 @@
     "./badge": "./src/badge.tsx",
     "./feedback-banner": "./src/feedback-banner.tsx",
     "./leaderboard-list": "./src/leaderboard-list.tsx",
+    "./tabs": "./src/tabs.tsx",
     "./timer-bar": "./src/timer-bar.tsx"
   },
   "scripts": {
