@@ -39,6 +39,12 @@ COPY --from=prepare /app/out/full/ .
 
 RUN pnpm turbo run build --filter=api...
 
+# Bundle api + prod-only deps into a self-contained deploy directory.
+# --prod excludes devDependencies (jest, eslint, typescript, nodemon, ...).
+# --legacy: pnpm v10+ default requires inject-workspace-packages=true; the
+# legacy deploy path produces a portable, self-contained node_modules bundle.
+RUN pnpm --filter=api deploy --prod --legacy /app/deploy
+
 FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 
@@ -54,6 +60,6 @@ ENV BUILD_TIME=${BUILD_TIME:-unknown}
 RUN addgroup --system --gid 1001 expressjs
 RUN adduser --system --uid 1001 expressjs
 USER expressjs
-COPY --from=builder /app .
+COPY --from=builder --chown=expressjs:expressjs /app/deploy ./
 
-CMD node apps/api/dist/index.js
+CMD ["node", "dist/index.js"]

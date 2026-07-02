@@ -13,17 +13,16 @@
   "jest": {
     "preset": "@repo/jest-presets/node"
   },
+  "files": [
+    "dist/**"
+  ],
   "dependencies": {
     "@repo/database": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/logic": "workspace:*",
-    "@types/pg": "^8.20.0",
-    "body-parser": "^2.3.0",
+    "@repo/types": "workspace:*",
     "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "http": "0.0.1-security",
-    "morgan": "^1.11.0",
     "pg": "^8.22.0",
     "socket.io": "^4.8.3"
   },
@@ -31,13 +30,11 @@
     "@jest/globals": "^30.4.1",
     "@repo/eslint-config": "workspace:*",
     "@repo/jest-presets": "workspace:*",
-    "@repo/types": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/body-parser": "^1.19.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/morgan": "^1.9.10",
     "@types/node": "^25.9.4",
+    "@types/pg": "^8.20.0",
     "@types/supertest": "^7.2.0",
     "esbuild": "^0.28.1",
     "esbuild-register": "^3.6.0",
