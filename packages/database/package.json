@@ -21,7 +21,6 @@
     "preset": "@repo/jest-presets/node"
   },
   "dependencies": {
-    "dotenv": "^17.4.2",
     "pg": "^8.22.0"
   },
   "devDependencies": {

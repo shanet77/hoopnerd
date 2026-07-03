@@ -1,9 +1,14 @@
 import { Pool } from "pg";
-import * as dotenv from "dotenv";
 import * as path from "path";
 
-const rootEnvPath = path.resolve(__dirname, "../../..", ".env");
-dotenv.config({ path: rootEnvPath });
+// Load env from monorepo root .env. Node built-in (no dotenv dep).
+// No-op when the file is absent (e.g. production, where env comes from the
+// orchestrator) and never overrides vars already set.
+try {
+  process.loadEnvFile(path.resolve(__dirname, "../../..", ".env"));
+} catch {
+  // .env not present — rely on ambient environment
+}
 
 const dbName =
   process.env.NODE_ENV === "test"

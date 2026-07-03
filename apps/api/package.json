@@ -5,9 +5,9 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "dev": "nodemon --exec \"node -r esbuild-register ./src/index.ts\" -e .ts",
+    "dev": "node --watch --import tsx ./src/index.ts",
     "lint": "tsc --noEmit && eslint \"src/**/*.ts*\" --max-warnings 0",
-    "start": "node -r esbuild-register ./src/index.ts",
+    "start": "node ./dist/index.js",
     "test": "NODE_ENV=test jest --detectOpenHandles"
   },
   "jest": {
@@ -36,13 +36,11 @@
     "@types/node": "^25.9.4",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^7.2.0",
-    "esbuild": "^0.28.1",
-    "esbuild-register": "^3.6.0",
     "eslint": "^10.6.0",
     "jest": "^30.4.2",
-    "nodemon": "^3.1.14",
     "socket.io-client": "^4.8.3",
     "supertest": "^7.2.2",
+    "tsx": "^4.19.2",
     "typescript": "6.0.2"
   }
 }
