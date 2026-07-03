@@ -6,7 +6,6 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "dev": "node --watch --import tsx ./src/index.ts",
-    "lint": "tsc --noEmit && eslint \"src/**/*.ts*\" --max-warnings 0",
     "start": "node ./dist/index.js",
     "test": "NODE_ENV=test jest --detectOpenHandles"
   },
@@ -28,7 +27,6 @@
   },
   "devDependencies": {
     "@jest/globals": "^30.4.1",
-    "@repo/eslint-config": "workspace:*",
     "@repo/jest-presets": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/cors": "^2.8.19",
@@ -36,7 +34,6 @@
     "@types/node": "^25.9.4",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^7.2.0",
-    "eslint": "^10.6.0",
     "jest": "^30.4.2",
     "socket.io-client": "^4.8.3",
     "supertest": "^7.2.2",
