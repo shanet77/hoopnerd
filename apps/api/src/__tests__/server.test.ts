@@ -7,8 +7,8 @@ import {
   afterAll,
   beforeEach,
   afterEach,
-  jest,
-} from "@jest/globals";
+  vi,
+} from "vitest";
 // Use short timeouts for faster integration tests
 process.env.TURN_TIMEOUT_MS = "1000";
 process.env.DISCONNECT_GRACE_MS = "500";
@@ -23,7 +23,7 @@ import type { Express } from "express";
 import databasePool from "@repo/database";
 
 // Mock the @repo/logic package
-jest.mock("@repo/logic", () => {
+vi.mock("@repo/logic", () => {
   class MockCpuEngine {
     constructor(_deps: any) {}
     async getBestMove() {
@@ -32,23 +32,23 @@ jest.mock("@repo/logic", () => {
   }
   return {
     __esModule: true,
-    validateMove: jest.fn<typeof validateMove>(),
-    getConnectionDetails: jest.fn<typeof getConnectionDetails>(),
+    validateMove: vi.fn<typeof validateMove>(),
+    getConnectionDetails: vi.fn<typeof getConnectionDetails>(),
     CpuEngine: MockCpuEngine,
   };
 });
-jest.mock("@repo/database", () => ({
+vi.mock("@repo/database", () => ({
   __esModule: true,
   default: {
-    query: jest.fn(),
+    query: vi.fn(),
   },
 }));
 
-const mockValidateMove = validateMove as jest.Mock<typeof validateMove>;
-const mockGetConnectionDetails = getConnectionDetails as jest.Mock<
+const mockValidateMove = validateMove as vi.Mock<typeof validateMove>;
+const mockGetConnectionDetails = getConnectionDetails as vi.Mock<
   typeof getConnectionDetails
 >;
-const mockDbQuery = databasePool.query as unknown as jest.Mock<any>;
+const mockDbQuery = databasePool.query as unknown as vi.Mock<any>;
 
 // Helper function to create a socket client
 const createSocketClient = (port: number): Socket => {
@@ -63,20 +63,22 @@ describe("API Server", () => {
   let server: HttpServer;
   let port: number;
 
-  beforeAll((done) => {
+  beforeAll(async () => {
     const serverInstance = createServer();
     app = serverInstance.app;
     server = serverInstance.server;
 
     // Dynamically assign a port for testing
-    server.listen(0, () => {
-      port = (server.address() as AddressInfo).port;
-      done();
+    await new Promise<void>((resolve) => {
+      server.listen(0, () => {
+        port = (server.address() as AddressInfo).port;
+        resolve();
+      });
     });
   });
 
-  afterAll((done) => {
-    server.close(done);
+  afterAll(async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
   // Assign the mock to a variable for easier access and control
@@ -144,19 +146,14 @@ describe("API Server", () => {
     let player1: Player = { id: 1, name: "Player1", position: "G" };
     let player2: Player = { id: 2, name: "Player2", position: "F" };
 
-    beforeEach((done) => {
+    beforeEach(async () => {
       client1 = createSocketClient(port);
       client2 = createSocketClient(port);
 
-      let clientsConnected = 0;
-      const onConnect = () => {
-        clientsConnected++;
-        if (clientsConnected === 2) {
-          done();
-        }
-      };
-      client1.on("connect", onConnect);
-      client2.on("connect", onConnect);
+      await Promise.all([
+        new Promise<void>((resolve) => client1.on("connect", resolve)),
+        new Promise<void>((resolve) => client2.on("connect", resolve)),
+      ]);
     });
 
     afterEach(() => {

@@ -1,11 +1,10 @@
-import "@testing-library/jest-dom";
 import React from "react";
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ThemeProvider } from "./theme";
 
 // next-themes uses useLayoutEffect internally which needs to be mocked in jsdom
-jest.mock("next-themes", () => ({
+vi.mock("next-themes", () => ({
   ThemeProvider: ({ children, ...props }: any) => {
     // Capture props on the mock for assertion
     return (
@@ -18,7 +17,7 @@ jest.mock("next-themes", () => ({
 
 describe("ThemeProvider", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("renders children", () => {

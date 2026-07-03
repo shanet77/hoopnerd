@@ -1,12 +1,11 @@
-import "@testing-library/jest-dom";
 import React from "react";
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { ThemeToggle } from "./ThemeToggle";
 
-const setThemeMock = jest.fn();
+const setThemeMock = vi.fn();
 
-jest.mock("next-themes", () => ({
+vi.mock("next-themes", () => ({
   useTheme: () => ({
     theme: "system",
     resolvedTheme: "light",
@@ -16,7 +15,7 @@ jest.mock("next-themes", () => ({
 
 describe("ThemeToggle", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("renders the moon icon in light mode", () => {

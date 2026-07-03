@@ -1,6 +1,5 @@
-import "@testing-library/jest-dom";
 import React from "react";
-import { describe, expect, it, jest } from "@jest/globals";
+import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { StatsResponse } from "@repo/types";
 import { LeaderboardPanel } from "./LeaderboardPanel";
@@ -10,7 +9,7 @@ function MockImage(props: React.ImgHTMLAttributes<HTMLImageElement>) {
   return <img {...props} />;
 }
 
-jest.mock("next/image", () => ({
+vi.mock("next/image", () => ({
   __esModule: true,
   default: MockImage,
 }));

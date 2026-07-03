@@ -1,31 +1,39 @@
-import "@testing-library/jest-dom";
 import React from "react";
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import Web from "./page";
 
-const pushMock = jest.fn();
-const trackEventMock = jest.fn();
-const setPlayerSessionMock = jest.fn();
-const createRoomMock = jest.fn();
-const joinMatchmakingMock = jest.fn();
-const createCpuGameMock = jest.fn();
+const {
+  pushMock,
+  trackEventMock,
+  setPlayerSessionMock,
+  createRoomMock,
+  joinMatchmakingMock,
+  createCpuGameMock,
+} = vi.hoisted(() => ({
+  pushMock: vi.fn(),
+  trackEventMock: vi.fn(),
+  setPlayerSessionMock: vi.fn(),
+  createRoomMock: vi.fn(),
+  joinMatchmakingMock: vi.fn(),
+  createCpuGameMock: vi.fn(),
+}));
 
-jest.mock("next/navigation", () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
 }));
 
-jest.mock("./lib/analytics", () => ({
+vi.mock("./lib/analytics", () => ({
   trackEvent: (...args: any[]) => trackEventMock(...args),
 }));
 
-jest.mock("./lib/playerSession", () => ({
+vi.mock("./lib/playerSession", () => ({
   getPlayerName: () => "",
-  setPlayerName: jest.fn(),
+  setPlayerName: vi.fn(),
   setPlayerSession: (...args: any[]) => setPlayerSessionMock(...args),
 }));
 
-jest.mock("./lib/socket", () => ({
+vi.mock("./lib/socket", () => ({
   SocketProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useSocket: () => ({ socket: {}, isConnected: true }),
   createRoom: (...args: any[]) => createRoomMock(...args),
@@ -33,7 +41,7 @@ jest.mock("./lib/socket", () => ({
   createCpuGame: (...args: any[]) => createCpuGameMock(...args),
 }));
 
-jest.mock("./lib/useAvailableSeasons", () => ({
+vi.mock("./lib/useAvailableSeasons", () => ({
   useAvailableSeasons: () => ({
     seasons: [],
     minYear: 1950,
@@ -61,8 +69,8 @@ async function waitForStats() {
 
  describe("Lobby page", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    (global as any).fetch = jest.fn().mockResolvedValue(mockStatsResponse());
+    vi.clearAllMocks();
+    (global as any).fetch = vi.fn().mockResolvedValue(mockStatsResponse());
   });
 
   it("shows primary CTAs and a name prompt", async () => {

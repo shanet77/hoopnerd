@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   generatePlayerId,
   issueSessionToken,
@@ -49,13 +49,13 @@ describe("socketAuth", () => {
 
   it("rejects expired tokens", () => {
     process.env.SOCKET_SESSION_SECRET = "test-secret";
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const now = new Date("2026-01-01T00:00:00.000Z");
-    jest.setSystemTime(now.getTime());
+    vi.setSystemTime(now.getTime());
     const token = issueSessionToken("ROOM1", 42);
 
-    jest.setSystemTime(now.getTime() + 1000 * 60 * 60 * 13);
+    vi.setSystemTime(now.getTime() + 1000 * 60 * 60 * 13);
     expect(verifySessionToken(token)).toBeNull();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 });

@@ -1,30 +1,30 @@
-import { describe, expect, it, jest, beforeEach } from "@jest/globals";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import supertest from "supertest";
 import express from "express";
 import { createApiRouter } from "../api";
 import { PlayerService } from "@repo/types";
 import databasePool from "@repo/database";
 
-jest.mock("@repo/database", () => ({
+vi.mock("@repo/database", () => ({
   __esModule: true,
   default: {
-    query: jest.fn(),
+    query: vi.fn(),
   },
 }));
 
-const mockDbQuery = databasePool.query as unknown as jest.Mock<
+const mockDbQuery = databasePool.query as unknown as vi.Mock<
   (...args: any[]) => any
 >;
 
 function createTestApp(playerServiceOverrides: Partial<PlayerService> = {}) {
   const fakePlayerService = {
-    searchPlayers: jest
+    searchPlayers: vi
       .fn<PlayerService["searchPlayers"]>()
       .mockResolvedValue([]),
-    getRandomPlayer: jest
+    getRandomPlayer: vi
       .fn<PlayerService["getRandomPlayer"]>()
       .mockResolvedValue(null),
-    getRandomTopScorer: jest
+    getRandomTopScorer: vi
       .fn<PlayerService["getRandomTopScorer"]>()
       .mockResolvedValue(null),
     ...playerServiceOverrides,
@@ -72,7 +72,7 @@ describe("API Routes — /api/players/search", () => {
   });
 
   it("returns 500 when searchPlayers throws", async () => {
-    const searchPlayers = jest
+    const searchPlayers = vi
       .fn<PlayerService["searchPlayers"]>()
       .mockRejectedValue(new Error("db down"));
     const { app } = createTestApp({ searchPlayers });
@@ -90,7 +90,7 @@ describe("API Routes — /api/players/search", () => {
       { id: 1, name: "Tim Duncan", position: "PF" },
       { id: 2, name: "Tony Parker", position: "PG" },
     ];
-    const searchPlayers = jest
+    const searchPlayers = vi
       .fn<PlayerService["searchPlayers"]>()
       .mockResolvedValue(players);
     const { app } = createTestApp({ searchPlayers });
@@ -108,7 +108,7 @@ describe("API Routes — /api/players/search", () => {
 describe("API Routes — /api/players/random", () => {
   it("returns a random player", async () => {
     const player = { id: 5, name: "Manu Ginobili", position: "SG" };
-    const getRandomPlayer = jest
+    const getRandomPlayer = vi
       .fn<PlayerService["getRandomPlayer"]>()
       .mockResolvedValue(player);
     const { app } = createTestApp({ getRandomPlayer });
@@ -122,7 +122,7 @@ describe("API Routes — /api/players/random", () => {
   });
 
   it("returns null when no players exist", async () => {
-    const getRandomPlayer = jest
+    const getRandomPlayer = vi
       .fn<PlayerService["getRandomPlayer"]>()
       .mockResolvedValue(null);
     const { app } = createTestApp({ getRandomPlayer });
@@ -136,7 +136,7 @@ describe("API Routes — /api/players/random", () => {
   });
 
   it("returns 500 on database error", async () => {
-    const getRandomPlayer = jest
+    const getRandomPlayer = vi
       .fn<PlayerService["getRandomPlayer"]>()
       .mockRejectedValue(new Error("db error"));
     const { app } = createTestApp({ getRandomPlayer });

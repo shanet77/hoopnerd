@@ -1,9 +1,9 @@
-import { describe, expect, it, jest } from "@jest/globals";
+import { describe, expect, it, vi } from "vitest";
 
-const nextFn = jest.fn(() => ({ type: "next" }));
-const rewriteFn = jest.fn((url: unknown) => ({ type: "rewrite", url }));
+const nextFn = vi.fn(() => ({ type: "next" }));
+const rewriteFn = vi.fn((url: unknown) => ({ type: "rewrite", url }));
 
-jest.mock("next/server", () => ({
+vi.mock("next/server", () => ({
   NextResponse: {
     next: nextFn,
     rewrite: rewriteFn,

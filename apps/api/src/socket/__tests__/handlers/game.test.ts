@@ -1,50 +1,50 @@
-import { describe, it, expect, beforeEach, jest, afterEach } from "@jest/globals";
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { Socket } from 'socket.io';
 import { GameRoomRepository } from "../../../services/GameRoomRepository";
 import { registerGameHandlers } from "../../handlers/game";
 import { SubmitMoveRequest, Player, GameRoomState } from "@repo/types";
 
 // Mock socketAuth module
-jest.mock("../../../socketAuth", () => ({
-  verifySessionToken: jest.fn(),
+vi.mock("../../../socketAuth", () => ({
+  verifySessionToken: vi.fn(),
 }));
 
 import { verifySessionToken } from "../../../socketAuth";
 
-const mockVerifySessionToken = verifySessionToken as jest.Mock;
+const mockVerifySessionToken = verifySessionToken as vi.Mock;
 
 describe("Game Handlers", () => {
   let mockSocket: Partial<Socket>;
   let mockRoomRepository: Partial<GameRoomRepository>;
-  let emitMock: jest.Mock;
-  let toMock: jest.Mock;
+  let emitMock: vi.Mock;
+  let toMock: vi.Mock;
   let handlers: Record<string, Function> = {};
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     handlers = {};
-    emitMock = jest.fn();
-    toMock = jest.fn(() => ({ emit: emitMock }));
+    emitMock = vi.fn();
+    toMock = vi.fn(() => ({ emit: emitMock }));
 
     mockSocket = {
       id: 'socket-123',
       emit: emitMock,
       to: toMock,
-      on: jest.fn((event: string, handler: Function) => {
+      on: vi.fn((event: string, handler: Function) => {
         handlers[event] = handler;
       }) as any,
     };
 
     mockRoomRepository = {
-      getRoom: jest.fn(),
-      getSocketBinding: jest.fn(),
-      submitMove: jest.fn(),
-      switchTurn: jest.fn(),
+      getRoom: vi.fn(),
+      getSocketBinding: vi.fn(),
+      submitMove: vi.fn(),
+      switchTurn: vi.fn(),
     };
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   const setupHandlers = () => {
@@ -100,7 +100,7 @@ describe("Game Handlers", () => {
 
     it("should reject when socket binding doesn't match session", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: mockPlayerId });
-      (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
+      (mockRoomRepository.getSocketBinding as vi.Mock).mockReturnValueOnce({
         roomId: 'WRONG_ROOM',
         playerId: 999,
       });
@@ -121,11 +121,11 @@ describe("Game Handlers", () => {
 
     it("should reject when room doesn't exist", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: mockPlayerId });
-      (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
+      (mockRoomRepository.getSocketBinding as vi.Mock).mockReturnValueOnce({
         roomId: mockRoomId,
         playerId: mockPlayerId,
       });
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValueOnce(undefined);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValueOnce(undefined);
 
       const submitMoveHandler = handlers['submit_move'];
       await submitMoveHandler({
@@ -143,7 +143,7 @@ describe("Game Handlers", () => {
 
     it("should emit game error when game is already completed", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: mockPlayerId });
-      (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
+      (mockRoomRepository.getSocketBinding as vi.Mock).mockReturnValueOnce({
         roomId: mockRoomId,
         playerId: mockPlayerId,
       });
@@ -154,7 +154,7 @@ describe("Game Handlers", () => {
         players: [player],
         currentPlayerIndex: 0,
       } as GameRoomState;
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValueOnce(completedRoom);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValueOnce(completedRoom);
 
       const submitMoveHandler = handlers['submit_move'];
       await submitMoveHandler({
@@ -169,7 +169,7 @@ describe("Game Handlers", () => {
 
     it("should reject when player is not part of the room", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: 999 });
-      (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
+      (mockRoomRepository.getSocketBinding as vi.Mock).mockReturnValueOnce({
         roomId: mockRoomId,
         playerId: 999,
       });
@@ -180,7 +180,7 @@ describe("Game Handlers", () => {
           { id: 1, name: 'Player1', position: 'G' } as Player,
         ],
       } as GameRoomState;
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValueOnce(room);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValueOnce(room);
 
       const submitMoveHandler = handlers['submit_move'];
       await submitMoveHandler({
@@ -198,7 +198,7 @@ describe("Game Handlers", () => {
 
     it("should reject when it's not the player's turn", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: 1 });
-      (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
+      (mockRoomRepository.getSocketBinding as vi.Mock).mockReturnValueOnce({
         roomId: mockRoomId,
         playerId: 1,
       });
@@ -211,7 +211,7 @@ describe("Game Handlers", () => {
         currentPlayerIndex: 1, // Player 2's turn
         startingPlayer: { id: 50, name: 'Starter', position: 'C' } as Player,
       } as GameRoomState;
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValueOnce(room);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValueOnce(room);
 
       const submitMoveHandler = handlers['submit_move'];
       await submitMoveHandler({
@@ -229,7 +229,7 @@ describe("Game Handlers", () => {
 
     it("should reject when game is not properly initialized", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: 1 });
-      (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
+      (mockRoomRepository.getSocketBinding as vi.Mock).mockReturnValueOnce({
         roomId: mockRoomId,
         playerId: 1,
       });
@@ -242,7 +242,7 @@ describe("Game Handlers", () => {
         currentPlayerIndex: 0,
         startingPlayer: null, // Not initialized
       } as GameRoomState;
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValueOnce(room);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValueOnce(room);
 
       const submitMoveHandler = handlers['submit_move'];
       await submitMoveHandler({
@@ -257,7 +257,7 @@ describe("Game Handlers", () => {
 
     it("should emit failed move submission when move is invalid", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: 1 });
-      (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
+      (mockRoomRepository.getSocketBinding as vi.Mock).mockReturnValueOnce({
         roomId: mockRoomId,
         playerId: 1,
       });
@@ -270,8 +270,8 @@ describe("Game Handlers", () => {
         currentPlayerIndex: 0,
         startingPlayer: { id: 50, name: 'Starter', position: 'C' } as Player,
       } as GameRoomState;
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValueOnce(room);
-      (mockRoomRepository.submitMove as jest.Mock).mockResolvedValueOnce({
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValueOnce(room);
+      (mockRoomRepository.submitMove as vi.Mock).mockResolvedValueOnce({
         success: false,
         message: 'Invalid connection!',
         errorPlayer: 'NewPlayer',
@@ -301,7 +301,7 @@ describe("Game Handlers", () => {
 
     it("should process valid move and switch turn", async () => {
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: 1 });
-      (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
+      (mockRoomRepository.getSocketBinding as vi.Mock).mockReturnValueOnce({
         roomId: mockRoomId,
         playerId: 1,
       });
@@ -314,8 +314,8 @@ describe("Game Handlers", () => {
         currentPlayerIndex: 0,
         startingPlayer: { id: 50, name: 'Starter', position: 'C' } as Player,
       } as GameRoomState;
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValueOnce(room);
-      (mockRoomRepository.submitMove as jest.Mock).mockResolvedValueOnce({
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValueOnce(room);
+      (mockRoomRepository.submitMove as vi.Mock).mockResolvedValueOnce({
         success: true,
         message: 'NewPlayer connected to chain!',
       });
@@ -337,9 +337,9 @@ describe("Game Handlers", () => {
     });
 
     it("should handle errors during move validation", async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
       mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: 1 });
-      (mockRoomRepository.getSocketBinding as jest.Mock).mockReturnValueOnce({
+      (mockRoomRepository.getSocketBinding as vi.Mock).mockReturnValueOnce({
         roomId: mockRoomId,
         playerId: 1,
       });
@@ -352,8 +352,8 @@ describe("Game Handlers", () => {
         currentPlayerIndex: 0,
         startingPlayer: { id: 50, name: 'Starter', position: 'C' } as Player,
       } as GameRoomState;
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValueOnce(room);
-      (mockRoomRepository.submitMove as jest.Mock).mockRejectedValueOnce(new Error('DB error'));
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValueOnce(room);
+      (mockRoomRepository.submitMove as vi.Mock).mockRejectedValueOnce(new Error('DB error'));
 
       const submitMoveHandler = handlers['submit_move'];
       await submitMoveHandler({

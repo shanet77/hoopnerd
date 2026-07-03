@@ -1,61 +1,61 @@
-import { describe, it, expect, beforeEach, jest, afterEach } from "@jest/globals";
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { Socket } from 'socket.io';
 import { GameRoomRepository } from "../../../services/GameRoomRepository";
 import { registerMatchmakingHandlers } from "../../handlers/matchmaking";
 import { JoinMatchmakingRequest, GameRoomState, Player } from "@repo/types";
 
 // Mock socketAuth module
-jest.mock("../../../socketAuth", () => ({
-  normalizePlayerName: jest.fn((name: string) => name.trim()),
+vi.mock("../../../socketAuth", () => ({
+  normalizePlayerName: vi.fn((name: string) => name.trim()),
   MAX_PLAYER_NAME_LENGTH: 32,
-  generatePlayerId: jest.fn(() => 12345),
-  issueSessionToken: jest.fn(() => "mock-token"),
+  generatePlayerId: vi.fn(() => 12345),
+  issueSessionToken: vi.fn(() => "mock-token"),
 }));
 
 import { normalizePlayerName, issueSessionToken } from "../../../socketAuth";
 
-const mockNormalizePlayerName = normalizePlayerName as jest.Mock;
-const mockIssueSessionToken = issueSessionToken as jest.Mock;
+const mockNormalizePlayerName = normalizePlayerName as vi.Mock;
+const mockIssueSessionToken = issueSessionToken as vi.Mock;
 
 describe("Matchmaking Handlers", () => {
   let mockSocket: Partial<Socket>;
   let mockRoomRepository: Partial<GameRoomRepository>;
-  let emitMock: jest.Mock;
-  let toMock: jest.Mock;
+  let emitMock: vi.Mock;
+  let toMock: vi.Mock;
   let handlers: Record<string, Function> = {};
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     handlers = {};
-    emitMock = jest.fn();
-    toMock = jest.fn(() => ({ emit: emitMock }));
+    emitMock = vi.fn();
+    toMock = vi.fn(() => ({ emit: emitMock }));
 
     mockSocket = {
       id: 'socket-123',
       emit: emitMock,
       to: toMock,
-      join: jest.fn(),
-      on: jest.fn((event: string, handler: Function) => {
+      join: vi.fn(),
+      on: vi.fn((event: string, handler: Function) => {
         handlers[event] = handler;
       }) as any,
     };
 
     mockRoomRepository = {
-      createRoom: jest.fn((roomId: string) => ({
+      createRoom: vi.fn((roomId: string) => ({
         roomId,
         players: [],
         gameStarted: false,
         friendsOnly: false,
       } as GameRoomState)),
-      findAvailablePublicRoom: jest.fn(),
-      getRoom: jest.fn(),
-      bindSocket: jest.fn(),
-      startGame: jest.fn(),
+      findAvailablePublicRoom: vi.fn(),
+      getRoom: vi.fn(),
+      bindSocket: vi.fn(),
+      startGame: vi.fn(),
     };
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   const setupHandlers = () => {
@@ -96,14 +96,14 @@ describe("Matchmaking Handlers", () => {
     });
 
     it("should create new room when no available public room exists", async () => {
-      (mockRoomRepository.findAvailablePublicRoom as jest.Mock).mockReturnValueOnce(null);
+      (mockRoomRepository.findAvailablePublicRoom as vi.Mock).mockReturnValueOnce(null);
       const newRoom = {
         roomId: expect.stringMatching(/^[A-Z0-9]{6}$/),
         players: [],
         friendsOnly: false,
       };
-      (mockRoomRepository.createRoom as jest.Mock).mockReturnValue(newRoom);
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValue(newRoom);
+      (mockRoomRepository.createRoom as vi.Mock).mockReturnValue(newRoom);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValue(newRoom);
 
       const joinMatchmakingHandler = handlers['join_matchmaking'];
       await joinMatchmakingHandler({ playerName: mockPlayerName } as JoinMatchmakingRequest);
@@ -120,8 +120,8 @@ describe("Matchmaking Handlers", () => {
         roomId: existingRoomId,
         players: [{ id: 1, name: 'ExistingPlayer', position: 'G' } as Player],
       };
-      (mockRoomRepository.findAvailablePublicRoom as jest.Mock).mockReturnValueOnce(existingRoomId);
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValue(existingRoom);
+      (mockRoomRepository.findAvailablePublicRoom as vi.Mock).mockReturnValueOnce(existingRoomId);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValue(existingRoom);
 
       const joinMatchmakingHandler = handlers['join_matchmaking'];
       await joinMatchmakingHandler({ playerName: mockPlayerName } as JoinMatchmakingRequest);
@@ -131,14 +131,14 @@ describe("Matchmaking Handlers", () => {
     });
 
     it("should skip public rooms when friendsOnly is true", async () => {
-      (mockRoomRepository.findAvailablePublicRoom as jest.Mock).mockReturnValueOnce('PUBLIC123');
+      (mockRoomRepository.findAvailablePublicRoom as vi.Mock).mockReturnValueOnce('PUBLIC123');
       const newRoom = {
         roomId: 'NEW123',
         players: [],
         friendsOnly: true,
       };
-      (mockRoomRepository.createRoom as jest.Mock).mockReturnValue(newRoom);
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValue(newRoom);
+      (mockRoomRepository.createRoom as vi.Mock).mockReturnValue(newRoom);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValue(newRoom);
 
       const joinMatchmakingHandler = handlers['join_matchmaking'];
       await joinMatchmakingHandler({
@@ -162,8 +162,8 @@ describe("Matchmaking Handlers", () => {
           { id: 2, name: 'Player2', position: 'F' } as Player,
         ],
       };
-      (mockRoomRepository.findAvailablePublicRoom as jest.Mock).mockReturnValueOnce(roomId);
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValue(fullRoom);
+      (mockRoomRepository.findAvailablePublicRoom as vi.Mock).mockReturnValueOnce(roomId);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValue(fullRoom);
 
       const joinMatchmakingHandler = handlers['join_matchmaking'];
       await joinMatchmakingHandler({ playerName: 'NewPlayer' } as JoinMatchmakingRequest);
@@ -181,8 +181,8 @@ describe("Matchmaking Handlers", () => {
         roomId,
         players: [{ id: 1, name: 'TestPlayer', position: 'G' } as Player],
       };
-      (mockRoomRepository.findAvailablePublicRoom as jest.Mock).mockReturnValueOnce(roomId);
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValue(roomWithSameName);
+      (mockRoomRepository.findAvailablePublicRoom as vi.Mock).mockReturnValueOnce(roomId);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValue(roomWithSameName);
 
       const joinMatchmakingHandler = handlers['join_matchmaking'];
       await joinMatchmakingHandler({ playerName: 'testplayer' } as JoinMatchmakingRequest);
@@ -195,20 +195,20 @@ describe("Matchmaking Handlers", () => {
     });
 
     it("should successfully create room and add player", async () => {
-      (mockRoomRepository.findAvailablePublicRoom as jest.Mock).mockReturnValueOnce(null);
+      (mockRoomRepository.findAvailablePublicRoom as vi.Mock).mockReturnValueOnce(null);
       const newRoom = {
         roomId: 'NEW123',
         players: [],
         friendsOnly: false,
       };
-      (mockRoomRepository.createRoom as jest.Mock).mockReturnValue(newRoom);
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValue(newRoom);
+      (mockRoomRepository.createRoom as vi.Mock).mockReturnValue(newRoom);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValue(newRoom);
 
       const joinMatchmakingHandler = handlers['join_matchmaking'];
       await joinMatchmakingHandler({ playerName: mockPlayerName } as JoinMatchmakingRequest);
 
       // Capture the actual room ID from the function call
-      const createdRoomId = (mockRoomRepository.createRoom as jest.Mock).mock.calls[0][0];
+      const createdRoomId = (mockRoomRepository.createRoom as vi.Mock).mock.calls[0][0];
 
       expect(mockSocket.join).toHaveBeenCalledWith(createdRoomId);
       expect(newRoom.players).toHaveLength(1);
@@ -234,8 +234,8 @@ describe("Matchmaking Handlers", () => {
         roomId: existingRoomId,
         players: [{ id: 1, name: 'ExistingPlayer', position: 'G' } as Player],
       };
-      (mockRoomRepository.findAvailablePublicRoom as jest.Mock).mockReturnValueOnce(existingRoomId);
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValue(existingRoom);
+      (mockRoomRepository.findAvailablePublicRoom as vi.Mock).mockReturnValueOnce(existingRoomId);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValue(existingRoom);
 
       const joinMatchmakingHandler = handlers['join_matchmaking'];
       await joinMatchmakingHandler({ playerName: mockPlayerName } as JoinMatchmakingRequest);
@@ -253,8 +253,8 @@ describe("Matchmaking Handlers", () => {
         roomId: existingRoomId,
         players: [{ id: 1, name: 'ExistingPlayer', position: 'G' } as Player],
       };
-      (mockRoomRepository.findAvailablePublicRoom as jest.Mock).mockReturnValueOnce(existingRoomId);
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValue(existingRoom);
+      (mockRoomRepository.findAvailablePublicRoom as vi.Mock).mockReturnValueOnce(existingRoomId);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValue(existingRoom);
 
       const joinMatchmakingHandler = handlers['join_matchmaking'];
       await joinMatchmakingHandler({ playerName: mockPlayerName } as JoinMatchmakingRequest);
@@ -273,14 +273,14 @@ describe("Matchmaking Handlers", () => {
         players: [],
         friendsOnly: false,
       };
-      (mockRoomRepository.findAvailablePublicRoom as jest.Mock).mockReturnValueOnce(null);
-      (mockRoomRepository.createRoom as jest.Mock).mockReturnValue(newRoom);
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValue(newRoom);
+      (mockRoomRepository.findAvailablePublicRoom as vi.Mock).mockReturnValueOnce(null);
+      (mockRoomRepository.createRoom as vi.Mock).mockReturnValue(newRoom);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValue(newRoom);
 
       const joinMatchmakingHandler = handlers['join_matchmaking'];
       await joinMatchmakingHandler({ playerName: mockPlayerName } as JoinMatchmakingRequest);
 
-      const createdRoomId = (mockRoomRepository.createRoom as jest.Mock).mock.calls[0][0];
+      const createdRoomId = (mockRoomRepository.createRoom as vi.Mock).mock.calls[0][0];
       expect(mockRoomRepository.startGame).toHaveBeenCalledWith(createdRoomId);
     });
 
@@ -290,9 +290,9 @@ describe("Matchmaking Handlers", () => {
         players: [],
         friendsOnly: false,
       };
-      (mockRoomRepository.findAvailablePublicRoom as jest.Mock).mockReturnValueOnce(null);
-      (mockRoomRepository.createRoom as jest.Mock).mockReturnValue(newRoom);
-      (mockRoomRepository.getRoom as jest.Mock).mockReturnValue(newRoom);
+      (mockRoomRepository.findAvailablePublicRoom as vi.Mock).mockReturnValueOnce(null);
+      (mockRoomRepository.createRoom as vi.Mock).mockReturnValue(newRoom);
+      (mockRoomRepository.getRoom as vi.Mock).mockReturnValue(newRoom);
 
       const joinMatchmakingHandler = handlers['join_matchmaking'];
       await joinMatchmakingHandler({ playerName: mockPlayerName } as JoinMatchmakingRequest);

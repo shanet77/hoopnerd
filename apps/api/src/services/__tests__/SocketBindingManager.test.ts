@@ -1,19 +1,19 @@
-import { describe, it, expect, beforeEach, jest, afterEach } from "@jest/globals";
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { SocketBindingManager } from "../SocketBindingManager";
 import { Server as SocketIOServer } from "socket.io";
 
 describe("SocketBindingManager", () => {
   let manager: SocketBindingManager;
   let mockIo: Partial<SocketIOServer>;
-  let onExpiredMock: jest.Mock;
+  let onExpiredMock: vi.Mock;
   const defaultGraceMs = 500;
 
   beforeEach(() => {
-    jest.useFakeTimers();
-    onExpiredMock = jest.fn();
+    vi.useFakeTimers();
+    onExpiredMock = vi.fn();
 
     mockIo = {
-      to: jest.fn(() => ({ emit: jest.fn() })),
+      to: vi.fn(() => ({ emit: vi.fn() })),
       sockets: {
         sockets: new Map(),
       } as any,
@@ -27,14 +27,14 @@ describe("SocketBindingManager", () => {
   });
 
   afterEach(() => {
-    jest.clearAllTimers();
-    jest.useRealTimers();
-    jest.clearAllMocks();
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.clearAllMocks();
   });
 
   describe("constructor", () => {
     it("should use provided disconnectGraceMs", () => {
-      const expiredMock = jest.fn();
+      const expiredMock = vi.fn();
       const mgr = new SocketBindingManager(
         mockIo as SocketIOServer,
         expiredMock,
@@ -43,10 +43,10 @@ describe("SocketBindingManager", () => {
       mgr.bindSocket("s1", "room1", 1);
       mgr.handleDisconnect("s1");
 
-      jest.advanceTimersByTime(2000);
+      vi.advanceTimersByTime(2000);
       expect(expiredMock).not.toHaveBeenCalled();
 
-      jest.advanceTimersByTime(1001);
+      vi.advanceTimersByTime(1001);
       expect(expiredMock).toHaveBeenCalledWith("room1", 1);
     });
 
@@ -58,10 +58,10 @@ describe("SocketBindingManager", () => {
       mgr.bindSocket("s1", "room1", 1);
       mgr.handleDisconnect("s1");
 
-      jest.advanceTimersByTime(9000);
+      vi.advanceTimersByTime(9000);
       expect(onExpiredMock).not.toHaveBeenCalled();
 
-      jest.advanceTimersByTime(1001);
+      vi.advanceTimersByTime(1001);
       expect(onExpiredMock).toHaveBeenCalledWith("room1", 1);
     });
   });
@@ -82,12 +82,12 @@ describe("SocketBindingManager", () => {
 
       manager.bindSocket("socket-2", "roomA", 1);
 
-      jest.advanceTimersByTime(defaultGraceMs + 100);
+      vi.advanceTimersByTime(defaultGraceMs + 100);
       expect(onExpiredMock).not.toHaveBeenCalled();
     });
 
     it("should disconnect stale socket for same player in same room", () => {
-      const staleDisconnect = jest.fn();
+      const staleDisconnect = vi.fn();
       (mockIo.sockets!.sockets as Map<string, any>).set("old-socket", {
         disconnect: staleDisconnect,
       });
@@ -104,7 +104,7 @@ describe("SocketBindingManager", () => {
     });
 
     it("should not disconnect stale socket from different room", () => {
-      const staleDisconnect = jest.fn();
+      const staleDisconnect = vi.fn();
       (mockIo.sockets!.sockets as Map<string, any>).set("old-socket", {
         disconnect: staleDisconnect,
       });
@@ -120,7 +120,7 @@ describe("SocketBindingManager", () => {
     });
 
     it("should not disconnect stale socket for different player", () => {
-      const staleDisconnect = jest.fn();
+      const staleDisconnect = vi.fn();
       (mockIo.sockets!.sockets as Map<string, any>).set("old-socket", {
         disconnect: staleDisconnect,
       });
@@ -180,7 +180,7 @@ describe("SocketBindingManager", () => {
       manager.bindSocket("socket-1", "roomA", 1);
       manager.handleDisconnect("socket-1");
 
-      jest.advanceTimersByTime(defaultGraceMs + 100);
+      vi.advanceTimersByTime(defaultGraceMs + 100);
 
       expect(onExpiredMock).toHaveBeenCalledWith("roomA", 1);
     });
@@ -191,7 +191,7 @@ describe("SocketBindingManager", () => {
 
       manager.bindSocket("socket-2", "roomA", 1);
 
-      jest.advanceTimersByTime(defaultGraceMs + 100);
+      vi.advanceTimersByTime(defaultGraceMs + 100);
 
       expect(onExpiredMock).not.toHaveBeenCalled();
     });
@@ -202,7 +202,7 @@ describe("SocketBindingManager", () => {
 
       manager.handleDisconnect("socket-1");
 
-      jest.advanceTimersByTime(defaultGraceMs + 100);
+      vi.advanceTimersByTime(defaultGraceMs + 100);
 
       expect(onExpiredMock).not.toHaveBeenCalled();
     });
@@ -211,16 +211,16 @@ describe("SocketBindingManager", () => {
       manager.bindSocket("socket-1", "roomA", 1);
       manager.handleDisconnect("socket-1");
 
-      jest.advanceTimersByTime(defaultGraceMs / 2);
+      vi.advanceTimersByTime(defaultGraceMs / 2);
 
       manager.bindSocket("socket-2", "roomA", 1);
       manager.handleDisconnect("socket-2");
 
       // First timer was cleared by rebind; second timer needs its full grace
-      jest.advanceTimersByTime(defaultGraceMs - 50);
+      vi.advanceTimersByTime(defaultGraceMs - 50);
       expect(onExpiredMock).not.toHaveBeenCalled();
 
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
       expect(onExpiredMock).toHaveBeenCalledTimes(1);
       expect(onExpiredMock).toHaveBeenCalledWith("roomA", 1);
     });
@@ -233,7 +233,7 @@ describe("SocketBindingManager", () => {
 
       manager.clearDisconnectGraceTimer("roomA", 1);
 
-      jest.advanceTimersByTime(defaultGraceMs + 100);
+      vi.advanceTimersByTime(defaultGraceMs + 100);
       expect(onExpiredMock).not.toHaveBeenCalled();
     });
 
@@ -251,7 +251,7 @@ describe("SocketBindingManager", () => {
       // Rebind within grace period
       manager.bindSocket("s2", "roomA", 1);
 
-      jest.advanceTimersByTime(defaultGraceMs + 100);
+      vi.advanceTimersByTime(defaultGraceMs + 100);
 
       expect(onExpiredMock).not.toHaveBeenCalled();
     });
@@ -263,7 +263,7 @@ describe("SocketBindingManager", () => {
       // Second disconnect, no rebind
       manager.handleDisconnect("s2");
 
-      jest.advanceTimersByTime(defaultGraceMs + 100);
+      vi.advanceTimersByTime(defaultGraceMs + 100);
 
       expect(onExpiredMock).toHaveBeenCalledTimes(1);
       expect(onExpiredMock).toHaveBeenCalledWith("roomA", 1);
@@ -276,7 +276,7 @@ describe("SocketBindingManager", () => {
       manager.handleDisconnect("s2");
       manager.bindSocket("s3", "roomA", 1);
 
-      jest.advanceTimersByTime(defaultGraceMs + 100);
+      vi.advanceTimersByTime(defaultGraceMs + 100);
 
       expect(onExpiredMock).not.toHaveBeenCalled();
     });

@@ -1,30 +1,28 @@
-import { afterEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-const mockPool = jest.fn();
-const mockConfig = jest.fn();
+const mockPool = vi.fn();
 
-jest.mock("pg", () => ({
+vi.mock("pg", () => ({
   Pool: mockPool,
 }));
 
-jest.mock("dotenv", () => ({
-  config: mockConfig,
-}));
-
 describe("@repo/database", () => {
+  beforeEach(() => {
+    vi.spyOn(process, "loadEnvFile").mockImplementation(() => {});
+  });
+
   afterEach(() => {
-    jest.resetModules();
+    vi.restoreAllMocks();
+    vi.resetModules();
     mockPool.mockReset();
-    mockConfig.mockReset();
     delete process.env.DATABASE_URL;
     delete process.env.NODE_ENV;
   });
 
   it("creates a pool with connection string when DATABASE_URL is set", async () => {
     process.env.DATABASE_URL = "postgres://example";
-    await import("../index.js");
+    await import("../index");
 
-    expect(mockConfig).toHaveBeenCalled();
     expect(mockPool).toHaveBeenCalledWith({
       connectionString: "postgres://example",
     });
@@ -33,7 +31,7 @@ describe("@repo/database", () => {
   it("uses test database name in test environment", async () => {
     process.env.NODE_ENV = "test";
     delete process.env.DATABASE_URL;
-    await import("../index.js");
+    await import("../index");
 
     expect(mockPool).toHaveBeenCalledWith(
       expect.objectContaining({

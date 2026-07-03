@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CpuEngine } from "../cpuEngine";
 import type { DatabaseService, Player } from "@repo/types";
 
 const mockDb = {
-  query: jest.fn() as jest.Mock<any>,
+  query: vi.fn() as vi.Mock<any>,
 };
 
 describe("CpuEngine", () => {
@@ -60,7 +60,7 @@ describe("CpuEngine", () => {
         mockDb.query.mockResolvedValueOnce({ rows: candidates });
 
         // Mock Math.random to return a specific value
-        const randomSpy = jest.spyOn(Math, "random").mockReturnValue(0.5);
+        const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5);
 
         const result = await engine.getBestMove(lastPlayer, usedIds, "easy");
 

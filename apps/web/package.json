@@ -5,11 +5,8 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "test": "jest",
+    "test": "vitest run",
     "start": "next start"
-  },
-  "jest": {
-    "preset": "@repo/jest-presets/react"
   },
   "dependencies": {
     "@repo/types": "workspace:*",
@@ -22,21 +19,17 @@
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
-    "@jest/globals": "^30.4.1",
-    "@repo/jest-presets": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4.3.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@types/jest": "^30.0.0",
     "@types/node": "^25.9.4",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "jest": "^30.4.2",
-    "jest-environment-jsdom": "^30.4.1",
+    "jsdom": "^29.1.1",
     "postcss": "8.5.9",
     "tailwindcss": "4.2.2",
-    "ts-jest": "^29.4.11",
-    "typescript": "6.0.2"
+    "typescript": "6.0.2",
+    "vitest": "^4.1.9"
   }
 }

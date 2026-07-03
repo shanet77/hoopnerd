@@ -11,18 +11,13 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "dev": "tsc -w",
-    "test": "jest"
-  },
-  "jest": {
-    "preset": "@repo/jest-presets/node"
+    "test": "vitest run"
   },
   "devDependencies": {
-    "@jest/globals": "^30.4.1",
-    "@repo/jest-presets": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^25.9.4",
-    "jest": "^30.4.2",
-    "typescript": "6.0.2"
+    "typescript": "6.0.2",
+    "vitest": "^4.1.9"
   },
   "dependencies": {
     "@types/pg": "^8.20.0",

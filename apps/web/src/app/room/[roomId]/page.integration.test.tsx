@@ -1,10 +1,9 @@
-import "@testing-library/jest-dom";
 import React from "react";
-import { describe, expect, it, jest } from "@jest/globals";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import Room from "./page";
 
-jest.mock("next/navigation", () => ({
+vi.mock("next/navigation", () => ({
   useParams: () => ({ roomId: "ROOM1" }),
   useSearchParams: () => ({
     get: (key: string) => {
@@ -12,18 +11,18 @@ jest.mock("next/navigation", () => ({
       return null;
     },
   }),
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
-jest.mock("../../lib/socket", () => ({
+vi.mock("../../lib/socket", () => ({
   SocketProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useSocket: () => ({ socket: null, isConnected: false }),
-  joinRoom: jest.fn(),
-  submitMove: jest.fn(),
-  leaveRoom: jest.fn(),
+  joinRoom: vi.fn(),
+  submitMove: vi.fn(),
+  leaveRoom: vi.fn(),
 }));
 
-jest.mock("../../../components/ClientOnly", () => ({
+vi.mock("../../../components/ClientOnly", () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));

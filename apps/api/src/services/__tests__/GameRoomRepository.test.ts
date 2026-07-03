@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, jest, afterEach } from "@jest/globals";
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { GameRoomRepository } from "../GameRoomRepository";
 import { Player, PlayerService, GameRoomState, PlayerConnection } from "@repo/types";
 import { Server as SocketIOServer } from "socket.io";
@@ -6,33 +6,33 @@ import { validateMove, getConnectionDetails } from "@repo/logic";
 import databasePool from "@repo/database";
 
 // Mocks - matching pattern from server.test.ts
-jest.mock("@repo/logic", () => ({
+vi.mock("@repo/logic", () => ({
   __esModule: true,
-  validateMove: jest.fn<typeof validateMove>(),
-  getConnectionDetails: jest.fn<typeof getConnectionDetails>(),
+  validateMove: vi.fn<typeof validateMove>(),
+  getConnectionDetails: vi.fn<typeof getConnectionDetails>(),
 }));
-jest.mock("@repo/database", () => ({
+vi.mock("@repo/database", () => ({
   __esModule: true,
   default: {
-    query: jest.fn(),
+    query: vi.fn(),
   },
 }));
 
-const mockValidateMove = validateMove as jest.Mock<typeof validateMove>;
-const mockGetConnectionDetails = getConnectionDetails as jest.Mock<typeof getConnectionDetails>;
-const mockDbQuery = databasePool.query as unknown as jest.Mock<any>;
+const mockValidateMove = validateMove as vi.Mock<typeof validateMove>;
+const mockGetConnectionDetails = getConnectionDetails as vi.Mock<typeof getConnectionDetails>;
+const mockDbQuery = databasePool.query as unknown as vi.Mock<any>;
 
 describe("GameRoomRepository", () => {
   let repository: GameRoomRepository;
   let mockIo: Partial<SocketIOServer>;
   let mockPlayerService: Partial<PlayerService>;
-  let emitMock: jest.Mock;
-  let toMock: jest.Mock;
+  let emitMock: vi.Mock;
+  let toMock: vi.Mock;
 
   beforeEach(() => {
-    jest.useFakeTimers();
-    emitMock = jest.fn();
-    toMock = jest.fn(() => ({ emit: emitMock }));
+    vi.useFakeTimers();
+    emitMock = vi.fn();
+    toMock = vi.fn(() => ({ emit: emitMock }));
     
     mockIo = {
       to: toMock as any,
@@ -42,7 +42,7 @@ describe("GameRoomRepository", () => {
     };
 
     mockPlayerService = {
-      getRandomTopScorer: jest.fn(),
+      getRandomTopScorer: vi.fn(),
     };
 
     repository = new GameRoomRepository(
@@ -56,9 +56,9 @@ describe("GameRoomRepository", () => {
   });
 
   afterEach(() => {
-    jest.clearAllTimers();
-    jest.useRealTimers();
-    jest.clearAllMocks();
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.clearAllMocks();
   });
 
   describe("createRoom", () => {
@@ -165,7 +165,7 @@ describe("GameRoomRepository", () => {
     });
 
     it("should disconnect stale socket for same player", () => {
-      const disconnectMock = jest.fn();
+      const disconnectMock = vi.fn();
       (mockIo.sockets!.sockets as Map<string, any>).set("old-socket", { disconnect: disconnectMock });
       
       repository.createRoom("ROOM1");
@@ -191,7 +191,7 @@ describe("GameRoomRepository", () => {
       repository.bindSocket("socket-2", "ROOM1", 1);
       
       // Fast forward timer
-      jest.advanceTimersByTime(11000);
+      vi.advanceTimersByTime(11000);
       
       // Should not have removed player (timer was cleared)
       const room = repository.getRoom("ROOM1");
@@ -225,7 +225,7 @@ describe("GameRoomRepository", () => {
 
     it("should start game and emit event", async () => {
       const startingPlayer = { id: 100, name: "Tim Duncan", position: "PF" } as Player;
-      (mockPlayerService.getRandomTopScorer as jest.Mock).mockResolvedValue(startingPlayer);
+      (mockPlayerService.getRandomTopScorer as vi.Mock).mockResolvedValue(startingPlayer);
 
       repository.createRoom("ROOM1");
       const room = repository.getRoom("ROOM1")!;
@@ -242,7 +242,7 @@ describe("GameRoomRepository", () => {
     });
 
     it("should handle failure to get starting player", async () => {
-      (mockPlayerService.getRandomTopScorer as jest.Mock).mockResolvedValue(null);
+      (mockPlayerService.getRandomTopScorer as vi.Mock).mockResolvedValue(null);
 
       repository.createRoom("ROOM1");
       const room = repository.getRoom("ROOM1")!;
@@ -257,8 +257,8 @@ describe("GameRoomRepository", () => {
     });
 
     it("should set random starting player index", async () => {
-      (mockPlayerService.getRandomTopScorer as jest.Mock).mockResolvedValue({ id: 1, name: "Test", position: "F" });
-      jest.spyOn(Math, "random").mockReturnValue(0.5);
+      (mockPlayerService.getRandomTopScorer as vi.Mock).mockResolvedValue({ id: 1, name: "Test", position: "F" });
+      vi.spyOn(Math, "random").mockReturnValue(0.5);
 
       repository.createRoom("ROOM1");
       const room = repository.getRoom("ROOM1")!;
@@ -273,7 +273,7 @@ describe("GameRoomRepository", () => {
 
   describe("game timeout", () => {
     it("should end game on turn timeout", async () => {
-      (mockPlayerService.getRandomTopScorer as jest.Mock).mockResolvedValue({ id: 99, name: "Test", position: "F" });
+      (mockPlayerService.getRandomTopScorer as vi.Mock).mockResolvedValue({ id: 99, name: "Test", position: "F" });
 
       repository.createRoom("ROOM1");
       const room = repository.getRoom("ROOM1")!;
@@ -286,7 +286,7 @@ describe("GameRoomRepository", () => {
       const currentIndex = room.currentPlayerIndex;
       const expectedWinnerId = room.players[(currentIndex + 1) % room.players.length].id;
 
-      jest.advanceTimersByTime(25000);
+      vi.advanceTimersByTime(25000);
 
       expect(room.gameCompleted).toBe(true);
       expect(room.winner?.id).toBe(expectedWinnerId);
@@ -297,7 +297,7 @@ describe("GameRoomRepository", () => {
     });
 
     it("should clear timeout on game end", async () => {
-      (mockPlayerService.getRandomTopScorer as jest.Mock).mockResolvedValue({ id: 1, name: "Test", position: "G" });
+      (mockPlayerService.getRandomTopScorer as vi.Mock).mockResolvedValue({ id: 1, name: "Test", position: "G" });
 
       repository.createRoom("ROOM1");
       const room = repository.getRoom("ROOM1")!;
@@ -308,7 +308,7 @@ describe("GameRoomRepository", () => {
       repository.endGame("ROOM1", room.players[0], "Test end");
 
       // Advance past the original timeout
-      jest.advanceTimersByTime(30000);
+      vi.advanceTimersByTime(30000);
 
       // No additional game_over should be emitted
       const gameOverCalls = emitMock.mock.calls.filter(call => call[0] === "game_over");
@@ -533,7 +533,7 @@ describe("GameRoomRepository", () => {
       expect(room.players).toHaveLength(2);
 
       // After grace period, disconnected player removed
-      jest.advanceTimersByTime(10000);
+      vi.advanceTimersByTime(10000);
 
       expect(room.players).toHaveLength(1);
       expect(room.players[0].id).toBe(2);
@@ -553,7 +553,7 @@ describe("GameRoomRepository", () => {
       // Rebind before grace period
       repository.bindSocket("socket-2", "ROOM1", 1);
 
-      jest.advanceTimersByTime(11000);
+      vi.advanceTimersByTime(11000);
 
       expect(room.players).toHaveLength(2);
     });
@@ -648,7 +648,7 @@ describe("GameRoomRepository", () => {
       repository.clearDisconnectGraceTimer("ROOM1", 1);
 
       // After grace period, player should still be there
-      jest.advanceTimersByTime(11000);
+      vi.advanceTimersByTime(11000);
 
       expect(room.players).toHaveLength(2);
     });

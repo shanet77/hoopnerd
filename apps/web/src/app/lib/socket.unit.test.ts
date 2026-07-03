@@ -1,4 +1,4 @@
-import { describe, expect, it, jest } from "@jest/globals";
+import { describe, expect, it, vi } from "vitest";
 import {
   createRoom,
   joinMatchmaking,
@@ -13,7 +13,7 @@ const createMockSocket = () => {
   const onceHandlers = new Map<string, Handler>();
   const pendingEvents: Array<{ event: string; payload?: any }> = [];
   const socket = {
-    once: jest.fn((event: string, handler: Handler) => {
+    once: vi.fn((event: string, handler: Handler) => {
       onceHandlers.set(event, handler);
       // Check if there's a pending emit for this event and trigger the handler
       const pendingIndex = pendingEvents.findIndex((p) => {
@@ -41,11 +41,11 @@ const createMockSocket = () => {
       }
       return socket;
     }),
-    off: jest.fn((event: string) => {
+    off: vi.fn((event: string) => {
       onceHandlers.delete(event);
       return socket;
     }),
-    emit: jest.fn((event: string, payload?: any) => {
+    emit: vi.fn((event: string, payload?: any) => {
       // Store the emit for when handler is registered later
       pendingEvents.push({ event, payload });
       // Also try to call handler immediately if already registered

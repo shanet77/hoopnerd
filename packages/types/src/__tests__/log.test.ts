@@ -1,24 +1,29 @@
 import fs from "fs";
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlayerService } from "..";
 
-jest.mock("fs", () => ({
+vi.mock("fs", () => ({
+  default: {
+    promises: {
+      readFile: vi.fn(),
+    },
+  },
   promises: {
-    readFile: jest.fn(),
+    readFile: vi.fn(),
   },
 }));
 
-const mockReadFile = fs.promises.readFile as jest.MockedFunction<
+const mockReadFile = fs.promises.readFile as vi.MockedFunction<
   typeof fs.promises.readFile
 >;
 
 describe("@repo/types PlayerService", () => {
-  const db: { query: jest.Mock<any> } = {
-    query: jest.fn(),
+  const db: { query: vi.Mock<any> } = {
+    query: vi.fn(),
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("searches players with ilike wildcard", async () => {

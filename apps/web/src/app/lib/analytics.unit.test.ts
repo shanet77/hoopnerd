@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
 describe("analytics", () => {
   beforeEach(() => {
-    jest.resetModules();
+    vi.resetModules();
     delete (global as any).window;
   });
 

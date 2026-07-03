@@ -1,4 +1,4 @@
-import { describe, it, expect, jest } from "@jest/globals";
+import { describe, it, expect, vi } from "vitest";
 import { Socket } from "socket.io";
 import { GameRoomRepository } from "../../../services/GameRoomRepository";
 import { issueSessionToken } from "../../../socketAuth";
@@ -17,20 +17,20 @@ import { AuthError, ValidationError, AuthErrorCode } from "../../middleware/erro
 // ---------------------------------------------------------------------------
 
 function makeMockSocket(id = "sock-1"): Partial<AuthenticatedSocket> {
-  const emitMock = jest.fn();
+  const emitMock = vi.fn();
   return {
     id,
     emit: emitMock,
     to: (() => ({ emit: emitMock })) as any,
-    on: jest.fn(),
+    on: vi.fn(),
     handshake: {},
   };
 }
 
 function makeMockRepo(overrides: Partial<GameRoomRepository> = {}): GameRoomRepository {
   return {
-    getSocketBinding: jest.fn(),
-    getRoom: jest.fn(),
+    getSocketBinding: vi.fn(),
+    getRoom: vi.fn(),
     ...overrides,
   } as unknown as GameRoomRepository;
 }
@@ -45,7 +45,7 @@ describe("requireSession", () => {
     process.env.SOCKET_SESSION_SECRET = secret;
     const socket = makeMockSocket();
     const token = issueSessionToken("ROOM1", 42);
-    const nextFn = jest.fn();
+    const nextFn = vi.fn();
 
     await requireSession((d) => d.playerToken)(socket, { playerToken: token }, nextFn);
 
@@ -58,7 +58,7 @@ describe("requireSession", () => {
 
   it("rejects a missing token", async () => {
     const socket = makeMockSocket();
-    const nextFn = jest.fn();
+    const nextFn = vi.fn();
 
     await requireSession((d) => d.playerToken)(socket, {}, nextFn);
 
@@ -69,7 +69,7 @@ describe("requireSession", () => {
 
   it("rejects an invalid token", async () => {
     const socket = makeMockSocket();
-    const nextFn = jest.fn();
+    const nextFn = vi.fn();
 
     await requireSession((d) => d.playerToken)(socket, { playerToken: "bad-token" }, nextFn);
 
@@ -100,7 +100,7 @@ describe("requireRoomAccess", () => {
     (socket as AuthenticatedSocket).playerId = playerId;
     (socket as AuthenticatedSocket).roomId = roomId;
 
-    const nextFn = jest.fn();
+    const nextFn = vi.fn();
     const repo = makeMockRepo({
       getSocketBinding: () => ({ roomId, playerId }),
       getRoom: () => room,
@@ -115,7 +115,7 @@ describe("requireRoomAccess", () => {
 
   it("rejects when no session exists", async () => {
     const socket = makeMockSocket();
-    const nextFn = jest.fn();
+    const nextFn = vi.fn();
     await requireRoomAccess(makeMockRepo())(socket, {}, nextFn);
 
     expect(nextFn).toHaveBeenCalledWith(expect.any(AuthError));
@@ -131,7 +131,7 @@ describe("requireRoomAccess", () => {
     (socket as AuthenticatedSocket).playerId = playerId;
     (socket as AuthenticatedSocket).roomId = roomId;
 
-    const nextFn = jest.fn();
+    const nextFn = vi.fn();
     const repo = makeMockRepo({
       getSocketBinding: () => ({ roomId: "OTHER", playerId: 999 }),
     });
@@ -151,7 +151,7 @@ describe("requireRoomAccess", () => {
     (socket as AuthenticatedSocket).playerId = playerId;
     (socket as AuthenticatedSocket).roomId = roomId;
 
-    const nextFn = jest.fn();
+    const nextFn = vi.fn();
     const repo = makeMockRepo({
       getSocketBinding: () => ({ roomId, playerId }),
       getRoom: () => undefined,
@@ -172,7 +172,7 @@ describe("requireRoomAccess", () => {
     (socket as AuthenticatedSocket).playerId = playerId;
     (socket as AuthenticatedSocket).roomId = roomId;
 
-    const nextFn = jest.fn();
+    const nextFn = vi.fn();
     const repo = makeMockRepo({
       getSocketBinding: () => ({ roomId, playerId }),
       getRoom: () => ({ roomId, players: [{ id: 99, name: "Bob" }] }),
@@ -199,7 +199,7 @@ describe("requireCurrentTurn", () => {
     (socket as AuthenticatedSocket).room = room;
     (socket as AuthenticatedSocket).player = player;
 
-    const nextFn = jest.fn();
+    const nextFn = vi.fn();
     await requireCurrentTurn(makeMockRepo())(socket, {}, nextFn);
 
     expect(nextFn).toHaveBeenCalledWith();
@@ -219,7 +219,7 @@ describe("requireCurrentTurn", () => {
     (socket as AuthenticatedSocket).room = room;
     (socket as AuthenticatedSocket).player = player;
 
-    const nextFn = jest.fn();
+    const nextFn = vi.fn();
     await requireCurrentTurn(makeMockRepo())(socket, {}, nextFn);
 
     expect(nextFn).toHaveBeenCalledWith(expect.objectContaining({ code: AuthErrorCode.NOT_YOUR_TURN }));
@@ -232,14 +232,14 @@ describe("requireCurrentTurn", () => {
 
 describe("composeMiddlewares", () => {
   it("runs middlewares in sequence and merges results", async () => {
-    const m1 = jest.fn((_socket, _data, next) => next(null, { a: 1 }));
-    const m2 = jest.fn((_socket, data, next) => {
+    const m1 = vi.fn((_socket, _data, next) => next(null, { a: 1 }));
+    const m2 = vi.fn((_socket, data, next) => {
       expect(data.a).toBe(1);
       next(null, { b: 2 });
     });
 
     const composed = composeMiddlewares(m1 as any, m2 as any);
-    const finalCb = jest.fn();
+    const finalCb = vi.fn();
 
     await composed(makeMockSocket() as any, {}, finalCb);
 
@@ -249,12 +249,12 @@ describe("composeMiddlewares", () => {
   });
 
   it("stops on first error", async () => {
-    const m1 = jest.fn((_socket, _data, next) => {
+    const m1 = vi.fn((_socket, _data, next) => {
       next(new AuthError(AuthErrorCode.INVALID_TOKEN, "fail"));
     });
-    const m2 = jest.fn();
+    const m2 = vi.fn();
     const composed = composeMiddlewares(m1 as any, m2 as any);
-    const finalCb = jest.fn();
+    const finalCb = vi.fn();
 
     await composed(makeMockSocket() as any, {}, finalCb);
 
@@ -264,7 +264,7 @@ describe("composeMiddlewares", () => {
 
   it("handles empty middleware list", async () => {
     const composed = composeMiddlewares();
-    const finalCb = jest.fn();
+    const finalCb = vi.fn();
     await composed(makeMockSocket() as any, {}, finalCb);
     expect(finalCb).toHaveBeenCalledWith();
   });
@@ -277,7 +277,7 @@ describe("composeMiddlewares", () => {
 describe("validatePlayerName", () => {
   it("passes valid names and returns normalizedName", async () => {
     const socket = makeMockSocket();
-    const nextFn = jest.fn();
+    const nextFn = vi.fn();
 
     await validatePlayerName((d) => d.name)(socket, { name: " Alice " }, nextFn);
 
@@ -288,7 +288,7 @@ describe("validatePlayerName", () => {
 
   it("rejects empty names", async () => {
     const socket = makeMockSocket();
-    const nextFn = jest.fn();
+    const nextFn = vi.fn();
 
     await validatePlayerName((d) => d.name)(socket, { name: "" }, nextFn);
 
@@ -297,7 +297,7 @@ describe("validatePlayerName", () => {
 
   it("rejects names exceeding max length", async () => {
     const socket = makeMockSocket();
-    const nextFn = jest.fn();
+    const nextFn = vi.fn();
 
     await validatePlayerName((d) => d.name)(socket, { name: "a".repeat(33) }, nextFn);
 

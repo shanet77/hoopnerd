@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getConnectionDetails,
   getPlayerById,
@@ -6,7 +6,7 @@ import {
 } from "../index";
 
 const mockDb = {
-  query: jest.fn() as jest.Mock<any>,
+  query: vi.fn() as vi.Mock<any>,
 };
 
 describe("@repo/logic", () => {

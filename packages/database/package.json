@@ -14,22 +14,17 @@
     "seed": "pnpm run build && node dist/seed.js",
     "ingest:transactions": "pnpm run build && node dist/ingestTransactions.js --season 2026",
     "migrate": "node src/migrate.ts",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
-  },
-  "jest": {
-    "preset": "@repo/jest-presets/node"
+    "test": "vitest run"
   },
   "dependencies": {
     "pg": "^8.22.0"
   },
   "devDependencies": {
-    "@jest/globals": "^30.4.1",
-    "@repo/jest-presets": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^25.9.4",
     "@types/pg": "^8.20.0",
     "csv-parser": "^3.2.1",
-    "jest": "^30.4.2",
-    "typescript": "6.0.2"
+    "typescript": "6.0.2",
+    "vitest": "^4.1.9"
   }
 }

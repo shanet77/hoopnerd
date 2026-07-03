@@ -1,16 +1,16 @@
-import { describe, it, expect, beforeEach, jest } from "@jest/globals";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { recordGameStats } from "../StatsRecorder";
 import { GameRoomState, PlayerConnection } from "@repo/types";
 import databasePool from "@repo/database";
 
-jest.mock("@repo/database", () => ({
+vi.mock("@repo/database", () => ({
   __esModule: true,
   default: {
-    query: jest.fn(),
+    query: vi.fn(),
   },
 }));
 
-const mockDbQuery = databasePool.query as unknown as jest.Mock;
+const mockDbQuery = databasePool.query as unknown as vi.Mock;
 
 function makeRoom(overrides: Partial<GameRoomState> = {}): GameRoomState {
   return {
@@ -42,7 +42,7 @@ function makeConnection(
 
 describe("recordGameStats", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockDbQuery.mockResolvedValue({ rows: [] });
   });
 
