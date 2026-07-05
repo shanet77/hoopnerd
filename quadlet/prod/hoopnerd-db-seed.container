@@ -14,11 +14,9 @@ Volume=/home/USER/project/hoopnerd/datasets:/app/datasets:ro
 
 Network=hoopnerd-internal
 
-SecurityOpt=no-new-privileges:true
-DropCapability=ALL
-ReadOnly=true
-Tmpfs=/tmp
-RunInit=yes
+# No --read-only here — Prisma needs writable /app
+PodmanArgs=--security-opt=no-new-privileges:true
+PodmanArgs=--cap-drop=ALL
 
 [Service]
 Type=oneshot

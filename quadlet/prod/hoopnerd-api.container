@@ -9,26 +9,20 @@ ContainerName=hoopnerd-api
 
 EnvironmentFile=/home/USER/project/hoopnerd/.env.prod
 
-# Extra env vars not in .env.prod
 Environment=NODE_ENV=production
 Environment=PORT=3001
-
-# Port 3001 exposed to other containers on edge network; caddy proxies to it.
-# Not published to host — only caddy listens on host ports.
-Expose=3001
 
 Volume=/home/USER/project/hoopnerd/datasets:/app/datasets:ro
 
 Network=hoopnerd-edge
 Network=hoopnerd-internal
-# DNS alias so Caddyfile can reference this container as "api" (docker-compose compat)
-NetworkAlias=api
+PodmanArgs=--network-alias=api
 
-SecurityOpt=no-new-privileges:true
-DropCapability=ALL
-ReadOnly=true
-Tmpfs=/tmp
-RunInit=yes
+PodmanArgs=--security-opt=no-new-privileges:true
+PodmanArgs=--cap-drop=ALL
+PodmanArgs=--read-only
+PodmanArgs=--tmpfs=/tmp
+PodmanArgs=--init
 
 [Service]
 Restart=always

@@ -16,12 +16,12 @@ Volume=hoopnerd-caddy-config:/config
 
 Network=hoopnerd-edge
 
-SecurityOpt=no-new-privileges:true
-DropCapability=ALL
-AddCapability=NET_BIND_SERVICE
-ReadOnly=true
-Tmpfs=/tmp
-RunInit=yes
+PodmanArgs=--security-opt=no-new-privileges:true
+PodmanArgs=--cap-drop=ALL
+PodmanArgs=--cap-add=NET_BIND_SERVICE
+PodmanArgs=--read-only
+PodmanArgs=--tmpfs=/tmp
+PodmanArgs=--init
 
 [Service]
 Restart=always

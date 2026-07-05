@@ -1,13 +1,37 @@
-Podman Quadlet files for HoopNerd — rootless, systemd-native container management.
+# Podman Quadlets for HoopNerd
+
+Rootless, systemd-native container management. Replaces docker-compose.
+
+**Podman version:** 4.9.3+ (Ubuntu 24.04). Some newer quadlet keys (`Expose=`,
+`SecurityOpt=`, `NetworkAlias=`) are not available — we use `PodmanArgs=` as a
+fallback for those.
 
 ## Directory layout
 
 ```
 quadlet/
-├── dev/          # Local dev environment (postgres + db-seed)
-├── prod/         # Production stack (postgres, api, web, caddy, db-seed)
+├── dev/          # Local dev (postgres + db-seed)
+├── prod/         # Production stack (postgres, api, web, caddy, db-seed, example-site)
 └── README.md
 ```
+
+## Important notes for podman 4.9.x
+
+- **Networks** are created manually (`podman network create`), not via `.network`
+  quadlet files (those create names with a `systemd-` prefix that breaks
+  `Network=` references).
+- **systemctl enable** does NOT work on quadlet-generated units. Auto-start on
+  boot is handled by `[Install] WantedBy=default.target` in each `.container`
+  file.
+- **`ip_unprivileged_port_start=80`** is required for rootless podman to bind
+  to ports 80/443:
+  ```bash
+  sudo sysctl net.ipv4.ip_unprivileged_port_start=80
+  echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/99-podman-ports.conf
+  ```
+- **Rootless podman** cannot access files owned by other users (even if group
+  permissions allow it). The example-site volume uses a copy of the static
+  site in `/home/USER/sites/personal-site`.
 
 ## Dev (local development)
 
@@ -22,24 +46,36 @@ and runs the seed.
 
 Daily use:
 ```bash
-systemctl --user start hn-dev-postgres.service    # start (auto-starts on boot if enabled)
-systemctl --user stop hn-dev-postgres.service     # stop
-systemctl --user status hn-dev-postgres.service   # check status
-podman logs hoopnerd-postgres-dev                 # view logs
-podman exec -it hoopnerd-postgres-dev psql -U postgres -d connectaball_dev  # psql shell
-```
-
-Seeded again after schema changes:
-```bash
-systemctl --user start hn-dev-db-seed.service
+systemctl --user start hn-dev-postgres.service
+systemctl --user stop hn-dev-postgres.service
+systemctl --user status hn-dev-postgres.service
+podman logs hoopnerd-postgres-dev
 ```
 
 ## Production (VPS)
 
-Deployment is handled by the CI pipeline (`.forgejo/workflows/deploy.yml`) which
-runs `scripts/deploy-quadlet.sh` on the target VPS.
+Deployment is handled by CI (`.forgejo/workflows/deploy.yml`) which runs
+`scripts/deploy-quadlet.sh` on the VPS.
 
-Manual deployment (from VPS, with repo cloned at `/home/USER/project/hoopnerd`):
+### First-time VPS setup
+```bash
+# 1. Install podman
+sudo apt install -y podman
+
+# 2. Allow binding to low ports
+sudo sysctl net.ipv4.ip_unprivileged_port_start=80
+echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/99-podman-ports.conf
+
+# 3. Enable user lingering (services survive logout)
+loginctl enable-linger <deploy-user>
+
+# 4. Clone repo and run deploy
+git clone <repo> ~/project/hoopnerd
+cd ~/project/hoopnerd
+# Then run the deploy script or trigger via CI
+```
+
+### Manual deployment
 ```bash
 export IMAGE_TAG=<git-sha>
 export REGISTRY_URL=zot.example.com
@@ -51,23 +87,13 @@ export DEPLOY_PATH=/home/USER/project/hoopnerd
 ./scripts/deploy-quadlet.sh
 ```
 
-The script:
-1. Logs into the container registry with podman
-2. Pulls the specified SHA-tagged images and retags them as `main-latest`
-3. Builds the `db-seed` image from `packages/database/Dockerfile.seed`
-4. Symlinks quadlet files from `quadlet/prod/` to `~/.config/containers/systemd/`
-5. Runs `systemctl --user daemon-reload`
-6. Runs db-seed (one-shot)
-7. Restarts all services
-8. Verifies running containers match the expected image digests
-
-## Service management (prod)
+## Service management
 
 ```bash
 # View all services
-systemctl --user status 'hoopnerd-*'
+systemctl --user status 'hoopnerd-*' example-site.service
 
-# Restart a single service
+# Restart a service
 systemctl --user restart hoopnerd-api.service
 
 # View logs
@@ -75,28 +101,27 @@ journalctl --user -u hoopnerd-api.service -f
 podman logs hoopnerd-api
 
 # Stop everything
-systemctl --user stop hoopnerd-caddy.service hoopnerd-web.service hoopnerd-api.service hoopnerd-postgres.service
+systemctl --user stop hoopnerd-caddy.service hoopnerd-web.service hoopnerd-api.service hoopnerd-postgres.service example-site.service
 
-# Enable auto-start on boot
-systemctl --user enable hoopnerd-postgres.service hoopnerd-api.service hoopnerd-web.service hoopnerd-caddy.service
-
-# Run database seed (after schema changes)
+# Run database seed
 systemctl --user start hoopnerd-db-seed.service
 
-# Check container status
+# Check containers
 podman ps --filter name=hoopnerd
+podman ps --filter name=example-site
 ```
 
-## How it works
+## Architecture
 
-Each `.container` file becomes a systemd user unit. Podman's `quadlet` generator
-converts them at `daemon-reload` time. The result: containers are managed
-natively by systemd — auto-restart on failure, auto-start on boot, unified logging
-via journald.
+Each `.container` file becomes a systemd user unit via podman's quadlet generator.
+Containers are managed natively by systemd — auto-restart on failure, auto-start
+on boot, unified logging via journald.
 
-- **Networks** (`hoopnerd-edge`, `hoopnerd-internal`) are defined in `.network` files
-- **Volumes** are defined in `.volume` files and auto-created on first use
-- **Dependencies** (`Requires=`, `After=`) order startup: postgres → api → web → caddy
-- **One-shot containers** (db-seed) use `Type=oneshot` and `RemainAfterExit=no`
-
-No Docker daemon, no docker-compose. Just podman + systemd.
+| Service | Network(s) | Ports | Notes |
+|---------|-----------|-------|-------|
+| hoopnerd-postgres | `hoopnerd-internal` | — | Network alias `postgres` for docker-compose compat |
+| hoopnerd-api | `hoopnerd-edge`, `hoopnerd-internal` | — | Network alias `api`, read-only rootfs |
+| hoopnerd-web | `hoopnerd-edge` | — | Network alias `web`, read-only rootfs |
+| hoopnerd-caddy | `hoopnerd-edge` | 80, 443 (host) | Reverse proxy, CAP_NET_BIND_SERVICE |
+| hoopnerd-db-seed | `hoopnerd-internal` | — | Type=oneshot, runs once per deploy |
+| example-site | `hoopnerd-edge` | — | Static file server for example.com |

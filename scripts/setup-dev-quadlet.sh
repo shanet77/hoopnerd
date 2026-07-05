@@ -22,11 +22,16 @@ if ! command -v podman &>/dev/null; then
   exit 1
 fi
 
-# Symlink quadlet files
+# Create dev network (manually — .network quadlet files get systemd- prefix)
+echo ""
+echo "Ensuring dev network exists..."
+podman network exists hn-dev || podman network create hn-dev
+
+# Symlink quadlet files (.container and .volume only)
 mkdir -p "${QUADLET_DIR}"
 echo ""
 echo "Linking quadlet files..."
-for quadlet_file in "${QUADLET_SRC}"/*.{container,network,volume}; do
+for quadlet_file in "${QUADLET_SRC}"/*.container "${QUADLET_SRC}"/*.volume; do
   [ -f "${quadlet_file}" ] || continue
   unit_name="$(basename "${quadlet_file}")"
   target="${QUADLET_DIR}/${unit_name}"
@@ -48,7 +53,8 @@ podman build \
   --tag localhost/hoopnerd-db-seed-dev:local \
   "${PROJECT_ROOT}"
 
-# Reload systemd
+# Reload systemd (quadlet units auto-start via [Install] WantedBy=default.target,
+# so systemctl enable is not needed — it would fail on generated units anyway)
 echo ""
 echo "Reloading systemd user units..."
 systemctl --user daemon-reload
@@ -56,7 +62,7 @@ systemctl --user daemon-reload
 # Start postgres
 echo ""
 echo "Starting PostgreSQL..."
-systemctl --user enable --now hn-dev-postgres.service
+systemctl --user start hn-dev-postgres.service
 
 # Wait for healthy postgres
 echo "Waiting for PostgreSQL to be healthy..."

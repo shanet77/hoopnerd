@@ -12,11 +12,11 @@ Environment=POSTGRES_DB=connectaball_dev
 Environment=POSTGRES_USER=postgres
 Environment=POSTGRES_PASSWORD=postgres
 
-Volume=hn-dev-postgres-data:/var/lib/postgresql/data
+# postgres 18+ expects mount at /var/lib/postgresql
+Volume=hn-dev-postgres-data:/var/lib/postgresql
 
 Network=hn-dev
-# DNS alias matching docker-compose service name
-NetworkAlias=postgres
+PodmanArgs=--network-alias=postgres
 
 HealthCmd=pg_isready -U postgres
 HealthInterval=5s

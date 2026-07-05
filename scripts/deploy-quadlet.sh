@@ -38,6 +38,13 @@ if ! command -v podman &>/dev/null; then
 fi
 echo "podman version: $(podman --version)"
 
+# --- ensure podman networks exist --------------------------------------------
+# Podman .network quadlet files create networks with "systemd-" prefix, which
+# breaks the Network= references in container files.  Create them manually.
+echo "Ensuring podman networks exist..."
+podman network exists hoopnerd-edge || podman network create hoopnerd-edge
+podman network exists hoopnerd-internal || podman network create --internal hoopnerd-internal
+
 # --- registry login ----------------------------------------------------------
 REGISTRY_HOST="${REGISTRY_URL#https://}"
 REGISTRY_HOST="${REGISTRY_HOST#http://}"
@@ -87,14 +94,13 @@ podman build \
   --tag localhost/hoopnerd-db-seed:local \
   .
 
-# --- deploy quadlet files ----------------------------------------------------
+# --- deploy quadlet files (.container and .volume only) ----------------------
 QUADLET_DIR="${HOME}/.config/containers/systemd"
 mkdir -p "${QUADLET_DIR}"
 
 # Link quadlet files so they stay in sync with the repo on subsequent pulls.
-# Only link files that aren't already symlinked to the correct target.
 echo "Deploying quadlet unit files to ${QUADLET_DIR}..."
-for quadlet_file in quadlet/prod/*.{container,network,volume}; do
+for quadlet_file in quadlet/prod/*.container quadlet/prod/*.volume; do
   [ -f "${quadlet_file}" ] || continue
   unit_name="$(basename "${quadlet_file}")"
   target="${QUADLET_DIR}/${unit_name}"
@@ -108,11 +114,11 @@ for quadlet_file in quadlet/prod/*.{container,network,volume}; do
 done
 
 # --- reload systemd and start/restart services -------------------------------
+# Note: quadlet-generated units derive from the symlinked files, so
+# systemctl enable is not needed — [Install] WantedBy=default.target in each
+# .container file handles auto-start on boot.
 echo "Reloading systemd user units..."
 systemctl --user daemon-reload
-
-# Enable services (they'll auto-start on boot)
-systemctl --user enable hoopnerd-postgres.service hoopnerd-api.service hoopnerd-web.service hoopnerd-caddy.service example-site.service
 
 # Run database seed as a one-shot task before starting the app stack.
 # The seed container has After=hoopnerd-postgres.service so it will wait.
@@ -120,8 +126,6 @@ echo "Running database seed..."
 if systemctl --user start hoopnerd-db-seed.service; then
   echo "Database seed completed."
 else
-  # db-seed exits non-zero if data already exists (prisma migrate dev).
-  # This is expected on subsequent deploys. Check container logs for details.
   echo "Database seed finished (non-zero exit may be expected if already seeded)."
   podman logs hoopnerd-db-seed 2>&1 || true
 fi
@@ -174,3 +178,4 @@ systemctl --user status hoopnerd-postgres.service hoopnerd-api.service hoopnerd-
 echo ""
 echo "Containers:"
 podman ps --filter name=hoopnerd
+podman ps --filter name=example-site

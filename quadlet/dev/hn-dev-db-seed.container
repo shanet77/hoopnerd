@@ -7,7 +7,6 @@ After=hn-dev-postgres.service
 Image=localhost/hoopnerd-db-seed-dev:local
 ContainerName=hoopnerd-db-seed-dev
 
-# Uses "postgres" hostname (matches NetworkAlias on postgres container)
 Environment=DB_HOST=postgres
 Environment=DB_NAME=connectaball_dev
 Environment=DB_USER=postgres

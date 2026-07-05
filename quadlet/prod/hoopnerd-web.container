@@ -12,18 +12,15 @@ EnvironmentFile=/home/USER/project/hoopnerd/.env.prod
 Environment=NODE_ENV=production
 Environment=PORT=3000
 
-Expose=3000
-
 Network=hoopnerd-edge
-# DNS alias so Caddyfile can reference this container as "web" (docker-compose compat)
-NetworkAlias=web
+PodmanArgs=--network-alias=web
 
-SecurityOpt=no-new-privileges:true
-DropCapability=ALL
-ReadOnly=true
-Tmpfs=/tmp
-Tmpfs=/apps/web/.next/cache
-RunInit=yes
+PodmanArgs=--security-opt=no-new-privileges:true
+PodmanArgs=--cap-drop=ALL
+PodmanArgs=--read-only
+PodmanArgs=--tmpfs=/tmp
+PodmanArgs=--tmpfs=/apps/web/.next/cache
+PodmanArgs=--init
 
 [Service]
 Restart=always
