@@ -1,0 +1,32 @@
+[Unit]
+Description=HoopNerd PostgreSQL 18
+After=network-online.target
+
+[Container]
+Image=docker.io/library/postgres:18-alpine
+ContainerName=hoopnerd-postgres
+
+# EnvironmentFile passes all vars from .env.prod to the container.
+# The postgres image reads POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD automatically.
+EnvironmentFile=/home/USER/project/hoopnerd/.env.prod
+
+Volume=hoopnerd-postgres-data:/var/lib/postgresql/data
+
+Network=hoopnerd-internal
+# DNS alias so other containers can reach us as "postgres" (matches DB_HOST in .env.prod)
+NetworkAlias=postgres
+
+# Health check values must match POSTGRES_USER / POSTGRES_DB in .env.prod
+HealthCmd=/bin/sh -c "pg_isready -U hoopnerd -d hoopnerd"
+HealthInterval=10s
+HealthTimeout=5s
+HealthRetries=5
+
+SecurityOpt=no-new-privileges:true
+RunInit=yes
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

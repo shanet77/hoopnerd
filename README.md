@@ -48,7 +48,8 @@ CREATE TABLE rosters (
 
 ## Forgejo CI/CD (Actions)
 - Workflow: `.forgejo/workflows/deploy.yml`
-- Deployment helper (executed on Racknerd via SSH): `scripts/deploy-racknerd.sh`
+- Deployment helper (executed on Racknerd via SSH): `scripts/deploy-quadlet.sh`
+- Container orchestration: [Podman Quadlets](quadlet/) (replaces docker-compose)
 
 ### Required Forgejo Actions Secrets
 - `DEPLOY_HOST` (Racknerd host/IP)
@@ -76,7 +77,7 @@ CREATE TABLE rosters (
 ### Deployment Behavior
 - Pull requests run `test`.
 - Push to `main` builds `api` and `web` Docker images on `dockernode` and pushes them to `zot`.
-- Racknerd deploy then pulls tagged images from the registry and restarts services without local builds.
+- Racknerd deploy then pulls tagged images from the registry and restarts services via Podman Quadlets (systemd units). No docker-compose on the VPS.
 - `workflow_dispatch` supports optional `image_tag` to redeploy an existing tag without rebuilding.
 
 ## Boundaries
@@ -101,7 +102,8 @@ Connectaball/
 ├── scripts/                       # Optional: CI/CD or database migration scripts
 ├── .dockerignore                  # Prevents sending node_modules to Docker daemon
 ├── Caddyfile                      # Reverse proxy configuration
-├── docker-compose.yaml            # Local & VPS orchestration
+├── quadlet/                        # Podman Quadlet unit files (replaces docker-compose)
+├── docker-compose.yaml            # Local & VPS orchestration (legacy — see quadlet/)
 ├── turbo.json
 ├── package.json
 ├── pnpm-workspace.yaml

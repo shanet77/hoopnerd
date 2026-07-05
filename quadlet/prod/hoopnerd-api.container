@@ -1,0 +1,37 @@
+[Unit]
+Description=HoopNerd API (Express)
+Requires=hoopnerd-postgres.service
+After=hoopnerd-postgres.service network-online.target
+
+[Container]
+Image=zot.example.com/namespace/hoopnerd-api:main-latest
+ContainerName=hoopnerd-api
+
+EnvironmentFile=/home/USER/project/hoopnerd/.env.prod
+
+# Extra env vars not in .env.prod
+Environment=NODE_ENV=production
+Environment=PORT=3001
+
+# Port 3001 exposed to other containers on edge network; caddy proxies to it.
+# Not published to host — only caddy listens on host ports.
+Expose=3001
+
+Volume=/home/USER/project/hoopnerd/datasets:/app/datasets:ro
+
+Network=hoopnerd-edge
+Network=hoopnerd-internal
+# DNS alias so Caddyfile can reference this container as "api" (docker-compose compat)
+NetworkAlias=api
+
+SecurityOpt=no-new-privileges:true
+DropCapability=ALL
+ReadOnly=true
+Tmpfs=/tmp
+RunInit=yes
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

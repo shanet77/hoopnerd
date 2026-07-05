@@ -1,0 +1,30 @@
+[Unit]
+Description=HoopNerd Dev PostgreSQL 18
+After=network-online.target
+
+[Container]
+Image=docker.io/library/postgres:18-alpine
+ContainerName=hoopnerd-postgres-dev
+
+PublishPort=5432:5432
+
+Environment=POSTGRES_DB=connectaball_dev
+Environment=POSTGRES_USER=postgres
+Environment=POSTGRES_PASSWORD=postgres
+
+Volume=hn-dev-postgres-data:/var/lib/postgresql/data
+
+Network=hn-dev
+# DNS alias matching docker-compose service name
+NetworkAlias=postgres
+
+HealthCmd=pg_isready -U postgres
+HealthInterval=5s
+HealthTimeout=5s
+HealthRetries=5
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

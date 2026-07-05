@@ -1,0 +1,3 @@
+[Network]
+Internal=true
+# Private network for postgres, api, db-seed — no outbound internet

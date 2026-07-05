@@ -1,0 +1,32 @@
+[Unit]
+Description=HoopNerd Web (Next.js)
+Requires=hoopnerd-api.service
+After=hoopnerd-api.service network-online.target
+
+[Container]
+Image=zot.example.com/namespace/hoopnerd-web:main-latest
+ContainerName=hoopnerd-web
+
+EnvironmentFile=/home/USER/project/hoopnerd/.env.prod
+
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+Expose=3000
+
+Network=hoopnerd-edge
+# DNS alias so Caddyfile can reference this container as "web" (docker-compose compat)
+NetworkAlias=web
+
+SecurityOpt=no-new-privileges:true
+DropCapability=ALL
+ReadOnly=true
+Tmpfs=/tmp
+Tmpfs=/apps/web/.next/cache
+RunInit=yes
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
