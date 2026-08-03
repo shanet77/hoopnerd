@@ -22,7 +22,7 @@
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^25.9.5",
-    "@types/pg": "^8.20.0",
+    "@types/pg": "^8.20.3",
     "csv-parser": "^3.2.1",
     "typescript": "6.0.2",
     "vitest": "^4.1.10"
