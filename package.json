@@ -15,9 +15,9 @@
     "test:coverage": "turbo run test -- --coverage"
   },
   "devDependencies": {
-    "oxlint": "^1.76.0",
+    "oxlint": "^1.78.0",
     "prettier": "^3.9.6",
-    "turbo": "^2.10.8"
+    "turbo": "^2.10.10"
   },
   "engines": {
     "node": ">=14.0.0",
