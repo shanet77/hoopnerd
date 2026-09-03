@@ -15,6 +15,7 @@ set -euo pipefail
 #   REGISTRY_USERNAME   Registry login user          (required)
 #   REGISTRY_PASSWORD_B64  Base64-encoded password   (required)
 #   REGISTRY_NAMESPACE  Registry project namespace   (required)
+#   TARGET_SHA          Git ref/SHA to sync repo to (default origin/main)
 # =============================================================================
 
 echo "=== deploy-quadlet starting ==="
@@ -30,6 +31,12 @@ DEPLOY_TARGET_PATH="${DEPLOY_PATH:-}"
 : "${REGISTRY_NAMESPACE:?REGISTRY_NAMESPACE is required}"
 
 cd "${DEPLOY_TARGET_PATH}"
+
+SYNC_REF="${TARGET_SHA:-origin/main}"
+git fetch --all --prune --tags
+git clean -fd -- Caddyfile caddy quadlet deploy-quadlet.sh setup-dev-quadlet.sh scripts/deploy-quadlet.sh scripts/setup-dev-quadlet.sh
+git checkout --detach "${SYNC_REF}"
+echo "Deploying commit: $(git rev-parse HEAD)"
 
 # --- ensure podman is available ----------------------------------------------
 if ! command -v podman &>/dev/null; then
