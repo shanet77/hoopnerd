@@ -1,42 +1,22 @@
 {
-  # Set this to a monitored inbox before production launch.
-  # email you@hoopnerd.xyz
+	# Set this to a monitored inbox before production launch.
+	# email you@hoopnerd.xyz
 }
 
+# Shared security headers applied by every site below.
 (security_headers) {
-  encode zstd gzip
-  header {
-    Strict-Transport-Security "max-age=31536000; includeSubDomains"
-    X-Content-Type-Options "nosniff"
-    X-Frame-Options "DENY"
-    Referrer-Policy "strict-origin-when-cross-origin"
-    Permissions-Policy "geolocation=(), camera=(), microphone=()"
-    -Server
-  }
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), camera=(), microphone=()"
+		-Server
+	}
 }
 
-hoopnerd.xyz, www.hoopnerd.xyz {
-  import security_headers
-  reverse_proxy web:3000
-}
-
-api.hoopnerd.xyz {
-  import security_headers
-  reverse_proxy api:3001
-}
-
-graph.hoopnerd.xyz {
-  import security_headers
-  reverse_proxy web:3000
-}
-
-
-example.com {
-  import security_headers
-  redir https://www.example.com{uri} 308
-}
-
-www.example.com {
-  import security_headers
-  reverse_proxy example-site:8080
-}
+# Per-site blocks live in caddy/sites/*.caddy (one file per site).
+# Mounted at /etc/caddy/sites inside the container — see
+# quadlet/prod/hoopnerd-caddy.container.
+import sites/*.caddy

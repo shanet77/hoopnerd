@@ -7,6 +7,10 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/sites:/etc/caddy/sites:ro
+      - /home/USER/sites:/srv/sites:ro
+      - /home/USER/sites/steam2-data/depots:/srv/sites/steam2.example.com/data/depots:ro
+      - /home/USER/logs/caddy:/var/log/caddy
       - caddy_data:/data
       - caddy_config:/config
     networks:

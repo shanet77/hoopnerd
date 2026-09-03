@@ -11,7 +11,8 @@ fallback for those.
 ```
 quadlet/
 ├── dev/          # Local dev (postgres + db-seed)
-├── prod/         # Production stack (postgres, api, web, caddy, db-seed, example-site)
+├── prod/         # Production stack (postgres, api, web, caddy, db-seed, steam2-goaccess)
+├── retired/      # Decommissioned units (old per-site caddy file-servers)
 └── README.md
 ```
 
@@ -30,8 +31,8 @@ quadlet/
   echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/99-podman-ports.conf
   ```
 - **Rootless podman** cannot access files owned by other users (even if group
-  permissions allow it). The example-site volume uses a copy of the static
-  site in `/home/USER/sites/personal-site`.
+  permissions allow it). Static sites live in `/home/USER/sites/` owned by
+  the `<deploy-user>` user.
 
 ## Dev (local development)
 
@@ -91,7 +92,7 @@ export DEPLOY_PATH=/home/USER/project/hoopnerd
 
 ```bash
 # View all services
-systemctl --user status 'hoopnerd-*' example-site.service
+systemctl --user status 'hoopnerd-*' steam2-goaccess.service
 
 # Restart a service
 systemctl --user restart hoopnerd-api.service
@@ -101,14 +102,14 @@ journalctl --user -u hoopnerd-api.service -f
 podman logs hoopnerd-api
 
 # Stop everything
-systemctl --user stop hoopnerd-caddy.service hoopnerd-web.service hoopnerd-api.service hoopnerd-postgres.service example-site.service
+systemctl --user stop hoopnerd-caddy.service hoopnerd-web.service hoopnerd-api.service hoopnerd-postgres.service steam2-goaccess.service
 
 # Run database seed
 systemctl --user start hoopnerd-db-seed.service
 
 # Check containers
 podman ps --filter name=hoopnerd
-podman ps --filter name=example-site
+podman ps --filter name=steam2-goaccess
 ```
 
 ## Architecture
@@ -122,6 +123,6 @@ on boot, unified logging via journald.
 | hoopnerd-postgres | `hoopnerd-internal` | — | Network alias `postgres` for docker-compose compat |
 | hoopnerd-api | `hoopnerd-edge`, `hoopnerd-internal` | — | Network alias `api`, read-only rootfs |
 | hoopnerd-web | `hoopnerd-edge` | — | Network alias `web`, read-only rootfs |
-| hoopnerd-caddy | `hoopnerd-edge` | 80, 443 (host) | Reverse proxy, CAP_NET_BIND_SERVICE |
+| hoopnerd-caddy | `hoopnerd-edge` | 80, 443 (host) | Reverse proxy + static file-server for all sites, CAP_NET_BIND_SERVICE |
 | hoopnerd-db-seed | `hoopnerd-internal` | — | Type=oneshot, runs once per deploy |
-| example-site | `hoopnerd-edge` | — | Static file server for example.com |
+| steam2-goaccess | — | — | Regenerates steam2 stats HTML/JSON every 10 min |

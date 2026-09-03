@@ -1,0 +1,20 @@
+[Unit]
+Description=steam2 analytics GoAccess (regen every 10 min)
+After=network-online.target hoopnerd-caddy.service
+Requires=hoopnerd-caddy.service
+
+[Container]
+Image=docker.io/library/alpine:latest
+ContainerName=steam2-goaccess
+Volume=/home/USER/logs/caddy:/var/log/caddy:ro
+Volume=/home/USER/logs/goaccess:/var/log/goaccess
+Volume=/home/USER/sites/steam2.example.com:/srv
+Volume=/home/USER/bin/goaccess-loop.sh:/usr/local/bin/goaccess-loop.sh:ro
+Exec=sh /usr/local/bin/goaccess-loop.sh
+
+[Service]
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,14 @@
+hoopnerd.xyz, www.hoopnerd.xyz {
+	import security_headers
+	reverse_proxy web:3000
+}
+
+api.hoopnerd.xyz {
+	import security_headers
+	reverse_proxy api:3001
+}
+
+graph.hoopnerd.xyz {
+	import security_headers
+	reverse_proxy web:3000
+}

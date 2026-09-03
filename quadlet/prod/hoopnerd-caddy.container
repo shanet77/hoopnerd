@@ -10,8 +10,17 @@ ContainerName=hoopnerd-caddy
 PublishPort=80:80
 PublishPort=443:443
 
+# Main Caddyfile (globals + shared snippets + import of sites/*.caddy)
 Volume=/home/USER/project/hoopnerd/Caddyfile:/etc/caddy/Caddyfile:ro
+# Per-site blocks: add a new file under caddy/sites/ for each future site.
+Volume=/home/USER/project/hoopnerd/caddy/sites:/etc/caddy/sites:ro
+# All static site roots in one mount so new sites need no quadlet change.
+Volume=/home/USER/sites:/srv/sites:ro
+# Overlay the steam2 depots dataset onto the steam2 site tree
+# (must come after the parent /srv/sites mount).
+Volume=/home/USER/sites/steam2-data/depots:/srv/sites/steam2.example.com/data/depots:ro
 Volume=hoopnerd-caddy-data:/data
+Volume=/home/USER/logs/caddy:/var/log/caddy
 Volume=hoopnerd-caddy-config:/config
 
 Network=hoopnerd-edge

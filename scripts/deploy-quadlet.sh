@@ -135,7 +135,7 @@ echo "Starting/restarting application services..."
 systemctl --user restart hoopnerd-postgres.service
 sleep 2  # let postgres settle before api connects
 
-systemctl --user restart hoopnerd-api.service hoopnerd-web.service hoopnerd-caddy.service example-site.service
+systemctl --user restart hoopnerd-api.service hoopnerd-web.service hoopnerd-caddy.service steam2-goaccess.service
 
 # --- verify deployed containers are running the expected images ---------------
 verify_service_image() {
@@ -173,9 +173,9 @@ fi
 echo ""
 echo "=== deploy-quadlet complete ==="
 echo "Service status:"
-systemctl --user status hoopnerd-postgres.service hoopnerd-api.service hoopnerd-web.service hoopnerd-caddy.service example-site.service --no-pager --lines=0 || true
+systemctl --user status hoopnerd-postgres.service hoopnerd-api.service hoopnerd-web.service hoopnerd-caddy.service steam2-goaccess.service --no-pager --lines=0 || true
 
 echo ""
 echo "Containers:"
 podman ps --filter name=hoopnerd
-podman ps --filter name=example-site
+podman ps --filter name=steam2-goaccess
