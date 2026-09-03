@@ -5,14 +5,14 @@ WORKDIR /app
 # Copy package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm (pinned to v10: lockfile v9 compatible; latest v11.13.0 is a broken release)
+RUN npm install -g pnpm@10
 
 # Copy the entire project
 COPY . .
 
 # Install dependencies
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 # Build the database package
 RUN pnpm --filter @repo/database build
