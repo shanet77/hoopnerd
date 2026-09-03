@@ -5,8 +5,10 @@ WORKDIR /app
 # Copy package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Install pnpm (pinned to v10: lockfile v9 compatible; latest v11.13.0 is a broken release)
-RUN npm install -g pnpm@10
+# Install pnpm (pinned to 10.30.1, same toolchain as apps/api + apps/web Dockerfiles:
+# bare `npm i -g pnpm` pulls latest v11 which is a broken release, and latest
+# pnpm@10 errors on this repo's pnpm-workspace.yaml format)
+RUN corepack enable && corepack prepare pnpm@10.30.1 --activate
 
 # Copy the entire project
 COPY . .
