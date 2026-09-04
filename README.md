@@ -46,6 +46,33 @@ CREATE TABLE rosters (
 - `pnpm build`: Builds all apps and shared packages.
 - `pnpm lint`: Runs linting across the entire monorepo.
 
+## Local Development
+
+Requires Docker (for Postgres) and pnpm.
+
+```sh
+# 1. Start Postgres and seed it (first run only for the seed step)
+docker compose -f docker-compose.dev.yml up postgres -d
+docker compose -f docker-compose.dev.yml run --rm --build db-seed
+
+# 2. Start the API (:3001) and web app (:3000)
+# NEXT_PUBLIC_EMBED_PARENT_ORIGINS lets the /embed/cpu route notify
+# a locally-running parent page (see example.com /play docs).
+NEXT_PUBLIC_EMBED_PARENT_ORIGINS=http://localhost:4321 pnpm dev
+```
+
+- Lobby: <http://localhost:3000>
+- Frameless CPU game (what example.com embeds): <http://localhost:3000/embed/cpu>
+- API health: <http://localhost:3001/health>
+- The embed accepts `?name=` and `?min=`/`?max=` season filters, e.g.
+  `/embed/cpu?name=Shane&min=1996&max=1998`. Names are capped at 32 chars
+  and seasons are clamped to the seeded range; invalid values fall back
+  to a guest name / All Time.
+
+No CORS configuration is needed locally: outside production the API
+allows all origins (see `buildAllowedOrigins` in
+`apps/api/src/serverUtils.ts`).
+
 ## Forgejo CI/CD (Actions)
 - Workflow: `.forgejo/workflows/deploy.yml`
 - Deployment helper (executed on Racknerd via SSH): `scripts/deploy-quadlet.sh`

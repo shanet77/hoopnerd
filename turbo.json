@@ -11,7 +11,11 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**", "public/dist/**"],
       "dependsOn": ["^build"],
-      "env": ["NEXT_PUBLIC_API_HOST", "NEXT_PUBLIC_UMAMI_WEBSITE_ID", "NEXT_PUBLIC_APP_VERSION"]
+      "env": [
+        "NEXT_PUBLIC_API_HOST",
+        "NEXT_PUBLIC_UMAMI_WEBSITE_ID",
+        "NEXT_PUBLIC_APP_VERSION"
+      ]
     },
     "test": {
       "outputs": ["coverage/**"],
@@ -32,7 +36,8 @@
         "CORS_ORIGIN",
         "NEXT_PUBLIC_API_URL",
         "NEXT_PUBLIC_API_HOST",
-        "NEXT_PUBLIC_UMAMI_WEBSITE_ID"
+        "NEXT_PUBLIC_UMAMI_WEBSITE_ID",
+        "NEXT_PUBLIC_EMBED_PARENT_ORIGINS"
       ]
     },
     "clean": {

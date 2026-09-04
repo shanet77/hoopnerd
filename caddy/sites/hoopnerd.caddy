@@ -1,5 +1,16 @@
 hoopnerd.xyz, www.hoopnerd.xyz {
 	import security_headers
+
+	# The /embed/* routes are designed to be framed by the personal site.
+	# X-Frame-Options cannot express an allowlist, so strip it here and
+	# rely on frame-ancestors as the framing control. Everywhere else
+	# keeps DENY from security_headers.
+	@embed path /embed/*
+	header @embed {
+		-X-Frame-Options
+		Content-Security-Policy "frame-ancestors https://example.com https://www.example.com"
+	}
+
 	reverse_proxy web:3000
 }
 
