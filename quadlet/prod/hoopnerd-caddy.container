@@ -19,6 +19,10 @@ Volume=/home/USER/sites:/srv/sites:ro
 # Overlay the steam2 depots dataset onto the steam2 site tree
 # (must come after the parent /srv/sites mount).
 Volume=/home/USER/sites/steam2-data/depots:/srv/sites/steam2.example.com/data/depots:ro
+# Overlay the personal-site deploys (Forgejo uploads as deployer, Caddy runs
+# as <deploy-user>) onto the path the example-site.caddy site block serves.
+# (must come after the parent /srv/sites mount).
+Volume=/home/deployer/sites/personal-site:/srv/sites/personal-site:ro
 Volume=hoopnerd-caddy-data:/data
 Volume=/home/USER/logs/caddy:/var/log/caddy
 Volume=hoopnerd-caddy-config:/config
