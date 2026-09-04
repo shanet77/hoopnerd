@@ -7,7 +7,7 @@ After=hoopnerd-api.service network-online.target
 Image=zot.example.com/namespace/hoopnerd-web:main-latest
 ContainerName=hoopnerd-web
 
-EnvironmentFile=/home/USER/project/hoopnerd/.env.prod
+EnvironmentFile=/home/deployer/project/hoopnerd/.env.prod
 
 Environment=NODE_ENV=production
 Environment=PORT=3000

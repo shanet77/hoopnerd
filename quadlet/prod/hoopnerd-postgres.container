@@ -6,7 +6,7 @@ After=network-online.target
 Image=docker.io/library/postgres:18-alpine
 ContainerName=hoopnerd-postgres
 
-EnvironmentFile=/home/USER/project/hoopnerd/.env.prod
+EnvironmentFile=/home/deployer/project/hoopnerd/.env.prod
 
 # postgres 18+ expects mount at /var/lib/postgresql, NOT /var/lib/postgresql/data
 Volume=hoopnerd-postgres-data:/var/lib/postgresql

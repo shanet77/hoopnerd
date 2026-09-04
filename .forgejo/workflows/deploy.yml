@@ -268,10 +268,10 @@ jobs:
       - name: Deploy to Racknerd over SSH
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: <deploy-user>
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_PATH: /home/USER/project/hoopnerd
-          PATH_ON_VPS: /home/USER/project/hoopnerd
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          PATH_ON_VPS: ${{ secrets.DEPLOY_PATH }}
           REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
           REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}

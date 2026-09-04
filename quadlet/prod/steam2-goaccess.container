@@ -6,10 +6,10 @@ Requires=hoopnerd-caddy.service
 [Container]
 Image=docker.io/library/alpine:latest
 ContainerName=steam2-goaccess
-Volume=/home/USER/logs/caddy:/var/log/caddy:ro
-Volume=/home/USER/logs/goaccess:/var/log/goaccess
-Volume=/home/USER/sites/steam2.example.com:/srv
-Volume=/home/USER/bin/goaccess-loop.sh:/usr/local/bin/goaccess-loop.sh:ro
+Volume=/home/deployer/logs/caddy:/var/log/caddy:ro
+Volume=/home/deployer/logs/goaccess:/var/log/goaccess
+Volume=/home/deployer/sites/steam2.example.com:/srv
+Volume=/home/deployer/bin/goaccess-loop.sh:/usr/local/bin/goaccess-loop.sh:ro
 Exec=sh /usr/local/bin/goaccess-loop.sh
 
 [Service]

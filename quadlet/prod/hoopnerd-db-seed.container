@@ -7,10 +7,10 @@ After=hoopnerd-postgres.service
 Image=localhost/hoopnerd-db-seed:local
 ContainerName=hoopnerd-db-seed
 
-EnvironmentFile=/home/USER/project/hoopnerd/.env.prod
+EnvironmentFile=/home/deployer/project/hoopnerd/.env.prod
 Environment=NODE_ENV=production
 
-Volume=/home/USER/project/hoopnerd/datasets:/app/datasets:ro
+Volume=/home/deployer/project/hoopnerd/datasets:/app/datasets:ro
 
 Network=hoopnerd-internal
 
