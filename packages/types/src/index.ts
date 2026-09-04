@@ -2,13 +2,32 @@ import fs from "fs";
 import path from "path";
 import { Pool } from "pg";
 
-const TOP_SCORERS_PATH = path.resolve(
+const MONOREPO_TOP_SCORERS_PATH = path.resolve(
   __dirname,
   "../../..",
   "datasets/top_scorers.csv",
 );
 const DEFAULT_TOP_SCORERS_LIMIT = 80;
 let topScorerNamesCache: string[] | null = null;
+
+/**
+ * Candidate CSV locations, first hit wins.
+ *
+ * `__dirname`-relative works in the monorepo (packages/types/dist -> repo
+ * root). `pnpm --filter=api deploy` flattens node_modules, so in prod the
+ * relative path resolves to /app/node_modules/datasets/... while the
+ * datasets volume is mounted at /app/datasets. Probe the deploy mount and
+ * cwd as well; TOP_SCORERS_CSV_PATH always wins when set.
+ */
+const resolveTopScorersPaths = (): string[] => {
+  const candidates: string[] = [];
+  const configured = process.env.TOP_SCORERS_CSV_PATH?.trim();
+  if (configured) candidates.push(configured);
+  candidates.push(MONOREPO_TOP_SCORERS_PATH);
+  candidates.push("/app/datasets/top_scorers.csv");
+  candidates.push(path.resolve(process.cwd(), "datasets/top_scorers.csv"));
+  return [...new Set(candidates)];
+};
 
 const parseTopScorerNames = (csv: string, limit: number): string[] => {
   const lines = csv
@@ -50,16 +69,23 @@ const loadTopScorerNames = async (limit: number): Promise<string[]> => {
     return topScorerNamesCache.slice(0, limit);
   }
 
-  try {
-    const csv = await fs.promises.readFile(TOP_SCORERS_PATH, "utf8");
-    const names = parseTopScorerNames(csv, limit);
-    topScorerNamesCache = names;
-    return names;
-  } catch (error) {
-    console.error("Failed to load top scorers list:", error);
-    topScorerNamesCache = [];
-    return [];
+  let lastError: unknown = null;
+  for (const candidate of resolveTopScorersPaths()) {
+    try {
+      const csv = await fs.promises.readFile(candidate, "utf8");
+      const names = parseTopScorerNames(csv, limit);
+      topScorerNamesCache = names;
+      return names;
+    } catch (error) {
+      lastError = error;
+    }
   }
+  console.error(
+    `Failed to load top scorers list (tried ${resolveTopScorersPaths().join(", ")}):`,
+    lastError,
+  );
+  topScorerNamesCache = [];
+  return [];
 };
 
 export type DatabaseService = Pool;
@@ -274,12 +300,13 @@ export class PlayerService {
     seasonYearMax?: number,
   ): Promise<Player | null> {
     const topScorerNames = await loadTopScorerNames(limit);
-    if (topScorerNames.length === 0) {
-      return null;
-    }
+    const hasSeasonFilter =
+      seasonYearMin !== undefined && seasonYearMax !== undefined;
 
-    if (seasonYearMin !== undefined && seasonYearMax !== undefined) {
-      const sql = `
+    if (topScorerNames.length > 0) {
+      const result = hasSeasonFilter
+        ? await this.db.query(
+            `
         SELECT id, player_name AS name, position
         FROM players
         WHERE player_name = ANY($1)
@@ -289,22 +316,50 @@ export class PlayerService {
           )
         ORDER BY RANDOM()
         LIMIT 1
-      `;
-
-      const result = await this.db.query(sql, [topScorerNames, seasonYearMin, seasonYearMax]);
-      return result.rows.length > 0 ? result.rows[0] : null;
-    }
-
-    const sql = `
+      `,
+            [topScorerNames, seasonYearMin, seasonYearMax],
+          )
+        : await this.db.query(
+            `
       SELECT id, player_name AS name, position
       FROM players
       WHERE player_name = ANY($1)
       ORDER BY RANDOM()
       LIMIT 1
-    `;
+    `,
+            [topScorerNames],
+          );
+      if (result.rows.length > 0) return result.rows[0];
+    }
 
-    const result = await this.db.query(sql, [topScorerNames]);
-    return result.rows.length > 0 ? result.rows[0] : null;
+    // Fallback: the bundled top-scorers CSV is missing (e.g. prod deploy
+    // layout) or none of its names match the DB / season filter. Pick any
+    // rostered player instead of failing game start outright.
+    console.warn(
+      "getRandomTopScorer: top-scorers list unavailable or unmatched, falling back to any rostered player",
+    );
+    const fallback = hasSeasonFilter
+      ? await this.db.query(
+          `
+        SELECT p.id, p.player_name AS name, p.position
+        FROM players p
+        WHERE p.id IN (
+          SELECT DISTINCT player_id FROM rosters
+          WHERE season_year >= $1 AND season_year <= $2
+        )
+        ORDER BY RANDOM()
+        LIMIT 1
+      `,
+          [seasonYearMin, seasonYearMax],
+        )
+      : await this.db.query(`
+        SELECT p.id, p.player_name AS name, p.position
+        FROM players p
+        WHERE EXISTS (SELECT 1 FROM rosters r WHERE r.player_id = p.id)
+        ORDER BY RANDOM()
+        LIMIT 1
+      `);
+    return fallback.rows.length > 0 ? fallback.rows[0] : null;
   }
 }
 

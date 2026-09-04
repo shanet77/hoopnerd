@@ -94,11 +94,16 @@ export class GameRoomRepository {
       room.gameStarted = true;
       room.currentPlayerIndex = Math.floor(Math.random() * room.players.length);
 
-      const startingPlayer = await this.playerService.getRandomTopScorer(
-        undefined,
-        room.seasonYearMin,
-        room.seasonYearMax,
-      );
+      let startingPlayer: Player | null = null;
+      try {
+        startingPlayer = await this.playerService.getRandomTopScorer(
+          undefined,
+          room.seasonYearMin,
+          room.seasonYearMax,
+        );
+      } catch (error) {
+        console.error(`[startGame] Room ${roomId} — starting-player query failed:`, error);
+      }
       if (!startingPlayer) {
         room.gameStarted = false;
         this.io

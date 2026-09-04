@@ -47,6 +47,19 @@ describe("socketAuth", () => {
     expect(id).not.toBe(22);
   });
 
+  it("generates player IDs within the Postgres integer range", () => {
+    const room = createGameRoom("ROOMY");
+    for (let i = 0; i < 50; i++) {
+      const id = generatePlayerId(room);
+      expect(Number.isInteger(id)).toBe(true);
+      expect(id).toBeGreaterThanOrEqual(1);
+      // players.id is int4 — larger values fail roster/move queries with
+      // `out of range for type integer`.
+      expect(id).toBeLessThanOrEqual(2 ** 31 - 1);
+      room.players.push({ id, name: `P${i}`, position: "G" });
+    }
+  });
+
   it("rejects expired tokens", () => {
     process.env.SOCKET_SESSION_SECRET = "test-secret";
     vi.useFakeTimers();

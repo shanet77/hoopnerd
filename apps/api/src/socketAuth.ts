@@ -4,7 +4,9 @@ import { GameRoomState } from '@repo/types';
 const TOKEN_TTL_SECONDS = 60 * 60 * 12;
 const TOKEN_VERSION = 1;
 const TOKEN_HEADER = { alg: 'HS256', typ: 'JWT' } as const;
-const PLAYER_ID_MAX = (2 ** 48) - 1;
+// players.id is a PG `integer` (int4): room player IDs must stay within
+// int4 range or roster/move queries fail with "out of range for type integer".
+const PLAYER_ID_MAX = 2 ** 31 - 1;
 
 export const MAX_PLAYER_NAME_LENGTH = 32;
 

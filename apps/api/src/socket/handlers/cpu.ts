@@ -31,6 +31,14 @@ export function registerCpuGameHandlers(
     validateName(socket, data, async (error, result) => {
       if (error) {
         handleErrorOnSocket(socket, error, CPU_GAME_OPTIONS);
+        // The embed awaits `cpu_game_created` (rejecting only after a 15s
+        // timeout), so always resolve it — otherwise an invalid name leaves
+        // the iframe spinning instead of showing the retry card.
+        socket.emit("cpu_game_created", {
+          success: false,
+          message:
+            error instanceof Error ? error.message : "Invalid request.",
+        });
         return;
       }
 
