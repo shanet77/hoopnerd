@@ -1,7 +1,0 @@
-quiz.example.com {
-	import security_headers
-	reverse_proxy quizzer:3000
-	log {
-		output discard
-	}
-}

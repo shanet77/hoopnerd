@@ -105,6 +105,7 @@ allows all origins (see `buildAllowedOrigins` in
 - Pull requests run `test`.
 - Push to `main` builds `api` and `web` Docker images on `dockernode` and pushes them to `zot`.
 - Racknerd deploy then pulls tagged images from the registry and restarts services via Podman Quadlets (systemd units). No docker-compose on the VPS.
+- The Caddy reverse proxy lives in the separate `edge-proxy` repo; this deploy never touches it.
 - `workflow_dispatch` supports optional `image_tag` to redeploy an existing tag without rebuilding.
 
 ## Boundaries
@@ -128,8 +129,7 @@ Connectaball/
 │   └── config/                    # Shared eslint/tsconfig
 ├── scripts/                       # Optional: CI/CD or database migration scripts
 ├── .dockerignore                  # Prevents sending node_modules to Docker daemon
-├── Caddyfile                      # Reverse proxy configuration
-├── quadlet/                        # Podman Quadlet unit files (replaces docker-compose)
+├── quadlet/                        # Podman Quadlet unit files (postgres, api, web, db-seed; edge proxy lives in edge-proxy)
 ├── docker-compose.yaml            # Local & VPS orchestration (legacy — see quadlet/)
 ├── turbo.json
 ├── package.json

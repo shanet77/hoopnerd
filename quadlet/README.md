@@ -11,7 +11,7 @@ fallback for those.
 ```
 quadlet/
 ├── dev/          # Local dev (postgres + db-seed)
-├── prod/         # Production stack (postgres, api, web, caddy, db-seed, steam2-goaccess)
+├── prod/         # Production stack (postgres, api, web, db-seed)
 ├── retired/      # Decommissioned units (old per-site caddy file-servers)
 └── README.md
 ```
@@ -102,7 +102,8 @@ journalctl --user -u hoopnerd-api.service -f
 podman logs hoopnerd-api
 
 # Stop everything
-systemctl --user stop hoopnerd-caddy.service hoopnerd-web.service hoopnerd-api.service hoopnerd-postgres.service steam2-goaccess.service
+# Stop everything (edge proxy is deployed separately from the edge-proxy repo)
+systemctl --user stop hoopnerd-web.service hoopnerd-api.service hoopnerd-postgres.service
 
 # Run database seed
 systemctl --user start hoopnerd-db-seed.service
@@ -123,6 +124,4 @@ on boot, unified logging via journald.
 | hoopnerd-postgres | `hoopnerd-internal` | — | Network alias `postgres` for docker-compose compat |
 | hoopnerd-api | `hoopnerd-edge`, `hoopnerd-internal` | — | Network alias `api`, read-only rootfs |
 | hoopnerd-web | `hoopnerd-edge` | — | Network alias `web`, read-only rootfs |
-| hoopnerd-caddy | `hoopnerd-edge` | 80, 443 (host) | Reverse proxy + static file-server for all sites, CAP_NET_BIND_SERVICE |
 | hoopnerd-db-seed | `hoopnerd-internal` | — | Type=oneshot, runs once per deploy |
-| steam2-goaccess | — | — | Regenerates steam2 stats HTML/JSON every 10 min |

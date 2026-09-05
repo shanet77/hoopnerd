@@ -34,7 +34,7 @@ cd "${DEPLOY_TARGET_PATH}"
 
 SYNC_REF="${TARGET_SHA:-origin/main}"
 git fetch --all --prune --tags
-git clean -fd -- Caddyfile caddy quadlet deploy-quadlet.sh setup-dev-quadlet.sh scripts/deploy-quadlet.sh scripts/setup-dev-quadlet.sh
+git clean -fd -- quadlet deploy-quadlet.sh setup-dev-quadlet.sh scripts/deploy-quadlet.sh scripts/setup-dev-quadlet.sh
 git checkout --detach "${SYNC_REF}"
 echo "Deploying commit: $(git rev-parse HEAD)"
 
@@ -142,7 +142,7 @@ echo "Starting/restarting application services..."
 systemctl --user restart hoopnerd-postgres.service
 sleep 2  # let postgres settle before api connects
 
-systemctl --user restart hoopnerd-api.service hoopnerd-web.service hoopnerd-caddy.service steam2-goaccess.service
+systemctl --user restart hoopnerd-api.service hoopnerd-web.service
 
 # --- verify deployed containers are running the expected images ---------------
 verify_service_image() {
@@ -180,9 +180,8 @@ fi
 echo ""
 echo "=== deploy-quadlet complete ==="
 echo "Service status:"
-systemctl --user status hoopnerd-postgres.service hoopnerd-api.service hoopnerd-web.service hoopnerd-caddy.service steam2-goaccess.service --no-pager --lines=0 || true
+systemctl --user status hoopnerd-postgres.service hoopnerd-api.service hoopnerd-web.service --no-pager --lines=0 || true
 
 echo ""
 echo "Containers:"
 podman ps --filter name=hoopnerd
-podman ps --filter name=steam2-goaccess
