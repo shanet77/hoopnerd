@@ -1,5 +1,3 @@
-import { Server as SocketIOServer } from 'socket.io';
-
 export interface SocketBinding {
   roomId: string;
   playerId: number;
@@ -11,9 +9,12 @@ export class SocketBindingManager {
   private readonly disconnectGracePeriodMs: number;
 
   constructor(
-    private io: SocketIOServer,
-    private onDisconnectGraceExpired: (roomId: string, playerId: number) => void,
-    disconnectGraceMs?: number
+    private disconnectSocket: (socketId: string) => void,
+    private onDisconnectGraceExpired: (
+      roomId: string,
+      playerId: number,
+    ) => void,
+    disconnectGraceMs?: number,
   ) {
     this.disconnectGracePeriodMs =
       disconnectGraceMs ?? (Number(process.env.DISCONNECT_GRACE_MS) || 10000);
@@ -42,8 +43,7 @@ export class SocketBindingManager {
         boundSocketId !== socketId
       ) {
         this.socketRoomBindings.delete(boundSocketId);
-        const staleSocket = this.io.sockets.sockets.get(boundSocketId);
-        staleSocket?.disconnect(true);
+        this.disconnectSocket(boundSocketId);
       }
     }
 
@@ -71,7 +71,7 @@ export class SocketBindingManager {
         const stillBound = Array.from(this.socketRoomBindings.values()).some(
           (activeBinding) =>
             activeBinding.roomId === roomId &&
-            activeBinding.playerId === playerId
+            activeBinding.playerId === playerId,
         );
 
         if (!stillBound) {

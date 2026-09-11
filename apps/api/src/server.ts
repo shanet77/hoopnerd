@@ -5,8 +5,8 @@ import databasePool, { PgRepository } from "@repo/database";
 import type { Repository } from "@repo/database";
 import { CpuEngine } from "@repo/logic";
 import { buildAllowedOrigins, buildCorsConfig } from "./serverUtils";
-import { GameRoomRepository } from "./services/GameRoomRepository";
-import { CpuGameService } from "./services/CpuGameService";
+import { MatchEngine } from "./services/MatchEngine";
+import { SocketMatchEventSink } from "./socket/MatchSocketAdapter";
 import { createSocketIOServer, setupSocketIO } from "./socket";
 import { createApiRouter } from "./routes/api";
 
@@ -40,17 +40,16 @@ export const createServer = (
   app.use(createApiRouter({ repository }));
 
   const io = createSocketIOServer(server, allowedOrigins);
-  const roomRepository = new GameRoomRepository(io, repository);
 
-  // CPU mode setup (enabled by default, disable with ENABLE_CPU_MODE=false)
+  // CPU mode (enabled by default, disable with ENABLE_CPU_MODE=false)
   const enableCpuMode = process.env.ENABLE_CPU_MODE !== "false";
-  let cpuGameService: CpuGameService | undefined;
-  if (enableCpuMode) {
-    const cpuEngine = new CpuEngine({ repository });
-    cpuGameService = new CpuGameService(roomRepository, cpuEngine);
-  }
+  const matchEngine = new MatchEngine({
+    repository,
+    sink: new SocketMatchEventSink(io),
+    cpuEngine: enableCpuMode ? new CpuEngine({ repository }) : undefined,
+  });
 
-  setupSocketIO(io, roomRepository, cpuGameService);
+  setupSocketIO(io, matchEngine, enableCpuMode);
 
   return { app, server };
 };

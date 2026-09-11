@@ -1,28 +1,21 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { SocketBindingManager } from "../SocketBindingManager";
-import { Server as SocketIOServer } from "socket.io";
 
 describe("SocketBindingManager", () => {
   let manager: SocketBindingManager;
-  let mockIo: Partial<SocketIOServer>;
+  let disconnectMock: vi.Mock;
   let onExpiredMock: vi.Mock;
   const defaultGraceMs = 500;
 
   beforeEach(() => {
     vi.useFakeTimers();
+    disconnectMock = vi.fn();
     onExpiredMock = vi.fn();
 
-    mockIo = {
-      to: vi.fn(() => ({ emit: vi.fn() })),
-      sockets: {
-        sockets: new Map(),
-      } as any,
-    } as any;
-
     manager = new SocketBindingManager(
-      mockIo as SocketIOServer,
+      disconnectMock,
       onExpiredMock,
-      defaultGraceMs
+      defaultGraceMs,
     );
   });
 
@@ -35,11 +28,7 @@ describe("SocketBindingManager", () => {
   describe("constructor", () => {
     it("should use provided disconnectGraceMs", () => {
       const expiredMock = vi.fn();
-      const mgr = new SocketBindingManager(
-        mockIo as SocketIOServer,
-        expiredMock,
-        3000
-      );
+      const mgr = new SocketBindingManager(disconnectMock, expiredMock, 3000);
       mgr.bindSocket("s1", "room1", 1);
       mgr.handleDisconnect("s1");
 
@@ -51,10 +40,7 @@ describe("SocketBindingManager", () => {
     });
 
     it("should default to 10000ms when no env var and no arg", () => {
-      const mgr = new SocketBindingManager(
-        mockIo as SocketIOServer,
-        onExpiredMock
-      );
+      const mgr = new SocketBindingManager(disconnectMock, onExpiredMock);
       mgr.bindSocket("s1", "room1", 1);
       mgr.handleDisconnect("s1");
 
@@ -87,15 +73,10 @@ describe("SocketBindingManager", () => {
     });
 
     it("should disconnect stale socket for same player in same room", () => {
-      const staleDisconnect = vi.fn();
-      (mockIo.sockets!.sockets as Map<string, any>).set("old-socket", {
-        disconnect: staleDisconnect,
-      });
-
       manager.bindSocket("old-socket", "roomA", 1);
       manager.bindSocket("new-socket", "roomA", 1);
 
-      expect(staleDisconnect).toHaveBeenCalledWith(true);
+      expect(disconnectMock).toHaveBeenCalledWith("old-socket");
       expect(manager.getSocketBinding("old-socket")).toBeUndefined();
       expect(manager.getSocketBinding("new-socket")).toEqual({
         roomId: "roomA",
@@ -104,15 +85,10 @@ describe("SocketBindingManager", () => {
     });
 
     it("should not disconnect stale socket from different room", () => {
-      const staleDisconnect = vi.fn();
-      (mockIo.sockets!.sockets as Map<string, any>).set("old-socket", {
-        disconnect: staleDisconnect,
-      });
-
       manager.bindSocket("old-socket", "roomA", 1);
       manager.bindSocket("new-socket", "roomB", 1);
 
-      expect(staleDisconnect).not.toHaveBeenCalled();
+      expect(disconnectMock).not.toHaveBeenCalled();
       expect(manager.getSocketBinding("old-socket")).toEqual({
         roomId: "roomA",
         playerId: 1,
@@ -120,15 +96,10 @@ describe("SocketBindingManager", () => {
     });
 
     it("should not disconnect stale socket for different player", () => {
-      const staleDisconnect = vi.fn();
-      (mockIo.sockets!.sockets as Map<string, any>).set("old-socket", {
-        disconnect: staleDisconnect,
-      });
-
       manager.bindSocket("old-socket", "roomA", 1);
       manager.bindSocket("new-socket", "roomA", 2);
 
-      expect(staleDisconnect).not.toHaveBeenCalled();
+      expect(disconnectMock).not.toHaveBeenCalled();
       expect(manager.getSocketBinding("old-socket")).toEqual({
         roomId: "roomA",
         playerId: 1,
@@ -238,9 +209,7 @@ describe("SocketBindingManager", () => {
     });
 
     it("should be a no-op when no timer exists", () => {
-      expect(() =>
-        manager.clearDisconnectGraceTimer("roomA", 1)
-      ).not.toThrow();
+      expect(() => manager.clearDisconnectGraceTimer("roomA", 1)).not.toThrow();
     });
   });
 

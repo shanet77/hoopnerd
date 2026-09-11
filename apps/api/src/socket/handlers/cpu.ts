@@ -1,7 +1,6 @@
 import { Socket } from "socket.io";
 import { CreateCpuGameRequest } from "@repo/types";
-import { GameRoomRepository } from "../../services/GameRoomRepository";
-import { CpuGameService } from "../../services/CpuGameService";
+import { MatchEngine } from "../../services/MatchEngine";
 import { issueSessionToken } from "../../socketAuth";
 import {
   validatePlayerName,
@@ -17,8 +16,7 @@ const CPU_GAME_OPTIONS: HandleErrorOnSocketOptions = {
 
 export function registerCpuGameHandlers(
   socket: Socket,
-  roomRepository: GameRoomRepository,
-  cpuGameService: CpuGameService,
+  matchEngine: MatchEngine,
 ): void {
   // ---------------------------------------------------------------------------
   // create_cpu_game
@@ -36,25 +34,22 @@ export function registerCpuGameHandlers(
         // the iframe spinning instead of showing the retry card.
         socket.emit("cpu_game_created", {
           success: false,
-          message:
-            error instanceof Error ? error.message : "Invalid request.",
+          message: error instanceof Error ? error.message : "Invalid request.",
         });
         return;
       }
 
       const normalizedName = (result as any).normalizedName;
-      const difficulty = "easy";
       const { seasonYearMin, seasonYearMax } = data;
 
       // Generate a room ID
       const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
 
       try {
-        // Create the CPU game
-        const { room, humanPlayer } = cpuGameService.createCpuGame(
+        const { room, humanPlayer } = matchEngine.createCpuGame(
           roomId,
           normalizedName,
-          difficulty,
+          "easy",
           socket.id,
           seasonYearMin,
           seasonYearMax,
@@ -62,15 +57,12 @@ export function registerCpuGameHandlers(
 
         // Join the human's socket to the room
         socket.join(roomId);
-        roomRepository.bindSocket(socket.id, roomId, humanPlayer.id);
+        matchEngine.bindSocket(socket.id, roomId, humanPlayer.id);
         const playerToken = issueSessionToken(roomId, humanPlayer.id);
 
-        // Start the game immediately.
-        // startGame → startTurnTimer → onCpuTurn callback triggers the CPU
-        // if the CPU goes first. Subsequent CPU turns are triggered the same
-        // way via switchTurn → startTurnTimer. This is server-side and
-        // survives socket reconnects (page navigations).
-        const started = await roomRepository.startGame(roomId);
+        // Start the game immediately. The engine drives CPU turns internally
+        // from here on — no separate CPU service or turn callback to wire.
+        const started = await matchEngine.start(roomId);
         if (!started) {
           socket.emit("cpu_game_created", {
             success: false,
@@ -79,7 +71,6 @@ export function registerCpuGameHandlers(
           return;
         }
 
-        // Send success response
         socket.emit("cpu_game_created", {
           success: true,
           message: "CPU game created!",

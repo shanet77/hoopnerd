@@ -1,19 +1,27 @@
-import { Socket } from 'socket.io';
-import { JoinMatchmakingRequest, JoinMatchmakingResponse, Player } from '@repo/types';
-import { GameRoomRepository } from '../../services/GameRoomRepository';
-import { generatePlayerId, issueSessionToken } from '../../socketAuth';
-import { validatePlayerName, handleErrorOnSocket, HandleErrorOnSocketOptions } from '../middleware/validation';
+import { Socket } from "socket.io";
+import {
+  JoinMatchmakingRequest,
+  JoinMatchmakingResponse,
+  Player,
+} from "@repo/types";
+import { MatchEngine } from "../../services/MatchEngine";
+import { generatePlayerId, issueSessionToken } from "../../socketAuth";
+import {
+  validatePlayerName,
+  handleErrorOnSocket,
+  HandleErrorOnSocketOptions,
+} from "../middleware/validation";
 
 const MATCHMAKING_OPTIONS: HandleErrorOnSocketOptions = {
-  defaultEvent: 'matchmaking_result',
-  legacyChannel: 'matchmaking_result',
+  defaultEvent: "matchmaking_result",
+  legacyChannel: "matchmaking_result",
 };
 
 export function registerMatchmakingHandlers(
   socket: Socket,
-  roomRepository: GameRoomRepository
+  matchEngine: MatchEngine,
 ): void {
-  socket.on('join_matchmaking', async (data: JoinMatchmakingRequest) => {
+  socket.on("join_matchmaking", async (data: JoinMatchmakingRequest) => {
     const friendsOnly = data.friendsOnly ?? false;
 
     // --- input validation via middleware -------------------------------------
@@ -31,7 +39,7 @@ export function registerMatchmakingHandlers(
 
       // Find an available public room
       if (!friendsOnly) {
-        selectedRoomId = roomRepository.findAvailablePublicRoom(normalizedName);
+        selectedRoomId = matchEngine.findAvailablePublicRoom(normalizedName);
         if (selectedRoomId) {
           joinedExisting = true;
         }
@@ -40,30 +48,34 @@ export function registerMatchmakingHandlers(
       // Fallback: create a new room
       if (!selectedRoomId) {
         selectedRoomId = generateRoomId();
-        roomRepository.createRoom(selectedRoomId, friendsOnly);
+        matchEngine.createRoom(selectedRoomId, friendsOnly);
       }
 
-      const room = roomRepository.getRoom(selectedRoomId)!;
+      const room = matchEngine.getRoom(selectedRoomId)!;
 
       // Validate room capacity and name uniqueness
       if (
         room.players.length >= 2 &&
         !room.players.some(
-          (p: any) => p.name.toLowerCase() === normalizedName.toLowerCase()
+          (p: any) => p.name.toLowerCase() === normalizedName.toLowerCase(),
         )
       ) {
-        socket.emit('matchmaking_result', {
+        socket.emit("matchmaking_result", {
           success: false,
-          message: 'Room is full.',
+          message: "Room is full.",
           joinedExisting,
         });
         return;
       }
 
-      if (room.players.some((p: any) => p.name.toLowerCase() === normalizedName.toLowerCase())) {
-        socket.emit('matchmaking_result', {
+      if (
+        room.players.some(
+          (p: any) => p.name.toLowerCase() === normalizedName.toLowerCase(),
+        )
+      ) {
+        socket.emit("matchmaking_result", {
           success: false,
-          message: 'That name is already in use for this room.',
+          message: "That name is already in use for this room.",
           joinedExisting,
         });
         return;
@@ -75,15 +87,15 @@ export function registerMatchmakingHandlers(
       const player: Player = {
         id: generatePlayerId(room),
         name: normalizedName,
-        position: 'G',
+        position: "G",
         socketId: socket.id,
       };
       room.players.push(player);
-      roomRepository.bindSocket(socket.id, selectedRoomId, player.id);
+      matchEngine.bindSocket(socket.id, selectedRoomId, player.id);
       const playerToken = issueSessionToken(selectedRoomId, player.id);
 
-      socket.to(selectedRoomId).emit('player_connected', player);
-      socket.to(selectedRoomId).emit('room_updated', room);
+      socket.to(selectedRoomId).emit("player_connected", player);
+      socket.to(selectedRoomId).emit("room_updated", room);
 
       const response: JoinMatchmakingResponse = {
         success: true,
@@ -97,8 +109,8 @@ export function registerMatchmakingHandlers(
         playerId: player.id,
       };
 
-      socket.emit('matchmaking_result', response);
-      await roomRepository.startGame(selectedRoomId);
+      socket.emit("matchmaking_result", response);
+      await matchEngine.start(selectedRoomId);
     });
   });
 }

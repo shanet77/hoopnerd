@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { Socket } from 'socket.io';
-import { GameRoomRepository } from "../../../services/GameRoomRepository";
+import { Socket } from "socket.io";
+import { MatchEngine } from "../../../services/MatchEngine";
 import { registerRoomHandlers } from "../../handlers/room";
 import { JoinRoomRequest, LeaveRoomRequest, GameRoomState } from "@repo/types";
 
@@ -13,7 +13,11 @@ vi.mock("../../../socketAuth", () => ({
   verifySessionToken: vi.fn(),
 }));
 
-import { normalizePlayerName, verifySessionToken, issueSessionToken } from "../../../socketAuth";
+import {
+  normalizePlayerName,
+  verifySessionToken,
+  issueSessionToken,
+} from "../../../socketAuth";
 
 const mockNormalizePlayerName = normalizePlayerName as vi.Mock;
 const mockVerifySessionToken = verifySessionToken as vi.Mock;
@@ -21,7 +25,7 @@ const mockIssueSessionToken = issueSessionToken as vi.Mock;
 
 describe("Room Handlers", () => {
   let mockSocket: Partial<Socket>;
-  let mockRoomRepository: Partial<GameRoomRepository>;
+  let mockEngine: Partial<MatchEngine>;
   let emitMock: vi.Mock;
   let toMock: vi.Mock;
   let leaveMock: vi.Mock;
@@ -37,7 +41,7 @@ describe("Room Handlers", () => {
     joinMock = vi.fn();
 
     mockSocket = {
-      id: 'socket-123',
+      id: "socket-123",
       emit: emitMock,
       to: toMock,
       join: joinMock,
@@ -47,142 +51,154 @@ describe("Room Handlers", () => {
       }) as any,
     };
 
-    mockRoomRepository = {
-      createRoom: vi.fn((roomId: string) => ({
-        roomId,
-        players: [],
-        gameStarted: false,
-        friendsOnly: false,
-      } as GameRoomState)),
+    mockEngine = {
+      createRoom: vi.fn(
+        (roomId: string) =>
+          ({
+            roomId,
+            players: [],
+            gameStarted: false,
+            friendsOnly: false,
+          }) as GameRoomState,
+      ),
       getOrCreateRoom: vi.fn(),
       bindSocket: vi.fn(),
       getSocketBinding: vi.fn(),
       getRoom: vi.fn(),
       removeSocketBinding: vi.fn(),
-      removePlayerFromRoom: vi.fn(),
+      removePlayer: vi.fn(),
       clearDisconnectGraceTimer: vi.fn(),
-      startGame: vi.fn(),
+      start: vi.fn(),
     };
   });
 
   describe("create_room event", () => {
     beforeEach(() => {
-      registerRoomHandlers(mockSocket as Socket, mockRoomRepository as GameRoomRepository);
+      registerRoomHandlers(mockSocket as Socket, mockEngine as MatchEngine);
     });
 
     it("should create a room and emit success", () => {
-      (mockRoomRepository.createRoom as vi.Mock).mockImplementation((id: string) => ({
+      (mockEngine.createRoom as vi.Mock).mockImplementation((id: string) => ({
         roomId: id,
         players: [],
         gameStarted: false,
       }));
 
-      const createRoomHandler = handlers['create_room'];
+      const createRoomHandler = handlers["create_room"];
       createRoomHandler(false);
 
-      expect(mockRoomRepository.createRoom).toHaveBeenCalledWith(
+      expect(mockEngine.createRoom).toHaveBeenCalledWith(
         expect.stringMatching(/^[A-Z0-9]{6}$/),
-        false
+        false,
       );
-      expect(mockSocket.emit).toHaveBeenCalledWith('room_created', {
+      expect(mockSocket.emit).toHaveBeenCalledWith("room_created", {
         success: true,
-        message: expect.stringContaining('created successfully'),
+        message: expect.stringContaining("created successfully"),
         roomId: expect.any(String),
       });
     });
 
     it("should create friends-only room when specified", () => {
-      const createRoomHandler = handlers['create_room'];
+      const createRoomHandler = handlers["create_room"];
       createRoomHandler(true);
 
-      expect(mockRoomRepository.createRoom).toHaveBeenCalledWith(
+      expect(mockEngine.createRoom).toHaveBeenCalledWith(
         expect.any(String),
-        true
+        true,
       );
     });
 
     it("should default to friendsOnly=false when no argument provided", () => {
-      const createRoomHandler = handlers['create_room'];
+      const createRoomHandler = handlers["create_room"];
       createRoomHandler();
 
-      expect(mockRoomRepository.createRoom).toHaveBeenCalledWith(
+      expect(mockEngine.createRoom).toHaveBeenCalledWith(
         expect.any(String),
-        false
+        false,
       );
     });
   });
 
   describe("join_room event", () => {
-    const mockRoomId = 'ABC123';
-    const mockPlayerName = 'TestPlayer';
+    const mockRoomId = "ABC123";
+    const mockPlayerName = "TestPlayer";
 
     beforeEach(() => {
       mockNormalizePlayerName.mockReturnValue(mockPlayerName);
-      registerRoomHandlers(mockSocket as Socket, mockRoomRepository as GameRoomRepository);
+      registerRoomHandlers(mockSocket as Socket, mockEngine as MatchEngine);
     });
 
     it("should reject empty or invalid player names", async () => {
-      mockNormalizePlayerName.mockReturnValueOnce('');
+      mockNormalizePlayerName.mockReturnValueOnce("");
 
-      const joinRoomHandler = handlers['join_room'];
-      await joinRoomHandler({ roomId: mockRoomId, playerName: '' } as JoinRoomRequest);
+      const joinRoomHandler = handlers["join_room"];
+      await joinRoomHandler({
+        roomId: mockRoomId,
+        playerName: "",
+      } as JoinRoomRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('validation_error', {
-        code: 'INVALID_NAME',
-        message: 'Name is required and must be 32 characters or fewer.',
+      expect(mockSocket.emit).toHaveBeenCalledWith("validation_error", {
+        code: "INVALID_NAME",
+        message: "Name is required and must be 32 characters or fewer.",
       });
     });
 
     it("should reject player names exceeding max length", async () => {
-      const longName = 'a'.repeat(33);
+      const longName = "a".repeat(33);
       mockNormalizePlayerName.mockReturnValueOnce(longName);
 
-      const joinRoomHandler = handlers['join_room'];
-      await joinRoomHandler({ roomId: mockRoomId, playerName: longName } as JoinRoomRequest);
+      const joinRoomHandler = handlers["join_room"];
+      await joinRoomHandler({
+        roomId: mockRoomId,
+        playerName: longName,
+      } as JoinRoomRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('validation_error', {
-        code: 'INVALID_NAME',
-        message: 'Name is required and must be 32 characters or fewer.',
+      expect(mockSocket.emit).toHaveBeenCalledWith("validation_error", {
+        code: "INVALID_NAME",
+        message: "Name is required and must be 32 characters or fewer.",
       });
     });
 
     it("should verify session token when provided", async () => {
       mockVerifySessionToken.mockReturnValueOnce(null);
       const mockRoom = { roomId: mockRoomId, players: [] };
-      (mockRoomRepository.getOrCreateRoom as vi.Mock).mockReturnValue(mockRoom);
+      (mockEngine.getOrCreateRoom as vi.Mock).mockReturnValue(mockRoom);
 
-      const joinRoomHandler = handlers['join_room'];
+      const joinRoomHandler = handlers["join_room"];
       await joinRoomHandler({
         roomId: mockRoomId,
         playerName: mockPlayerName,
-        playerToken: 'invalid-token',
+        playerToken: "invalid-token",
       } as JoinRoomRequest);
 
-      expect(mockVerifySessionToken).toHaveBeenCalledWith('invalid-token');
-      expect(mockSocket.emit).toHaveBeenCalledWith('room_joined', {
+      expect(mockVerifySessionToken).toHaveBeenCalledWith("invalid-token");
+      expect(mockSocket.emit).toHaveBeenCalledWith("room_joined", {
         success: false,
-        message: 'Invalid session token.',
+        message: "Invalid session token.",
       });
     });
 
     it("should reject session when player not found in room", async () => {
-      mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: 999 });
+      mockVerifySessionToken.mockReturnValueOnce({
+        roomId: mockRoomId,
+        playerId: 999,
+      });
       const mockRoom = {
         roomId: mockRoomId,
-        players: [{ id: 1, name: 'OtherPlayer' }],
+        players: [{ id: 1, name: "OtherPlayer" }],
       };
-      (mockRoomRepository.getOrCreateRoom as vi.Mock).mockReturnValue(mockRoom);
+      (mockEngine.getOrCreateRoom as vi.Mock).mockReturnValue(mockRoom);
 
-      const joinRoomHandler = handlers['join_room'];
+      const joinRoomHandler = handlers["join_room"];
       await joinRoomHandler({
         roomId: mockRoomId,
         playerName: mockPlayerName,
-        playerToken: 'valid-token',
+        playerToken: "valid-token",
       } as JoinRoomRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('room_joined', {
+      expect(mockSocket.emit).toHaveBeenCalledWith("room_joined", {
         success: false,
-        message: 'Session is no longer valid for this room.',
+        message: "Session is no longer valid for this room.",
       });
     });
 
@@ -190,40 +206,40 @@ describe("Room Handlers", () => {
       const mockRoom = {
         roomId: mockRoomId,
         players: [
-          { id: 1, name: 'Player1' },
-          { id: 2, name: 'Player2' },
+          { id: 1, name: "Player1" },
+          { id: 2, name: "Player2" },
         ],
       };
-      (mockRoomRepository.getOrCreateRoom as vi.Mock).mockReturnValue(mockRoom);
+      (mockEngine.getOrCreateRoom as vi.Mock).mockReturnValue(mockRoom);
 
-      const joinRoomHandler = handlers['join_room'];
+      const joinRoomHandler = handlers["join_room"];
       await joinRoomHandler({
         roomId: mockRoomId,
-        playerName: 'NewPlayer',
+        playerName: "NewPlayer",
       } as JoinRoomRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('room_joined', {
+      expect(mockSocket.emit).toHaveBeenCalledWith("room_joined", {
         success: false,
-        message: 'Room is full.',
+        message: "Room is full.",
       });
     });
 
     it("should reject duplicate player names", async () => {
       const mockRoom = {
         roomId: mockRoomId,
-        players: [{ id: 1, name: 'TestPlayer' }],
+        players: [{ id: 1, name: "TestPlayer" }],
       };
-      (mockRoomRepository.getOrCreateRoom as vi.Mock).mockReturnValue(mockRoom);
+      (mockEngine.getOrCreateRoom as vi.Mock).mockReturnValue(mockRoom);
 
-      const joinRoomHandler = handlers['join_room'];
+      const joinRoomHandler = handlers["join_room"];
       await joinRoomHandler({
         roomId: mockRoomId,
-        playerName: 'testplayer',
+        playerName: "testplayer",
       } as JoinRoomRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('room_joined', {
+      expect(mockSocket.emit).toHaveBeenCalledWith("room_joined", {
         success: false,
-        message: 'That name is already in use for this room.',
+        message: "That name is already in use for this room.",
       });
     });
 
@@ -233,9 +249,9 @@ describe("Room Handlers", () => {
         roomId: mockRoomId,
         players: [],
       };
-      (mockRoomRepository.getOrCreateRoom as vi.Mock).mockReturnValue(mockRoom);
+      (mockEngine.getOrCreateRoom as vi.Mock).mockReturnValue(mockRoom);
 
-      const joinRoomHandler = handlers['join_room'];
+      const joinRoomHandler = handlers["join_room"];
       await joinRoomHandler({
         roomId: mockRoomId,
         playerName: mockPlayerName,
@@ -244,113 +260,155 @@ describe("Room Handlers", () => {
       expect(mockSocket.join).toHaveBeenCalledWith(mockRoomId);
       expect(mockRoom.players).toHaveLength(1);
       expect(mockRoom.players[0].name).toBe(mockPlayerName);
-      expect(mockRoomRepository.bindSocket).toHaveBeenCalledWith(
-        'socket-123',
+      expect(mockEngine.bindSocket).toHaveBeenCalledWith(
+        "socket-123",
         mockRoomId,
-        12345
+        12345,
       );
       expect(mockIssueSessionToken).toHaveBeenCalledWith(mockRoomId, 12345);
-      expect(emitMock).toHaveBeenCalledWith('player_connected', expect.any(Object));
-      expect(emitMock).toHaveBeenCalledWith('room_updated', mockRoom);
-      expect(mockSocket.emit).toHaveBeenCalledWith('room_joined', {
+      expect(emitMock).toHaveBeenCalledWith(
+        "player_connected",
+        expect.any(Object),
+      );
+      expect(emitMock).toHaveBeenCalledWith("room_updated", mockRoom);
+      expect(mockSocket.emit).toHaveBeenCalledWith("room_joined", {
         success: true,
-        message: expect.stringContaining('Successfully joined'),
+        message: expect.stringContaining("Successfully joined"),
         roomState: mockRoom,
-        playerToken: 'mock-token',
+        playerToken: "mock-token",
         playerId: 12345,
       });
-      expect(mockRoomRepository.startGame).toHaveBeenCalledWith(mockRoomId);
+      expect(mockEngine.start).toHaveBeenCalledWith(mockRoomId);
     });
 
     it("should restore existing player session with valid token", async () => {
-      const existingPlayer = { id: 5, name: 'TestPlayer', socketId: 'old-socket' };
-      mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: 5 });
+      const existingPlayer = {
+        id: 5,
+        name: "TestPlayer",
+        socketId: "old-socket",
+      };
+      mockVerifySessionToken.mockReturnValueOnce({
+        roomId: mockRoomId,
+        playerId: 5,
+      });
       const mockRoom = {
         roomId: mockRoomId,
         players: [existingPlayer],
       };
-      (mockRoomRepository.getOrCreateRoom as vi.Mock).mockReturnValue(mockRoom);
+      (mockEngine.getOrCreateRoom as vi.Mock).mockReturnValue(mockRoom);
 
-      const joinRoomHandler = handlers['join_room'];
+      const joinRoomHandler = handlers["join_room"];
       await joinRoomHandler({
         roomId: mockRoomId,
         playerName: mockPlayerName,
-        playerToken: 'valid-token',
+        playerToken: "valid-token",
       } as JoinRoomRequest);
 
-      expect(existingPlayer.socketId).toBe('socket-123');
-      expect(mockRoomRepository.bindSocket).toHaveBeenCalledWith('socket-123', mockRoomId, 5);
+      expect(existingPlayer.socketId).toBe("socket-123");
+      expect(mockEngine.bindSocket).toHaveBeenCalledWith(
+        "socket-123",
+        mockRoomId,
+        5,
+      );
     });
   });
 
   describe("leave_room event", () => {
-    const mockRoomId = 'ABC123';
+    const mockRoomId = "ABC123";
 
     beforeEach(() => {
-      registerRoomHandlers(mockSocket as Socket, mockRoomRepository as GameRoomRepository);
+      registerRoomHandlers(mockSocket as Socket, mockEngine as MatchEngine);
     });
 
     it("should reject invalid session token", async () => {
       mockVerifySessionToken.mockReturnValueOnce(null);
 
-      const leaveRoomHandler = handlers['leave_room'];
-      await leaveRoomHandler({ roomId: mockRoomId, playerToken: 'invalid' } as LeaveRoomRequest);
+      const leaveRoomHandler = handlers["leave_room"];
+      await leaveRoomHandler({
+        roomId: mockRoomId,
+        playerToken: "invalid",
+      } as LeaveRoomRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
-        code: 'AUTH_001',
-        message: 'Invalid session token',
+      expect(mockSocket.emit).toHaveBeenCalledWith("auth_error", {
+        code: "AUTH_001",
+        message: "Invalid session token",
         metadata: undefined,
       });
     });
 
     it("should reject token for wrong room", async () => {
-      mockVerifySessionToken.mockReturnValueOnce({ roomId: 'OTHER_ROOM', playerId: 1 });
+      mockVerifySessionToken.mockReturnValueOnce({
+        roomId: "OTHER_ROOM",
+        playerId: 1,
+      });
 
-      const leaveRoomHandler = handlers['leave_room'];
-      await leaveRoomHandler({ roomId: mockRoomId, playerToken: 'valid' } as LeaveRoomRequest);
+      const leaveRoomHandler = handlers["leave_room"];
+      await leaveRoomHandler({
+        roomId: mockRoomId,
+        playerToken: "valid",
+      } as LeaveRoomRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
-        code: 'AUTH_004',
-        message: 'Socket identity does not match session',
+      expect(mockSocket.emit).toHaveBeenCalledWith("auth_error", {
+        code: "AUTH_004",
+        message: "Socket identity does not match session",
         metadata: undefined,
       });
     });
 
     it("should reject when socket binding doesn't match", async () => {
-      mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: 1 });
-      (mockRoomRepository.getSocketBinding as vi.Mock).mockReturnValueOnce({
-        roomId: 'WRONG_ROOM',
+      mockVerifySessionToken.mockReturnValueOnce({
+        roomId: mockRoomId,
+        playerId: 1,
+      });
+      (mockEngine.getSocketBinding as vi.Mock).mockReturnValueOnce({
+        roomId: "WRONG_ROOM",
         playerId: 999,
       });
 
-      const leaveRoomHandler = handlers['leave_room'];
-      await leaveRoomHandler({ roomId: mockRoomId, playerToken: 'valid' } as LeaveRoomRequest);
+      const leaveRoomHandler = handlers["leave_room"];
+      await leaveRoomHandler({
+        roomId: mockRoomId,
+        playerToken: "valid",
+      } as LeaveRoomRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('auth_error', {
-        code: 'AUTH_004',
-        message: 'Socket identity does not match session',
+      expect(mockSocket.emit).toHaveBeenCalledWith("auth_error", {
+        code: "AUTH_004",
+        message: "Socket identity does not match session",
         metadata: undefined,
       });
     });
 
     it("should successfully leave room when authenticated", async () => {
-      mockVerifySessionToken.mockReturnValueOnce({ roomId: mockRoomId, playerId: 1 });
-      (mockRoomRepository.getSocketBinding as vi.Mock).mockReturnValueOnce({
+      mockVerifySessionToken.mockReturnValueOnce({
         roomId: mockRoomId,
         playerId: 1,
       });
-      (mockRoomRepository.getRoom as vi.Mock).mockReturnValueOnce({
+      (mockEngine.getSocketBinding as vi.Mock).mockReturnValueOnce({
         roomId: mockRoomId,
-        players: [{ id: 1, name: 'Player1' }],
+        playerId: 1,
+      });
+      (mockEngine.getRoom as vi.Mock).mockReturnValueOnce({
+        roomId: mockRoomId,
+        players: [{ id: 1, name: "Player1" }],
       });
 
-      const leaveRoomHandler = handlers['leave_room'];
-      await leaveRoomHandler({ roomId: mockRoomId, playerToken: 'valid' } as LeaveRoomRequest);
+      const leaveRoomHandler = handlers["leave_room"];
+      await leaveRoomHandler({
+        roomId: mockRoomId,
+        playerToken: "valid",
+      } as LeaveRoomRequest);
 
       expect(mockSocket.leave).toHaveBeenCalledWith(mockRoomId);
-      expect(mockRoomRepository.removeSocketBinding).toHaveBeenCalledWith('socket-123');
-      expect(mockRoomRepository.clearDisconnectGraceTimer).toHaveBeenCalledWith(mockRoomId, 1);
-      expect(mockRoomRepository.removePlayerFromRoom).toHaveBeenCalledWith(mockRoomId, 1, 'left');
+      expect(mockEngine.removeSocketBinding).toHaveBeenCalledWith("socket-123");
+      expect(mockEngine.clearDisconnectGraceTimer).toHaveBeenCalledWith(
+        mockRoomId,
+        1,
+      );
+      expect(mockEngine.removePlayer).toHaveBeenCalledWith(
+        mockRoomId,
+        1,
+        "left",
+      );
     });
   });
 });

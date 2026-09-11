@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { Socket } from "socket.io";
-import { GameRoomRepository } from "../../../services/GameRoomRepository";
+import { MatchEngine } from "../../../services/MatchEngine";
 import { issueSessionToken } from "../../../socketAuth";
 import {
   requireSession,
@@ -9,8 +9,15 @@ import {
   composeMiddlewares,
   AuthenticatedSocket,
 } from "../../middleware/auth";
-import { validatePlayerName, handleErrorOnSocket } from "../../middleware/validation";
-import { AuthError, ValidationError, AuthErrorCode } from "../../middleware/errors";
+import {
+  validatePlayerName,
+  handleErrorOnSocket,
+} from "../../middleware/validation";
+import {
+  AuthError,
+  ValidationError,
+  AuthErrorCode,
+} from "../../middleware/errors";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -27,12 +34,12 @@ function makeMockSocket(id = "sock-1"): Partial<AuthenticatedSocket> {
   };
 }
 
-function makeMockRepo(overrides: Partial<GameRoomRepository> = {}): GameRoomRepository {
+function makeMockRepo(overrides: Partial<MatchEngine> = {}): MatchEngine {
   return {
     getSocketBinding: vi.fn(),
     getRoom: vi.fn(),
     ...overrides,
-  } as unknown as GameRoomRepository;
+  } as unknown as MatchEngine;
 }
 
 // ---------------------------------------------------------------------------
@@ -47,7 +54,11 @@ describe("requireSession", () => {
     const token = issueSessionToken("ROOM1", 42);
     const nextFn = vi.fn();
 
-    await requireSession((d) => d.playerToken)(socket, { playerToken: token }, nextFn);
+    await requireSession((d) => d.playerToken)(
+      socket,
+      { playerToken: token },
+      nextFn,
+    );
 
     expect(nextFn).toHaveBeenCalledWith();
     expect((socket as AuthenticatedSocket).sessionId).toBeUndefined(); // not attached here
@@ -71,7 +82,11 @@ describe("requireSession", () => {
     const socket = makeMockSocket();
     const nextFn = vi.fn();
 
-    await requireSession((d) => d.playerToken)(socket, { playerToken: "bad-token" }, nextFn);
+    await requireSession((d) => d.playerToken)(
+      socket,
+      { playerToken: "bad-token" },
+      nextFn,
+    );
 
     expect(nextFn).toHaveBeenCalledWith(expect.any(AuthError));
   });
@@ -126,7 +141,12 @@ describe("requireRoomAccess", () => {
     const playerId = 42;
     const socket = makeMockSocket();
     (socket as AuthenticatedSocket).session = {
-      v: 1, roomId, playerId, iat: 0, exp: Date.now() + 1e9, nonce: "n",
+      v: 1,
+      roomId,
+      playerId,
+      iat: 0,
+      exp: Date.now() + 1e9,
+      nonce: "n",
     };
     (socket as AuthenticatedSocket).playerId = playerId;
     (socket as AuthenticatedSocket).roomId = roomId;
@@ -138,7 +158,9 @@ describe("requireRoomAccess", () => {
 
     await requireRoomAccess(repo)(socket, {}, nextFn);
 
-    expect(nextFn).toHaveBeenCalledWith(expect.objectContaining({ code: AuthErrorCode.SOCKET_IDENTITY_MISMATCH }));
+    expect(nextFn).toHaveBeenCalledWith(
+      expect.objectContaining({ code: AuthErrorCode.SOCKET_IDENTITY_MISMATCH }),
+    );
   });
 
   it("rejects when room not found", async () => {
@@ -146,7 +168,12 @@ describe("requireRoomAccess", () => {
     const playerId = 42;
     const socket = makeMockSocket();
     (socket as AuthenticatedSocket).session = {
-      v: 1, roomId, playerId, iat: 0, exp: Date.now() + 1e9, nonce: "n",
+      v: 1,
+      roomId,
+      playerId,
+      iat: 0,
+      exp: Date.now() + 1e9,
+      nonce: "n",
     };
     (socket as AuthenticatedSocket).playerId = playerId;
     (socket as AuthenticatedSocket).roomId = roomId;
@@ -159,7 +186,9 @@ describe("requireRoomAccess", () => {
 
     await requireRoomAccess(repo)(socket, {}, nextFn);
 
-    expect(nextFn).toHaveBeenCalledWith(expect.objectContaining({ code: AuthErrorCode.ROOM_NOT_FOUND }));
+    expect(nextFn).toHaveBeenCalledWith(
+      expect.objectContaining({ code: AuthErrorCode.ROOM_NOT_FOUND }),
+    );
   });
 
   it("rejects when player not in room", async () => {
@@ -167,7 +196,12 @@ describe("requireRoomAccess", () => {
     const playerId = 42;
     const socket = makeMockSocket();
     (socket as AuthenticatedSocket).session = {
-      v: 1, roomId, playerId, iat: 0, exp: Date.now() + 1e9, nonce: "n",
+      v: 1,
+      roomId,
+      playerId,
+      iat: 0,
+      exp: Date.now() + 1e9,
+      nonce: "n",
     };
     (socket as AuthenticatedSocket).playerId = playerId;
     (socket as AuthenticatedSocket).roomId = roomId;
@@ -180,7 +214,9 @@ describe("requireRoomAccess", () => {
 
     await requireRoomAccess(repo)(socket, {}, nextFn);
 
-    expect(nextFn).toHaveBeenCalledWith(expect.objectContaining({ code: AuthErrorCode.PLAYER_NOT_FOUND }));
+    expect(nextFn).toHaveBeenCalledWith(
+      expect.objectContaining({ code: AuthErrorCode.PLAYER_NOT_FOUND }),
+    );
   });
 });
 
@@ -222,7 +258,9 @@ describe("requireCurrentTurn", () => {
     const nextFn = vi.fn();
     await requireCurrentTurn(makeMockRepo())(socket, {}, nextFn);
 
-    expect(nextFn).toHaveBeenCalledWith(expect.objectContaining({ code: AuthErrorCode.NOT_YOUR_TURN }));
+    expect(nextFn).toHaveBeenCalledWith(
+      expect.objectContaining({ code: AuthErrorCode.NOT_YOUR_TURN }),
+    );
   });
 });
 
@@ -279,9 +317,13 @@ describe("validatePlayerName", () => {
     const socket = makeMockSocket();
     const nextFn = vi.fn();
 
-    await validatePlayerName((d) => d.name)(socket, { name: " Alice " }, nextFn);
+    await validatePlayerName((d) => d.name)(
+      socket,
+      { name: " Alice " },
+      nextFn,
+    );
 
-    expect(nextFn).toHaveBeenCalledWith(null, {"normalizedName": "Alice"});
+    expect(nextFn).toHaveBeenCalledWith(null, { normalizedName: "Alice" });
     const result = (nextFn.mock.calls[0] as any)[1];
     expect(result.normalizedName).toBe("Alice");
   });
@@ -299,7 +341,11 @@ describe("validatePlayerName", () => {
     const socket = makeMockSocket();
     const nextFn = vi.fn();
 
-    await validatePlayerName((d) => d.name)(socket, { name: "a".repeat(33) }, nextFn);
+    await validatePlayerName((d) => d.name)(
+      socket,
+      { name: "a".repeat(33) },
+      nextFn,
+    );
 
     expect(nextFn).toHaveBeenCalledWith(expect.any(ValidationError));
   });
@@ -312,11 +358,16 @@ describe("validatePlayerName", () => {
 describe("handleErrorOnSocket", () => {
   it("emits auth_error for AuthError", () => {
     const socket = makeMockSocket();
-    const err = new AuthError(AuthErrorCode.INVALID_TOKEN, "bad token", { foo: "bar" });
+    const err = new AuthError(AuthErrorCode.INVALID_TOKEN, "bad token", {
+      foo: "bar",
+    });
     const result = handleErrorOnSocket(socket as Socket, err);
 
     expect(result).toBe(true);
-    expect((socket as any).emit).toHaveBeenCalledWith("auth_error", expect.objectContaining({ code: AuthErrorCode.INVALID_TOKEN }));
+    expect((socket as any).emit).toHaveBeenCalledWith(
+      "auth_error",
+      expect.objectContaining({ code: AuthErrorCode.INVALID_TOKEN }),
+    );
   });
 
   it("emits validation_error for ValidationError", () => {
@@ -325,13 +376,19 @@ describe("handleErrorOnSocket", () => {
     const result = handleErrorOnSocket(socket as Socket, err);
 
     expect(result).toBe(true);
-    expect((socket as any).emit).toHaveBeenCalledWith("validation_error", expect.objectContaining({ code: "BAD_NAME" }));
+    expect((socket as any).emit).toHaveBeenCalledWith(
+      "validation_error",
+      expect.objectContaining({ code: "BAD_NAME" }),
+    );
   });
 
   it("emits default event for unknown errors", () => {
     const socket = makeMockSocket();
     handleErrorOnSocket(socket as Socket, new Error("boom"), "game_error");
 
-    expect((socket as any).emit).toHaveBeenCalledWith("game_error", "An internal server error occurred.");
+    expect((socket as any).emit).toHaveBeenCalledWith(
+      "game_error",
+      "An internal server error occurred.",
+    );
   });
 });

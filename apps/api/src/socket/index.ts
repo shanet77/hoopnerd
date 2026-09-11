@@ -1,7 +1,6 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { Server as HttpServer } from "http";
-import { GameRoomRepository } from "../services/GameRoomRepository";
-import { CpuGameService } from "../services/CpuGameService";
+import { MatchEngine } from "../services/MatchEngine";
 import { registerRoomHandlers } from "./handlers/room";
 import { registerMatchmakingHandlers } from "./handlers/matchmaking";
 import { registerGameHandlers } from "./handlers/game";
@@ -27,24 +26,24 @@ export function createSocketIOServer(
  */
 export function registerSocketHandlers(
   io: SocketIOServer,
-  roomRepository: GameRoomRepository,
+  matchEngine: MatchEngine,
   socket: Socket,
-  cpuGameService?: CpuGameService,
+  cpuEnabled = true,
 ): void {
   console.log(`User connected: ${socket.id}`);
 
   // Register all handler modules
-  registerRoomHandlers(socket, roomRepository);
-  registerMatchmakingHandlers(socket, roomRepository);
-  registerGameHandlers(socket, roomRepository);
-  if (cpuGameService) {
-    registerCpuGameHandlers(socket, roomRepository, cpuGameService);
+  registerRoomHandlers(socket, matchEngine);
+  registerMatchmakingHandlers(socket, matchEngine);
+  registerGameHandlers(socket, matchEngine);
+  if (cpuEnabled) {
+    registerCpuGameHandlers(socket, matchEngine);
   }
 
   // Global disconnect handler
   socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.id}`);
-    roomRepository.handleDisconnect(socket.id);
+    matchEngine.handleDisconnect(socket.id);
   });
 }
 
@@ -53,10 +52,10 @@ export function registerSocketHandlers(
  */
 export function setupSocketIO(
   io: SocketIOServer,
-  roomRepository: GameRoomRepository,
-  cpuGameService?: CpuGameService,
+  matchEngine: MatchEngine,
+  cpuEnabled = true,
 ): void {
   io.on("connection", (socket: Socket) => {
-    registerSocketHandlers(io, roomRepository, socket, cpuGameService);
+    registerSocketHandlers(io, matchEngine, socket, cpuEnabled);
   });
 }

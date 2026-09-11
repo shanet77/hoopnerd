@@ -1,5 +1,5 @@
 import { Socket } from "socket.io";
-import { GameRoomRepository } from "../../services/GameRoomRepository";
+import { MatchEngine } from "../../services/MatchEngine";
 import { verifySessionToken, SessionTokenClaims } from "../../socketAuth";
 import { MiddlewareHandler } from "./validation";
 import { AuthError } from "./errors";
@@ -131,7 +131,7 @@ export function requireSession(
  *  - the player is actually in the room.
  */
 export function requireRoomAccess(
-  roomRepository: GameRoomRepository,
+  roomRepository: MatchEngine,
 ): HandlerMiddleware {
   return async (socket: Socket, data: any, next) => {
     try {
@@ -189,7 +189,7 @@ export function requireRoomAccess(
  * Validates that the authenticated player's turn it currently.
  */
 export function requireCurrentTurn(
-  _roomRepository: GameRoomRepository,
+  _roomRepository: MatchEngine,
 ): HandlerMiddleware {
   return async (socket: Socket, data: any, next) => {
     try {
