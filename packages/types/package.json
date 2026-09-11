@@ -19,8 +19,5 @@
     "typescript": "6.0.2",
     "vitest": "^4.1.11"
   },
-  "dependencies": {
-    "@types/pg": "^8.23.1",
-    "pg": "^8.23.0"
-  }
+  "dependencies": {}
 }
