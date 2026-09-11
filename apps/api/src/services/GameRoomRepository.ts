@@ -1,6 +1,6 @@
 import { Server as SocketIOServer } from "socket.io";
-import { Player, PlayerService, GameRoomState } from "@repo/types";
-import databasePool from "@repo/database";
+import type { Player, GameRoomState } from "@repo/types";
+import type { Repository } from "@repo/database";
 import { validateMove, getConnectionDetails } from "@repo/logic";
 import { createGameRoom } from "../serverUtils";
 import { SocketBindingManager, SocketBinding } from "./SocketBindingManager";
@@ -28,7 +28,7 @@ export class GameRoomRepository {
 
   constructor(
     private io: SocketIOServer,
-    private playerService: PlayerService,
+    private repository: Repository,
   ) {
     this.socketBindings = new SocketBindingManager(io, (roomId, playerId) =>
       this.removePlayerFromRoom(roomId, playerId, "disconnected"),
@@ -96,7 +96,7 @@ export class GameRoomRepository {
 
       let startingPlayer: Player | null = null;
       try {
-        startingPlayer = await this.playerService.getRandomTopScorer(
+        startingPlayer = await this.repository.getRandomTopScorer(
           undefined,
           room.seasonYearMin,
           room.seasonYearMax,
@@ -176,7 +176,7 @@ export class GameRoomRepository {
     }
 
     this.io.to(roomId).emit("game_over", { winner: room.winner, reason });
-    recordGameStats(room).catch((error) => {
+    recordGameStats(this.repository, room).catch((error) => {
       console.error("Error recording stats:", error);
     });
   }
@@ -263,7 +263,7 @@ export class GameRoomRepository {
 
     if (room.lastConnectedPlayer) {
       const isValidMove = await validateMove(
-        databasePool,
+        this.repository,
         room.lastConnectedPlayer.id,
         connectedPlayer.id,
         room.seasonYearMin,
@@ -280,7 +280,7 @@ export class GameRoomRepository {
       }
 
       const connection = await getConnectionDetails(
-        databasePool,
+        this.repository,
         room.lastConnectedPlayer.id,
         connectedPlayer.id,
         room.seasonYearMin,
@@ -344,7 +344,7 @@ export class GameRoomRepository {
     );
 
     // Validate the move
-    validateMove(databasePool, room.lastConnectedPlayer!.id, connectedPlayer.id, room.seasonYearMin, room.seasonYearMax)
+    validateMove(this.repository, room.lastConnectedPlayer!.id, connectedPlayer.id, room.seasonYearMin, room.seasonYearMax)
       .then(async (isValid) => {
         if (!isValid) {
           // CPU made an invalid move somehow — forfeit
@@ -376,7 +376,7 @@ export class GameRoomRepository {
         let connection = null;
         if (room.lastConnectedPlayer) {
           connection = await getConnectionDetails(
-            databasePool,
+            this.repository,
             room.lastConnectedPlayer.id,
             connectedPlayer.id,
             room.seasonYearMin,

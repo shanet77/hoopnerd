@@ -1,31 +1,24 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { GameRoomRepository } from "../GameRoomRepository";
-import { Player, PlayerService, GameRoomState, PlayerConnection } from "@repo/types";
+import type { Player, GameRoomState } from "@repo/types";
 import { Server as SocketIOServer } from "socket.io";
 import { validateMove, getConnectionDetails } from "@repo/logic";
-import databasePool from "@repo/database";
 
-// Mocks - matching pattern from server.test.ts
+type Mockify<T> = { [K in keyof T]: ReturnType<typeof vi.fn> };
+
 vi.mock("@repo/logic", () => ({
   __esModule: true,
   validateMove: vi.fn<typeof validateMove>(),
   getConnectionDetails: vi.fn<typeof getConnectionDetails>(),
 }));
-vi.mock("@repo/database", () => ({
-  __esModule: true,
-  default: {
-    query: vi.fn(),
-  },
-}));
 
 const mockValidateMove = validateMove as vi.Mock<typeof validateMove>;
 const mockGetConnectionDetails = getConnectionDetails as vi.Mock<typeof getConnectionDetails>;
-const mockDbQuery = databasePool.query as unknown as vi.Mock<any>;
 
 describe("GameRoomRepository", () => {
   let repository: GameRoomRepository;
   let mockIo: Partial<SocketIOServer>;
-  let mockPlayerService: Partial<PlayerService>;
+  let mockRepo: Mockify<any>;
   let emitMock: vi.Mock;
   let toMock: vi.Mock;
 
@@ -41,16 +34,18 @@ describe("GameRoomRepository", () => {
       } as any,
     };
 
-    mockPlayerService = {
+    mockRepo = {
       getRandomTopScorer: vi.fn(),
+      validateMove: vi.fn(),
+      getConnectionDetails: vi.fn(),
+      recordGameStats: vi.fn().mockResolvedValue(undefined),
     };
 
     repository = new GameRoomRepository(
       mockIo as SocketIOServer,
-      mockPlayerService as PlayerService
+      mockRepo as any
     );
 
-    mockDbQuery.mockResolvedValue({ rows: [] });
     mockValidateMove.mockResolvedValue(true as any);
     mockGetConnectionDetails.mockResolvedValue(null as any);
   });
@@ -225,7 +220,7 @@ describe("GameRoomRepository", () => {
 
     it("should start game and emit event", async () => {
       const startingPlayer = { id: 100, name: "Tim Duncan", position: "PF" } as Player;
-      (mockPlayerService.getRandomTopScorer as vi.Mock).mockResolvedValue(startingPlayer);
+      mockRepo.getRandomTopScorer.mockResolvedValue(startingPlayer);
 
       repository.createRoom("ROOM1");
       const room = repository.getRoom("ROOM1")!;
@@ -242,7 +237,7 @@ describe("GameRoomRepository", () => {
     });
 
     it("should handle failure to get starting player", async () => {
-      (mockPlayerService.getRandomTopScorer as vi.Mock).mockResolvedValue(null);
+      mockRepo.getRandomTopScorer.mockResolvedValue(null);
 
       repository.createRoom("ROOM1");
       const room = repository.getRoom("ROOM1")!;
@@ -257,7 +252,7 @@ describe("GameRoomRepository", () => {
     });
 
     it("should set random starting player index", async () => {
-      (mockPlayerService.getRandomTopScorer as vi.Mock).mockResolvedValue({ id: 1, name: "Test", position: "F" });
+      mockRepo.getRandomTopScorer.mockResolvedValue({ id: 1, name: "Test", position: "F" });
       vi.spyOn(Math, "random").mockReturnValue(0.5);
 
       repository.createRoom("ROOM1");
@@ -273,7 +268,7 @@ describe("GameRoomRepository", () => {
 
   describe("game timeout", () => {
     it("should end game on turn timeout", async () => {
-      (mockPlayerService.getRandomTopScorer as vi.Mock).mockResolvedValue({ id: 99, name: "Test", position: "F" });
+      mockRepo.getRandomTopScorer.mockResolvedValue({ id: 99, name: "Test", position: "F" });
 
       repository.createRoom("ROOM1");
       const room = repository.getRoom("ROOM1")!;
@@ -297,7 +292,7 @@ describe("GameRoomRepository", () => {
     });
 
     it("should clear timeout on game end", async () => {
-      (mockPlayerService.getRandomTopScorer as vi.Mock).mockResolvedValue({ id: 1, name: "Test", position: "G" });
+      mockRepo.getRandomTopScorer.mockResolvedValue({ id: 1, name: "Test", position: "G" });
 
       repository.createRoom("ROOM1");
       const room = repository.getRoom("ROOM1")!;
@@ -586,7 +581,9 @@ describe("GameRoomRepository", () => {
     });
 
     it("should record stats on game end", async () => {
-      mockDbQuery.mockResolvedValue({ rows: [] });
+      mockRepo.recordGameStats.mockImplementation((room: any) => {
+        room.statsRecorded = true;
+      });
       
       repository.createRoom("ROOM1");
       const room = repository.getRoom("ROOM1")!;
@@ -597,20 +594,20 @@ describe("GameRoomRepository", () => {
         toPlayer: { id: 100, name: "UsedPlayer1", position: "C" },
         teamName: "Spurs", 
         seasonYear: 2005 
-      } as PlayerConnection);
+      } as any);
 
       repository.endGame("ROOM1", room.players[0], "Test ended");
 
-      // Wait for async stats recording
+      await Promise.resolve();
       await Promise.resolve();
       await Promise.resolve();
 
-      expect(mockDbQuery).toHaveBeenCalled();
+      expect(mockRepo.recordGameStats).toHaveBeenCalled();
       expect(room.statsRecorded).toBe(true);
     }, 10000);
 
     it("should not record stats twice", async () => {
-      mockDbQuery.mockResolvedValue({ rows: [] });
+      mockRepo.recordGameStats.mockResolvedValue(undefined);
       
       repository.createRoom("ROOM1");
       const room = repository.getRoom("ROOM1")!;
@@ -623,12 +620,9 @@ describe("GameRoomRepository", () => {
       // Wait for async stats recording
       await Promise.resolve();
       await Promise.resolve();
+      await Promise.resolve();
 
-      // Stats query should only be called once (plus any queries from other tests)
-      const statsCalls = mockDbQuery.mock.calls.filter(
-        (call: any) => call[0].includes("INSERT INTO stats_events") && Array.isArray(call[1]) && call[1].includes("UsedPlayer1")
-      );
-      expect(statsCalls).toHaveLength(1);
+      expect(mockRepo.recordGameStats).toHaveBeenCalledTimes(1);
     }, 10000);
   });
 

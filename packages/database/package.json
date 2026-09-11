@@ -17,6 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@repo/types": "workspace:*",
     "pg": "^8.23.0"
   },
   "devDependencies": {

@@ -20,7 +20,7 @@ import { GameRoomState, Player } from "@repo/types";
 import { AddressInfo } from "net";
 import { getConnectionDetails, validateMove } from "@repo/logic";
 import type { Express } from "express";
-import databasePool from "@repo/database";
+import databasePool, { PgRepository } from "@repo/database";
 
 // Mock the @repo/logic package
 vi.mock("@repo/logic", () => {
@@ -37,12 +37,17 @@ vi.mock("@repo/logic", () => {
     CpuEngine: MockCpuEngine,
   };
 });
-vi.mock("@repo/database", () => ({
-  __esModule: true,
-  default: {
-    query: vi.fn(),
-  },
-}));
+vi.mock("@repo/database", async () => {
+  const actual = await vi.importActual<typeof import("@repo/database")>(
+    "@repo/database",
+  );
+  return {
+    __esModule: true,
+    default: { query: vi.fn() },
+    PgRepository: actual.PgRepository,
+    InMemoryRepository: actual.InMemoryRepository,
+  };
+});
 
 const mockValidateMove = validateMove as vi.Mock<typeof validateMove>;
 const mockGetConnectionDetails = getConnectionDetails as vi.Mock<

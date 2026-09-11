@@ -2,45 +2,39 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import supertest from "supertest";
 import express from "express";
 import { createApiRouter } from "../api";
-import { PlayerService } from "@repo/types";
-import databasePool from "@repo/database";
+import type { Repository } from "@repo/database";
+import { InMemoryRepository } from "@repo/database";
 
-vi.mock("@repo/database", () => ({
-  __esModule: true,
-  default: {
-    query: vi.fn(),
-  },
-}));
-
-const mockDbQuery = databasePool.query as unknown as vi.Mock<
-  (...args: any[]) => any
->;
-
-function createTestApp(playerServiceOverrides: Partial<PlayerService> = {}) {
-  const fakePlayerService = {
-    searchPlayers: vi
-      .fn<PlayerService["searchPlayers"]>()
-      .mockResolvedValue([]),
-    getRandomPlayer: vi
-      .fn<PlayerService["getRandomPlayer"]>()
-      .mockResolvedValue(null),
-    getRandomTopScorer: vi
-      .fn<PlayerService["getRandomTopScorer"]>()
-      .mockResolvedValue(null),
-    ...playerServiceOverrides,
-  } as unknown as PlayerService;
+function createTestApp(overrides: Partial<Repository> = {}) {
+  const base = new InMemoryRepository();
+  const fakeRepo: Repository = {
+    searchPlayers: overrides.searchPlayers ?? vi.fn().mockResolvedValue([]),
+    getRandomPlayer: overrides.getRandomPlayer ?? vi.fn().mockResolvedValue(null),
+    getRandomTopScorer: overrides.getRandomTopScorer ?? vi.fn().mockResolvedValue(null),
+    getPlayerById: overrides.getPlayerById ?? vi.fn().mockResolvedValue(null),
+    validateMove: overrides.validateMock ?? vi.fn().mockResolvedValue(true),
+    getConnectionDetails: overrides.getConnectionDetails ?? vi.fn().mockResolvedValue(null),
+    getValidCandidates: overrides.getValidCandidates ?? vi.fn().mockResolvedValue([]),
+    getSeasons: overrides.getSeasons ?? vi.fn().mockResolvedValue([]),
+    getStats: overrides.getStats ?? vi.fn().mockResolvedValue({
+      windowDays: 7,
+      timezone: "America/New_York",
+      updatedAt: new Date().toISOString(),
+      players: [],
+      teams: [],
+      seasons: [],
+      longestStreak: 0,
+    }),
+    recordGameStats: overrides.recordGameStats ?? vi.fn().mockResolvedValue(undefined),
+  };
 
   const app = express();
   app.use(express.json());
-  app.use(createApiRouter({ playerService: fakePlayerService }));
-  return { app, fakePlayerService };
+  app.use(createApiRouter({ repository: fakeRepo }));
+  return { app, fakeRepo };
 }
 
 describe("API Routes — /api/players/search", () => {
-  beforeEach(() => {
-    mockDbQuery.mockReset();
-  });
-
   it("returns 400 when query param is missing", async () => {
     const { app } = createTestApp();
     await supertest(app)
@@ -72,9 +66,7 @@ describe("API Routes — /api/players/search", () => {
   });
 
   it("returns 500 when searchPlayers throws", async () => {
-    const searchPlayers = vi
-      .fn<PlayerService["searchPlayers"]>()
-      .mockRejectedValue(new Error("db down"));
+    const searchPlayers = vi.fn().mockRejectedValue(new Error("db down"));
     const { app } = createTestApp({ searchPlayers });
 
     await supertest(app)
@@ -85,14 +77,12 @@ describe("API Routes — /api/players/search", () => {
       });
   });
 
-  it("returns results from playerService.searchPlayers", async () => {
+  it("returns results from repository.searchPlayers", async () => {
     const players = [
       { id: 1, name: "Tim Duncan", position: "PF" },
       { id: 2, name: "Tony Parker", position: "PG" },
     ];
-    const searchPlayers = vi
-      .fn<PlayerService["searchPlayers"]>()
-      .mockResolvedValue(players);
+    const searchPlayers = vi.fn().mockResolvedValue(players);
     const { app } = createTestApp({ searchPlayers });
 
     await supertest(app)
@@ -108,9 +98,7 @@ describe("API Routes — /api/players/search", () => {
 describe("API Routes — /api/players/random", () => {
   it("returns a random player", async () => {
     const player = { id: 5, name: "Manu Ginobili", position: "SG" };
-    const getRandomPlayer = vi
-      .fn<PlayerService["getRandomPlayer"]>()
-      .mockResolvedValue(player);
+    const getRandomPlayer = vi.fn().mockResolvedValue(player);
     const { app } = createTestApp({ getRandomPlayer });
 
     await supertest(app)
@@ -122,9 +110,7 @@ describe("API Routes — /api/players/random", () => {
   });
 
   it("returns null when no players exist", async () => {
-    const getRandomPlayer = vi
-      .fn<PlayerService["getRandomPlayer"]>()
-      .mockResolvedValue(null);
+    const getRandomPlayer = vi.fn().mockResolvedValue(null);
     const { app } = createTestApp({ getRandomPlayer });
 
     await supertest(app)
@@ -136,9 +122,7 @@ describe("API Routes — /api/players/random", () => {
   });
 
   it("returns 500 on database error", async () => {
-    const getRandomPlayer = vi
-      .fn<PlayerService["getRandomPlayer"]>()
-      .mockRejectedValue(new Error("db error"));
+    const getRandomPlayer = vi.fn().mockRejectedValue(new Error("db error"));
     const { app } = createTestApp({ getRandomPlayer });
 
     await supertest(app)
@@ -164,29 +148,19 @@ describe("API Routes — /health", () => {
 });
 
 describe("API Routes — /api/stats", () => {
-  beforeEach(() => {
-    mockDbQuery.mockReset();
-  });
-
-  const defaultRows = {
+  const defaultStats = {
+    windowDays: 7,
+    timezone: "America/New_York",
+    updatedAt: new Date().toISOString(),
     players: [{ name: "Tim Duncan", count: 3 }],
     teams: [{ name: "Spurs", count: 4 }],
     seasons: [{ seasonYear: 2005, count: 5 }],
-    streak: [{ longest: 8 }],
+    longestStreak: 8,
   };
 
-  function mockStatsResponses(overrides?: Partial<typeof defaultRows>) {
-    const rows = { ...defaultRows, ...overrides };
-    mockDbQuery
-      .mockResolvedValueOnce({ rows: rows.players })
-      .mockResolvedValueOnce({ rows: rows.teams })
-      .mockResolvedValueOnce({ rows: rows.seasons })
-      .mockResolvedValueOnce({ rows: rows.streak });
-  }
-
   it("returns default windowDays and timezone when not provided", async () => {
-    mockStatsResponses();
-    const { app } = createTestApp();
+    const getStats = vi.fn().mockResolvedValue({ ...defaultStats });
+    const { app } = createTestApp({ getStats });
 
     await supertest(app)
       .get("/api/stats")
@@ -198,8 +172,12 @@ describe("API Routes — /api/stats", () => {
   });
 
   it("clamps windowDays between 1 and 365", async () => {
-    mockStatsResponses();
-    const { app } = createTestApp();
+    const getStats = vi.fn().mockImplementation(async (windowDays, tz) => ({
+      ...defaultStats,
+      windowDays,
+      timezone: tz,
+    }));
+    const { app } = createTestApp({ getStats });
 
     await supertest(app)
       .get("/api/stats?windowDays=999")
@@ -210,8 +188,12 @@ describe("API Routes — /api/stats", () => {
   });
 
   it("uses provided timezone", async () => {
-    mockStatsResponses();
-    const { app } = createTestApp();
+    const getStats = vi.fn().mockImplementation(async (windowDays, tz) => ({
+      ...defaultStats,
+      windowDays,
+      timezone: tz,
+    }));
+    const { app } = createTestApp({ getStats });
 
     await supertest(app)
       .get("/api/stats?tz=America%2FChicago")
@@ -222,8 +204,12 @@ describe("API Routes — /api/stats", () => {
   });
 
   it("clamps windowDays to minimum of 1", async () => {
-    mockStatsResponses();
-    const { app } = createTestApp();
+    const getStats = vi.fn().mockImplementation(async (windowDays, tz) => ({
+      ...defaultStats,
+      windowDays,
+      timezone: tz,
+    }));
+    const { app } = createTestApp({ getStats });
 
     await supertest(app)
       .get("/api/stats?windowDays=0")
@@ -234,8 +220,12 @@ describe("API Routes — /api/stats", () => {
   });
 
   it("falls back to default timezone when tz is empty", async () => {
-    mockStatsResponses();
-    const { app } = createTestApp();
+    const getStats = vi.fn().mockImplementation(async (windowDays, tz) => ({
+      ...defaultStats,
+      windowDays,
+      timezone: tz,
+    }));
+    const { app } = createTestApp({ getStats });
 
     await supertest(app)
       .get("/api/stats?tz=")
@@ -246,8 +236,8 @@ describe("API Routes — /api/stats", () => {
   });
 
   it("returns all stats sections", async () => {
-    mockStatsResponses();
-    const { app } = createTestApp();
+    const getStats = vi.fn().mockResolvedValue({ ...defaultStats });
+    const { app } = createTestApp({ getStats });
 
     await supertest(app)
       .get("/api/stats?windowDays=30&tz=America%2FNew_York")
@@ -260,9 +250,9 @@ describe("API Routes — /api/stats", () => {
       });
   });
 
-  it("returns 400 when stats query throws", async () => {
-    mockDbQuery.mockRejectedValue(new Error("query failed"));
-    const { app } = createTestApp();
+  it("returns 500 when stats query throws", async () => {
+    const getStats = vi.fn().mockRejectedValue(new Error("query failed"));
+    const { app } = createTestApp({ getStats });
 
     await supertest(app)
       .get("/api/stats")
@@ -273,8 +263,8 @@ describe("API Routes — /api/stats", () => {
   });
 
   it("handles missing streak row gracefully", async () => {
-    mockStatsResponses({ streak: [{ longest: null }] });
-    const { app } = createTestApp();
+    const getStats = vi.fn().mockResolvedValue({ ...defaultStats, longestStreak: 0 });
+    const { app } = createTestApp({ getStats });
 
     await supertest(app)
       .get("/api/stats")
@@ -286,34 +276,21 @@ describe("API Routes — /api/stats", () => {
 });
 
 describe("API Routes — /api/seasons", () => {
-  beforeEach(() => {
-    mockDbQuery.mockReset();
-  });
-
   it("returns distinct season years sorted descending", async () => {
-    mockDbQuery.mockResolvedValueOnce({
-      rows: [
-        { season_year: 2026 },
-        { season_year: 2025 },
-        { season_year: 2024 },
-      ],
-    });
-    const { app } = createTestApp();
+    const getSeasons = vi.fn().mockResolvedValue([2026, 2025, 2024]);
+    const { app } = createTestApp({ getSeasons });
 
     await supertest(app)
       .get("/api/seasons")
       .expect(200)
       .then((res) => {
         expect(res.body).toEqual([2026, 2025, 2024]);
-        expect(mockDbQuery).toHaveBeenCalledWith(
-          expect.stringContaining("SELECT DISTINCT season_year"),
-        );
       });
   });
 
   it("returns empty array when no seasons exist", async () => {
-    mockDbQuery.mockResolvedValueOnce({ rows: [] });
-    const { app } = createTestApp();
+    const getSeasons = vi.fn().mockResolvedValue([]);
+    const { app } = createTestApp({ getSeasons });
 
     await supertest(app)
       .get("/api/seasons")
@@ -324,8 +301,8 @@ describe("API Routes — /api/seasons", () => {
   });
 
   it("returns 500 on database error", async () => {
-    mockDbQuery.mockRejectedValueOnce(new Error("db error"));
-    const { app } = createTestApp();
+    const getSeasons = vi.fn().mockRejectedValue(new Error("db error"));
+    const { app } = createTestApp({ getSeasons });
 
     await supertest(app)
       .get("/api/seasons")

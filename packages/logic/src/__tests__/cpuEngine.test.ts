@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CpuEngine } from "../cpuEngine";
-import type { DatabaseService, Player } from "@repo/types";
+import type { Player } from "@repo/types";
 
-const mockDb = {
-  query: vi.fn() as vi.Mock<any>,
-};
+const mockRepo = {
+  getValidCandidates: vi.fn(),
+} as any;
 
 describe("CpuEngine", () => {
   let engine: CpuEngine;
@@ -19,26 +19,22 @@ describe("CpuEngine", () => {
   ];
 
   beforeEach(() => {
-    mockDb.query.mockReset();
-    engine = new CpuEngine({ db: mockDb as unknown as DatabaseService });
+    vi.clearAllMocks();
+    engine = new CpuEngine({ repository: mockRepo });
   });
 
   describe("getValidCandidates", () => {
     it("returns players connected to the given player, excluding used IDs", async () => {
-      mockDb.query.mockResolvedValueOnce({ rows: candidates });
+      mockRepo.getValidCandidates.mockResolvedValue(candidates);
 
       const result = await engine.getValidCandidates(1, usedIds);
 
       expect(result).toEqual(candidates);
-      expect(mockDb.query).toHaveBeenCalledTimes(1);
-      // Verify the query excludes used IDs
-      const sql = mockDb.query.mock.calls[0][0];
-      expect(sql).toContain("r2.player_id = p.id");
-      expect(sql).toContain("p.id != ALL($2::int[])");
+      expect(mockRepo.getValidCandidates).toHaveBeenCalledWith(1, usedIds, undefined, undefined);
     });
 
     it("returns empty array when no valid candidates exist", async () => {
-      mockDb.query.mockResolvedValueOnce({ rows: [] });
+      mockRepo.getValidCandidates.mockResolvedValue([]);
 
       const result = await engine.getValidCandidates(1, [1, 2, 3, 4, 5]);
 
@@ -48,7 +44,7 @@ describe("CpuEngine", () => {
 
   describe("getBestMove", () => {
     it("returns null when no candidates available", async () => {
-      mockDb.query.mockResolvedValueOnce({ rows: [] });
+      mockRepo.getValidCandidates.mockResolvedValue([]);
 
       const result = await engine.getBestMove(lastPlayer, [1, 2, 3], "easy");
 
@@ -57,23 +53,21 @@ describe("CpuEngine", () => {
 
     describe("easy difficulty", () => {
       it("returns a random valid candidate", async () => {
-        mockDb.query.mockResolvedValueOnce({ rows: candidates });
+        mockRepo.getValidCandidates.mockResolvedValue(candidates);
 
-        // Mock Math.random to return a specific value
         const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5);
 
         const result = await engine.getBestMove(lastPlayer, usedIds, "easy");
 
         expect(result).not.toBeNull();
         expect(candidates).toContainEqual(result);
-        expect(mockDb.query).toHaveBeenCalledTimes(1);
+        expect(mockRepo.getValidCandidates).toHaveBeenCalledTimes(1);
 
         randomSpy.mockRestore();
       });
 
       it("never returns an already-used player", async () => {
-        // usedIds already contains 5 — make sure candidate rows don't include it
-        mockDb.query.mockResolvedValueOnce({ rows: candidates });
+        mockRepo.getValidCandidates.mockResolvedValue(candidates);
 
         const result = await engine.getBestMove(lastPlayer, usedIds, "easy");
 
@@ -85,7 +79,7 @@ describe("CpuEngine", () => {
     describe("edge cases", () => {
       it("handles single candidate correctly", async () => {
         const singleCandidate = [candidates[0]];
-        mockDb.query.mockResolvedValueOnce({ rows: singleCandidate });
+        mockRepo.getValidCandidates.mockResolvedValue(singleCandidate);
 
         const result = await engine.getBestMove(lastPlayer, usedIds, "easy");
 
@@ -93,7 +87,7 @@ describe("CpuEngine", () => {
       });
 
       it("returns null when query returns empty rows (no valid moves)", async () => {
-        mockDb.query.mockResolvedValueOnce({ rows: [] });
+        mockRepo.getValidCandidates.mockResolvedValue([]);
 
         const result = await engine.getBestMove(
           lastPlayer,
@@ -106,36 +100,30 @@ describe("CpuEngine", () => {
     });
 
     describe("season filtering", () => {
-      it("passes seasonYearMin/seasonYearMax to getValidCandidates query", async () => {
-        mockDb.query.mockResolvedValueOnce({ rows: candidates });
+      it("passes seasonYearMin/seasonYearMax to getValidCandidates", async () => {
+        mockRepo.getValidCandidates.mockResolvedValue(candidates);
 
         await engine.getBestMove(lastPlayer, usedIds, "easy", 2020, 2023);
 
-        expect(mockDb.query).toHaveBeenCalledTimes(1);
-        const sql = mockDb.query.mock.calls[0][0];
-        expect(sql).toContain("r1.season_year >= $3 AND r1.season_year <= $4");
-        const params = mockDb.query.mock.calls[0][1];
-        expect(params).toEqual([lastPlayer.id, usedIds, 2020, 2023]);
+        expect(mockRepo.getValidCandidates).toHaveBeenCalledWith(
+          lastPlayer.id, usedIds, 2020, 2023
+        );
       });
 
-      it("getValidCandidates omits season clause when both are undefined", async () => {
-        mockDb.query.mockResolvedValueOnce({ rows: candidates });
+      it("getValidCandidates omits season args when both are undefined", async () => {
+        mockRepo.getValidCandidates.mockResolvedValue(candidates);
 
         await engine.getValidCandidates(1, usedIds);
 
-        const sql = mockDb.query.mock.calls[0][0];
-        expect(sql).not.toContain("season_year >=");
+        expect(mockRepo.getValidCandidates).toHaveBeenCalledWith(1, usedIds, undefined, undefined);
       });
 
-      it("getValidCandidates includes season clause when both provided", async () => {
-        mockDb.query.mockResolvedValueOnce({ rows: [] });
+      it("getValidCandidates includes season args when both provided", async () => {
+        mockRepo.getValidCandidates.mockResolvedValue([]);
 
         await engine.getValidCandidates(1, usedIds, 2010, 2020);
 
-        const sql = mockDb.query.mock.calls[0][0];
-        expect(sql).toContain("r1.season_year >= $3 AND r1.season_year <= $4");
-        const params = mockDb.query.mock.calls[0][1];
-        expect(params).toEqual([1, usedIds, 2010, 2020]);
+        expect(mockRepo.getValidCandidates).toHaveBeenCalledWith(1, usedIds, 2010, 2020);
       });
     });
   });

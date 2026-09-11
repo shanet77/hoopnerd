@@ -1,7 +1,8 @@
-import { DatabaseService, CpuDifficulty, Player } from "@repo/types";
+import type { CpuDifficulty, Player } from "@repo/types";
+import type { Repository } from "@repo/database";
 
 export interface CpuEngineDependencies {
-  db: DatabaseService;
+  repository: Repository;
 }
 
 /**
@@ -60,28 +61,8 @@ export class CpuEngine {
     seasonYearMin?: number,
     seasonYearMax?: number,
   ): Promise<Player[]> {
-    const { db } = this.deps;
-
-    const params: (number | number[])[] = [playerId, usedPlayerIds];
-    let seasonClause = "";
-
-    if (seasonYearMin !== undefined && seasonYearMax !== undefined) {
-      seasonClause = "AND r1.season_year >= $3 AND r1.season_year <= $4";
-      params.push(seasonYearMin, seasonYearMax);
-    }
-
-    const sql = `
-      SELECT DISTINCT p.id, p.player_name AS name, p.position
-      FROM rosters r1
-      JOIN rosters r2 ON r1.team_id = r2.team_id AND r1.season_year = r2.season_year
-      JOIN players p ON r2.player_id = p.id
-      WHERE r1.player_id = $1
-        AND p.id != ALL($2::int[])${seasonClause ? " " + seasonClause : ""}
-      ORDER BY p.player_name
-    `;
-
-    const result = await db.query(sql, params);
-    return result.rows;
+    const { repository } = this.deps;
+    return repository.getValidCandidates(playerId, usedPlayerIds, seasonYearMin, seasonYearMax);
   }
 
   /**
@@ -90,93 +71,5 @@ export class CpuEngine {
   private pickRandom(candidates: Player[]): Player {
     const index = Math.floor(Math.random() * candidates.length);
     return candidates[index];
-  }
-
-  /**
-   * Medium: prefer candidates with fewer total connections (harder for opponent).
-   * Uses a subquery to count connections per candidate, then sorts ASC.
-   */
-  private async pickByConnectionCount(candidates: Player[]): Promise<Player> {
-    const { db } = this.deps;
-    const candidateIds = candidates.map((c) => c.id);
-
-    // Get connection counts for each candidate
-    const sql = `
-      SELECT p.id, COUNT(DISTINCT teammate_id) AS connection_count
-      FROM (
-        SELECT r1.player_id AS id, r2.player_id AS teammate_id
-        FROM rosters r1
-        JOIN rosters r2 ON r1.team_id = r2.team_id AND r1.season_year = r2.season_year
-        WHERE r1.player_id != r2.player_id
-          AND r1.player_id = ANY($1::int[])
-      ) sub
-      JOIN players p ON sub.id = p.id
-      GROUP BY p.id
-      ORDER BY connection_count ASC
-    `;
-
-    const result = await db.query(sql, [candidateIds]);
-
-    if (result.rows.length === 0) {
-      return this.pickRandom(candidates);
-    }
-
-    // Pick the candidate with the fewest connections
-    // If multiple have the same min count, pick a random one among them
-    const minCount = parseInt(result.rows[0].connection_count, 10);
-    const bestCandidates = result.rows.filter(
-      (row: any) => parseInt(row.connection_count, 10) === minCount,
-    );
-
-    const bestId =
-      bestCandidates[Math.floor(Math.random() * bestCandidates.length)].id;
-    return candidates.find((c) => c.id === bestId)!;
-  }
-
-  /**
-   * Hard: 1-ply lookahead. For each candidate, compute how many unused players
-   * the opponent could connect to from that candidate. Pick the candidate that
-   * minimizes the opponent's options.
-   */
-  private async pickByLookahead(
-    candidates: Player[],
-    usedPlayerIds: number[],
-  ): Promise<Player> {
-    const { db } = this.deps;
-
-    // For each candidate, count how many distinct unused players are connected to them
-    const candidateIds = candidates.map((c) => c.id);
-
-    const sql = `
-      SELECT p.id AS candidate_id, COUNT(DISTINCT teammate_id) AS opponent_options
-      FROM (
-        SELECT r1.player_id AS id, r2.player_id AS teammate_id
-        FROM rosters r1
-        JOIN rosters r2 ON r1.team_id = r2.team_id AND r1.season_year = r2.season_year
-        WHERE r1.player_id != r2.player_id
-          AND r1.player_id = ANY($1::int[])
-          AND r2.player_id != ALL($2::int[])
-      ) sub
-      JOIN players p ON sub.id = p.id
-      GROUP BY p.id
-      ORDER BY opponent_options ASC
-    `;
-
-    const result = await db.query(sql, [candidateIds, usedPlayerIds]);
-
-    if (result.rows.length === 0) {
-      return this.pickRandom(candidates);
-    }
-
-    // Pick the candidate that gives the opponent the fewest options
-    const minOptions = parseInt(result.rows[0].opponent_options, 10);
-    const bestCandidates = result.rows.filter(
-      (row: any) => parseInt(row.opponent_options, 10) === minOptions,
-    );
-
-    const bestId =
-      bestCandidates[Math.floor(Math.random() * bestCandidates.length)]
-        .candidate_id;
-    return candidates.find((c) => c.id === bestId)!;
   }
 }

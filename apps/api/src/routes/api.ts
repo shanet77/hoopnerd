@@ -1,19 +1,17 @@
 import { Router, Request, Response } from "express";
-import { PlayerService } from "@repo/types";
-import databasePool from "@repo/database";
+import type { Repository } from "@repo/database";
 import { parseTimezone, parseWindowDays } from "../serverUtils";
 
 type ApiRouterDependencies = {
-  playerService: PlayerService;
+  repository: Repository;
 };
 
 /**
  * Creates an Express router with all HTTP API routes.
- * This extracts route definitions from server.ts (Step 3 of the refactoring).
  */
 export function createApiRouter(dependencies: ApiRouterDependencies): Router {
   const router = Router();
-  const { playerService } = dependencies;
+  const { repository } = dependencies;
 
   router.get("/api/players/search", async (req: Request, res: Response) => {
     const { q } = req.query;
@@ -30,7 +28,7 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
     }
 
     try {
-      res.json(await playerService.searchPlayers(q));
+      res.json(await repository.searchPlayers(q));
     } catch (error) {
       console.error("Database query error:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -39,7 +37,7 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
 
   router.get("/api/players/random", async (req: Request, res: Response) => {
     try {
-      const player = await playerService.getRandomPlayer();
+      const player = await repository.getRandomPlayer();
       res.json(player);
     } catch (error) {
       console.error("Database query error:", error);
@@ -61,17 +59,7 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
 
   router.get("/api/seasons", async (_req: Request, res: Response) => {
     try {
-      const result = await databasePool.query(
-        `SELECT DISTINCT season_year
-         FROM rosters
-         ORDER BY season_year DESC`,
-      );
-
-      const seasons = result.rows.map(
-        (row: { season_year: number }) => row.season_year,
-      );
-
-      res.json(seasons);
+      res.json(await repository.getSeasons());
     } catch (error) {
       console.error("Seasons query error:", error);
       res.status(500).json({ error: "Failed to fetch seasons" });
@@ -83,71 +71,7 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
     const timezone = parseTimezone(req.query.tz);
 
     try {
-      const timeFilter = `
-        created_at AT TIME ZONE $2 >= (NOW() AT TIME ZONE $2) - ($1 || ' days')::interval
-      `;
-
-      const playersResult = await databasePool.query(
-        `
-          SELECT player_name AS name, COUNT(*)::int AS count
-          FROM stats_events
-          WHERE event_type = 'player'
-            AND ${timeFilter}
-            AND player_name IS NOT NULL
-          GROUP BY player_name
-          ORDER BY count DESC, name ASC
-          LIMIT 5
-        `,
-        [windowDays, timezone],
-      );
-
-      const teamsResult = await databasePool.query(
-        `
-          SELECT team_name AS name, COUNT(*)::int AS count
-          FROM stats_events
-          WHERE event_type = 'team'
-            AND ${timeFilter}
-            AND team_name IS NOT NULL
-          GROUP BY team_name
-          ORDER BY count DESC, name ASC
-          LIMIT 5
-        `,
-        [windowDays, timezone],
-      );
-
-      const seasonsResult = await databasePool.query(
-        `
-          SELECT season_year AS "seasonYear", COUNT(*)::int AS count
-          FROM stats_events
-          WHERE event_type = 'season'
-            AND ${timeFilter}
-            AND season_year IS NOT NULL
-          GROUP BY season_year
-          ORDER BY count DESC, season_year DESC
-          LIMIT 5
-        `,
-        [windowDays, timezone],
-      );
-
-      const streakResult = await databasePool.query(
-        `
-          SELECT COALESCE(MAX(streak_count), 0)::int AS longest
-          FROM stats_events
-          WHERE event_type = 'streak'
-            AND ${timeFilter}
-        `,
-        [windowDays, timezone],
-      );
-
-      res.json({
-        windowDays,
-        timezone,
-        updatedAt: new Date().toISOString(),
-        players: playersResult.rows,
-        teams: teamsResult.rows,
-        seasons: seasonsResult.rows,
-        longestStreak: streakResult.rows[0]?.longest ?? 0,
-      });
+      res.json(await repository.getStats(windowDays, timezone));
     } catch (error) {
       console.error("Stats query error:", error);
       res.status(500).json({ error: "Failed to fetch stats" });

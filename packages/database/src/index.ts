@@ -28,5 +28,7 @@ const pool = process.env.DATABASE_URL
     });
 
 export { runMigrations } from "./migrate";
+export { PgRepository, InMemoryRepository } from "./repository";
+export type { Repository } from "./repository";
 
 export default pool;
