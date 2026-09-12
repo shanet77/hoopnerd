@@ -4,7 +4,7 @@ Requires=hoopnerd-postgres.service
 After=hoopnerd-postgres.service network-online.target
 
 [Container]
-Image=zot.example.com/namespace/hoopnerd-api:main-latest
+Image=localhost/hoopnerd-api:main-latest
 ContainerName=hoopnerd-api
 
 EnvironmentFile=/home/deployer/project/hoopnerd/.env.prod

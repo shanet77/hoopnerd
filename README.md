@@ -87,7 +87,7 @@ allows all origins (see `buildAllowedOrigins` in
 - `DOCKERNODE_USER`
 - `DOCKERNODE_SSH_KEY`
 - `DOCKERNODE_PATH`
-- `REGISTRY_URL` (example: `zot.example.com`)
+- `REGISTRY_URL` (registry host, stored as a CI secret)
 - `REGISTRY_USERNAME`
 - `REGISTRY_PASSWORD`
 

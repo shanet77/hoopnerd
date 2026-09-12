@@ -70,8 +70,8 @@ fi
 # --- resolve image names -----------------------------------------------------
 API_IMAGE_SHA="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:${IMAGE_TAG}"
 WEB_IMAGE_SHA="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-web:${IMAGE_TAG}"
-API_IMAGE_LATEST="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:main-latest"
-WEB_IMAGE_LATEST="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-web:main-latest"
+API_IMAGE_LATEST="localhost/hoopnerd-api:main-latest"
+WEB_IMAGE_LATEST="localhost/hoopnerd-web:main-latest"
 
 echo "API  sha    : ${API_IMAGE_SHA}"
 echo "API  latest : ${API_IMAGE_LATEST}"

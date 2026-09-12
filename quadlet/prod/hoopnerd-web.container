@@ -4,7 +4,7 @@ Requires=hoopnerd-api.service
 After=hoopnerd-api.service network-online.target
 
 [Container]
-Image=zot.example.com/namespace/hoopnerd-web:main-latest
+Image=localhost/hoopnerd-web:main-latest
 ContainerName=hoopnerd-web
 
 EnvironmentFile=/home/deployer/project/hoopnerd/.env.prod

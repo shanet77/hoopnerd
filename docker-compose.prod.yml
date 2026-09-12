@@ -21,7 +21,7 @@ services:
     init: true
 
   api:
-    image: ${API_IMAGE:-zot.example.com/namespace/hoopnerd-api:main-latest}
+    image: ${API_IMAGE:?API_IMAGE is required}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -54,7 +54,7 @@ services:
     init: true
 
   web:
-    image: ${WEB_IMAGE:-zot.example.com/namespace/hoopnerd-web:main-latest}
+    image: ${WEB_IMAGE:?WEB_IMAGE is required}
     restart: unless-stopped
     environment:
       NODE_ENV: production

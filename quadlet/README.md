@@ -79,7 +79,7 @@ cd ~/project/hoopnerd
 ### Manual deployment
 ```bash
 export IMAGE_TAG=<git-sha>
-export REGISTRY_URL=zot.example.com
+export REGISTRY_URL=<registry-host>
 export REGISTRY_USERNAME=<registry-user>
 export REGISTRY_PASSWORD_B64=$(printf 'password' | base64)
 export REGISTRY_NAMESPACE=<registry-namespace>
