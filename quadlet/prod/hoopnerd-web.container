@@ -5,6 +5,7 @@ After=hoopnerd-api.service network-online.target
 
 [Container]
 Image=localhost/hoopnerd-web:main-latest
+Pull=never
 ContainerName=hoopnerd-web
 
 EnvironmentFile=/home/deployer/project/hoopnerd/.env.prod

@@ -33,7 +33,7 @@ DEPLOY_TARGET_PATH="${DEPLOY_PATH:-}"
 cd "${DEPLOY_TARGET_PATH}"
 
 SYNC_REF="${TARGET_SHA:-origin/main}"
-git fetch --all --prune --tags
+git fetch --all --prune --tags --force
 git clean -fd -- quadlet deploy-quadlet.sh setup-dev-quadlet.sh scripts/deploy-quadlet.sh scripts/setup-dev-quadlet.sh
 git checkout --detach "${SYNC_REF}"
 echo "Deploying commit: $(git rev-parse HEAD)"

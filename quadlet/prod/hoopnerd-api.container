@@ -5,6 +5,7 @@ After=hoopnerd-postgres.service network-online.target
 
 [Container]
 Image=localhost/hoopnerd-api:main-latest
+Pull=never
 ContainerName=hoopnerd-api
 
 EnvironmentFile=/home/deployer/project/hoopnerd/.env.prod

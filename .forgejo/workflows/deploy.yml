@@ -90,7 +90,9 @@ jobs:
           else
             git remote set-url origin "${repo_url}"
           fi
-          git fetch --tags origin main
+          # --force: tags are rewritten when history is, and a stale local tag
+          # would otherwise abort this step with "would clobber existing tag".
+          git fetch --tags --force origin main
           git checkout --detach FETCH_HEAD
 
       - name: Resolve version
@@ -176,7 +178,7 @@ jobs:
           fi
 
           cd "${DOCKERNODE_PATH}"
-          git fetch --all --prune
+          git fetch --all --prune --force
           git checkout --detach "${TARGET_SHA}"
 
           REGISTRY_PASSWORD="$(printf '%s' "${REGISTRY_PASSWORD_B64}" | base64 -d)"
@@ -253,7 +255,9 @@ jobs:
             git remote set-url origin "${repo_url}"
           fi
           # Fetch tags too — needed for version.sh to resolve semver
-          git fetch --tags origin main
+          # --force: tags are rewritten when history is, and a stale local tag
+          # would otherwise abort this step with "would clobber existing tag".
+          git fetch --tags --force origin main
           git checkout --detach FETCH_HEAD
 
       - name: Resolve version
