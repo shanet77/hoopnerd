@@ -16,8 +16,10 @@ COPY . .
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# Build the database package
-RUN pnpm --filter @repo/database build
+# Build the database package and its workspace dependencies.
+# The trailing "..." is required: @repo/types resolves via its package.json
+# "types": "./dist/index.d.ts", so it must be compiled before @repo/database.
+RUN pnpm --filter "@repo/database..." build
 
 WORKDIR /app/packages/database
 
