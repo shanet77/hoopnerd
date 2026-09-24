@@ -38,11 +38,10 @@ if ! command -v corepack &>/dev/null; then
   fi
 else
   corepack enable
-  corepack prepare pnpm@11.3.0 --activate
 fi
 
-# Verify the correct pnpm version is now active
-EXPECTED_PNPM="11.3.0"
+# Verify the pinned pnpm version (from packageManager) is active
+EXPECTED_PNPM="12.6.0"
 ACTUAL_PNPM="$(pnpm --version 2>/dev/null || true)"
 if [ "$ACTUAL_PNPM" != "$EXPECTED_PNPM" ]; then
   echo "⚠️  Expected pnpm v$EXPECTED_PNPM but found v${ACTUAL_PNPM:-<none>}. Continuing anyway..."
