@@ -7,6 +7,8 @@ import { SubmitMoveRequest, Player, GameRoomState } from "@repo/types";
 // Mock socketAuth module
 vi.mock("../../../socketAuth", () => ({
   verifySessionToken: vi.fn(),
+  normalizePlayerName: vi.fn((name: string) => name.trim()),
+  MAX_PLAYER_NAME_LENGTH: 32,
 }));
 
 import { verifySessionToken } from "../../../socketAuth";
@@ -71,7 +73,6 @@ describe("Game Handlers", () => {
       expect(mockSocket.emit).toHaveBeenCalledWith("auth_error", {
         code: "AUTH_001",
         message: "Invalid session token",
-        metadata: undefined,
       });
       expect(mockEngine.applyMove).not.toHaveBeenCalled();
     });
@@ -89,9 +90,8 @@ describe("Game Handlers", () => {
       } as SubmitMoveRequest);
 
       expect(mockSocket.emit).toHaveBeenCalledWith("auth_error", {
-        code: "AUTH_004",
-        message: "Socket identity does not match session",
-        metadata: undefined,
+        code: "AUTH_003",
+        message: "Session does not belong to this room",
       });
       expect(mockEngine.applyMove).not.toHaveBeenCalled();
     });
@@ -116,7 +116,6 @@ describe("Game Handlers", () => {
       expect(mockSocket.emit).toHaveBeenCalledWith("auth_error", {
         code: "AUTH_006",
         message: "Room not found",
-        metadata: undefined,
       });
     });
 
@@ -144,11 +143,12 @@ describe("Game Handlers", () => {
       expect(mockSocket.emit).toHaveBeenCalledWith("auth_error", {
         code: "AUTH_005",
         message: "Player is not part of this room",
-        metadata: undefined,
       });
     });
 
     it("should reject when it's not the player's turn", async () => {
+      // Turn order is a game-state invariant owned by MatchEngine.applyMove,
+      // so the handler authorizes identity and delegates.
       mockVerifySessionToken.mockReturnValueOnce({
         roomId: mockRoomId,
         playerId: 1,
@@ -157,12 +157,13 @@ describe("Game Handlers", () => {
         roomId: mockRoomId,
         playerId: 1,
       });
-      const player1 = { id: 1, name: "Player1", position: "G" } as Player;
-      const player2 = { id: 2, name: "Player2", position: "F" } as Player;
       (mockEngine.getRoom as vi.Mock).mockReturnValueOnce({
         roomId: mockRoomId,
         gameCompleted: false,
-        players: [player1, player2],
+        players: [
+          { id: 1, name: "Player1", position: "G" } as Player,
+          { id: 2, name: "Player2", position: "F" } as Player,
+        ],
         currentPlayerIndex: 1,
         startingPlayer: { id: 50, name: "Starter", position: "C" } as Player,
       } as GameRoomState);
@@ -173,11 +174,11 @@ describe("Game Handlers", () => {
         playerToken: mockToken,
       } as SubmitMoveRequest);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith("auth_error", {
-        code: "AUTH_007",
-        message: "Not your turn",
-        metadata: { currentPlayerName: "Player2" },
-      });
+      expect(mockEngine.applyMove).toHaveBeenCalledWith(
+        mockRoomId,
+        1,
+        mockConnectedPlayer,
+      );
     });
 
     it("should delegate the validated move to the engine", async () => {

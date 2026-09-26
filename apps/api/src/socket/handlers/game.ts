@@ -1,59 +1,39 @@
 import { Socket } from "socket.io";
 import { SubmitMoveRequest } from "@repo/types";
 import { MatchEngine } from "../../services/MatchEngine";
-import {
-  AuthenticatedSocket,
-  composeMiddlewares,
-  requireSession,
-  requireRoomAccess,
-  requireCurrentTurn,
-} from "../middleware/auth";
-import {
-  handleErrorOnSocket,
-  HandleErrorOnSocketOptions,
-} from "../middleware/validation";
-
-const GAME_HANDLER_OPTIONS: HandleErrorOnSocketOptions = {
-  defaultEvent: "game_error",
-  legacyChannel: "game_error",
-};
+import { SessionAuthorizer } from "../SessionAuthorizer";
+import { respondWithError } from "../socketProtocol";
 
 export function registerGameHandlers(
   socket: Socket,
   matchEngine: MatchEngine,
 ): void {
-  // Pre-compose middleware pipeline (created once, not per-event)
-  const requireValidSubmit = composeMiddlewares(
-    requireSession((d) => d.playerToken),
-    requireRoomAccess(matchEngine),
-    requireCurrentTurn(matchEngine),
-  );
+  const authorizer = new SessionAuthorizer(matchEngine);
 
   // ---------------------------------------------------------------------------
   // submit_move
   // ---------------------------------------------------------------------------
+  // Identity is resolved here; every game-state rule (is it your turn, was the
+  // player already used, is the connection valid) is enforced by the engine.
   socket.on("submit_move", async (data: SubmitMoveRequest) => {
-    const { roomId, connectedPlayer } = data;
+    let actor;
+    try {
+      actor = authorizer.authorize(socket.id, data.playerToken, data.roomId);
+    } catch (error) {
+      respondWithError(socket, error);
+      return;
+    }
 
-    requireValidSubmit(socket, data, async (error) => {
-      if (error) {
-        handleErrorOnSocket(socket, error, GAME_HANDLER_OPTIONS);
-        return;
-      }
-
-      const authSocket = socket as AuthenticatedSocket;
-
-      try {
-        await matchEngine.applyMove(
-          roomId,
-          authSocket.player!.id,
-          connectedPlayer,
-        );
-      } catch (err) {
-        console.error("Error validating move:", err);
-        socket.emit("game_error", "Error validating move");
-        socket.to(roomId).emit("game_error", "Error validating move");
-      }
-    });
+    try {
+      await matchEngine.applyMove(
+        actor.roomId,
+        actor.playerId,
+        data.connectedPlayer,
+      );
+    } catch (err) {
+      console.error("Error validating move:", err);
+      socket.emit("game_error", "Error validating move");
+      socket.to(actor.roomId).emit("game_error", "Error validating move");
+    }
   });
 }
