@@ -332,7 +332,6 @@ describe("Room Handlers", () => {
       expect(mockSocket.emit).toHaveBeenCalledWith("auth_error", {
         code: "AUTH_001",
         message: "Invalid session token",
-        metadata: undefined,
       });
     });
 
@@ -349,9 +348,8 @@ describe("Room Handlers", () => {
       } as LeaveRoomRequest);
 
       expect(mockSocket.emit).toHaveBeenCalledWith("auth_error", {
-        code: "AUTH_004",
-        message: "Socket identity does not match session",
-        metadata: undefined,
+        code: "AUTH_003",
+        message: "Session does not belong to this room",
       });
     });
 
@@ -374,7 +372,6 @@ describe("Room Handlers", () => {
       expect(mockSocket.emit).toHaveBeenCalledWith("auth_error", {
         code: "AUTH_004",
         message: "Socket identity does not match session",
-        metadata: undefined,
       });
     });
 
