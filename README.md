@@ -125,8 +125,8 @@ Connectaball/
 ├── packages/
 │   ├── database/                  # seed scripts for postgres
 │   ├── types/                     # Shared TS interfaces
-│   ├── logic/                     # Shared game validator
-│   └── config/                    # Shared eslint/tsconfig
+│   ├── ui/                        # Shared React components
+│   └── typescript-config/         # Shared tsconfig presets
 ├── scripts/                       # Optional: CI/CD or database migration scripts
 ├── .dockerignore                  # Prevents sending node_modules to Docker daemon
 ├── quadlet/                        # Podman Quadlet unit files (postgres, api, web, db-seed; edge proxy lives in edge-proxy)

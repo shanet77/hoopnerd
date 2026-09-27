@@ -3,7 +3,7 @@ import cors from "cors";
 import { Server as HttpServer } from "http";
 import databasePool, { PgRepository } from "@repo/database";
 import type { Repository } from "@repo/database";
-import { CpuEngine } from "@repo/logic";
+import { CpuEngine } from "./services/CpuEngine";
 import { buildAllowedOrigins, buildCorsConfig } from "./serverUtils";
 import { MatchEngine } from "./services/MatchEngine";
 import { SocketMatchEventSink } from "./socket/MatchSocketAdapter";

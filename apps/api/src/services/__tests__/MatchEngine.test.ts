@@ -1,18 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { MatchEngine, MatchEvent, MatchEventSink } from "../MatchEngine";
 import type { Player, GameRoomState } from "@repo/types";
-import { validateMove, getConnectionDetails } from "@repo/logic";
-
-vi.mock("@repo/logic", () => ({
-  __esModule: true,
-  validateMove: vi.fn<typeof validateMove>(),
-  getConnectionDetails: vi.fn<typeof getConnectionDetails>(),
-}));
-
-const mockValidateMove = validateMove as vi.Mock<typeof validateMove>;
-const mockGetConnectionDetails = getConnectionDetails as vi.Mock<
-  typeof getConnectionDetails
->;
 
 class RecordingSink implements MatchEventSink {
   events: MatchEvent[] = [];
@@ -49,8 +37,8 @@ describe("MatchEngine", () => {
 
     mockRepo = {
       getRandomTopScorer: vi.fn(),
-      validateMove: vi.fn(),
-      getConnectionDetails: vi.fn(),
+      validateMove: vi.fn().mockResolvedValue(true),
+      getConnectionDetails: vi.fn().mockResolvedValue(null),
       recordGameStats: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -60,9 +48,6 @@ describe("MatchEngine", () => {
       turnTimeoutMs: 25000,
       disconnectGraceMs: 10000,
     });
-
-    mockValidateMove.mockResolvedValue(true as any);
-    mockGetConnectionDetails.mockResolvedValue(null as any);
   });
 
   afterEach(() => {
@@ -439,7 +424,7 @@ describe("MatchEngine", () => {
     });
 
     it("should reject invalid connection", async () => {
-      mockValidateMove.mockResolvedValue(false as any);
+      mockRepo.validateMove.mockResolvedValue(false);
       room.lastConnectedPlayer = {
         id: 50,
         name: "Previous",
@@ -482,7 +467,7 @@ describe("MatchEngine", () => {
         teamName: "Spurs",
         seasonYear: 2005,
       };
-      mockGetConnectionDetails.mockResolvedValue(connectionDetails as any);
+      mockRepo.getConnectionDetails.mockResolvedValue(connectionDetails);
       room.lastConnectedPlayer = {
         id: 50,
         name: "Previous",
@@ -518,7 +503,7 @@ describe("MatchEngine", () => {
     });
 
     it("should emit a failed move without advancing the turn", async () => {
-      mockValidateMove.mockResolvedValue(false as any);
+      mockRepo.validateMove.mockResolvedValue(false);
       room.lastConnectedPlayer = {
         id: 50,
         name: "Previous",

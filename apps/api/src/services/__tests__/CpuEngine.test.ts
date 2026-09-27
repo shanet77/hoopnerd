@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CpuEngine } from "../cpuEngine";
+import { CpuEngine } from "../CpuEngine";
 import type { Player } from "@repo/types";
 
 const mockRepo = {

@@ -14,7 +14,6 @@
   ],
   "dependencies": {
     "@repo/database": "workspace:*",
-    "@repo/logic": "workspace:*",
     "@repo/types": "workspace:*",
     "cors": "^2.8.6",
     "express": "^5.2.1",

@@ -18,24 +18,19 @@ import { Server as HttpServer } from "http";
 import { io, Socket } from "socket.io-client";
 import { GameRoomState, Player } from "@repo/types";
 import { AddressInfo } from "net";
-import { getConnectionDetails, validateMove } from "@repo/logic";
 import type { Express } from "express";
 import databasePool, { PgRepository } from "@repo/database";
 
-// Mock the @repo/logic package
-vi.mock("@repo/logic", () => {
+// The CPU engine is exercised by its own unit tests; stub it here so the
+// integration tests stay deterministic and never make CPU turns.
+vi.mock("../services/CpuEngine", () => {
   class MockCpuEngine {
-    constructor(_deps: any) {}
+    constructor(_deps: unknown) {}
     async getBestMove() {
       return null;
     }
   }
-  return {
-    __esModule: true,
-    validateMove: vi.fn<typeof validateMove>(),
-    getConnectionDetails: vi.fn<typeof getConnectionDetails>(),
-    CpuEngine: MockCpuEngine,
-  };
+  return { CpuEngine: MockCpuEngine };
 });
 vi.mock("@repo/database", async () => {
   const actual = await vi.importActual<typeof import("@repo/database")>(
@@ -49,10 +44,6 @@ vi.mock("@repo/database", async () => {
   };
 });
 
-const mockValidateMove = validateMove as vi.Mock<typeof validateMove>;
-const mockGetConnectionDetails = getConnectionDetails as vi.Mock<
-  typeof getConnectionDetails
->;
 const mockDbQuery = databasePool.query as unknown as vi.Mock<any>;
 
 // Helper function to create a socket client
@@ -86,10 +77,8 @@ describe("API Server", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
-  // Assign the mock to a variable for easier access and control
+  // Reset the database mock before each test so queries return predictable rows.
   beforeEach(() => {
-    mockValidateMove.mockClear(); // Clear mock calls before each test
-    mockGetConnectionDetails.mockClear();
     mockDbQuery.mockReset();
     mockDbQuery.mockResolvedValue({
       rows: [{ id: 1, name: "Tim Duncan", position: "PF" }],

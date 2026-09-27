@@ -1,6 +1,6 @@
 import type { CpuDifficulty, GameRoomState, Player } from "@repo/types";
 import type { Repository } from "@repo/database";
-import { CpuEngine, getConnectionDetails, validateMove } from "@repo/logic";
+import { CpuEngine } from "./CpuEngine";
 import { createGameRoom, hasPlayerBeenUsed } from "../serverUtils";
 import { generatePlayerId } from "../socketAuth";
 import { SocketBindingManager, SocketBinding } from "./SocketBindingManager";
@@ -245,8 +245,7 @@ export class MatchEngine {
     }
 
     if (room.lastConnectedPlayer) {
-      const isValidMove = await validateMove(
-        this.deps.repository,
+      const isValidMove = await this.deps.repository.validateMove(
         room.lastConnectedPlayer.id,
         connectedPlayer.id,
         room.seasonYearMin,
@@ -265,8 +264,7 @@ export class MatchEngine {
         );
       }
 
-      const connection = await getConnectionDetails(
-        this.deps.repository,
+      const connection = await this.deps.repository.getConnectionDetails(
         room.lastConnectedPlayer.id,
         connectedPlayer.id,
         room.seasonYearMin,
