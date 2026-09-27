@@ -1,25 +1,18 @@
-FROM node:24-alpine
-
-WORKDIR /app
-
-# Copy package files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-
-# corepack picks up the pinned pnpm version from packageManager in package.json
+FROM node:24-alpine AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH=/pnpm:$PATH
 RUN corepack enable
 
-# Copy the entire project
+FROM base AS prepare
+WORKDIR /app
 COPY . .
+RUN pnpm --filter "@repo/database..." build \
+    && pnpm --filter "@repo/database" deploy --prod --legacy /out
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
-
-# Build the database package and its workspace dependencies.
-# The trailing "..." is required: @repo/types resolves via its package.json
-# "types": "./dist/index.d.ts", so it must be compiled before @repo/database.
-RUN pnpm --filter "@repo/database..." build
-
+FROM base AS runner
 WORKDIR /app/packages/database
+RUN addgroup --system --gid 1001 seed && adduser --system --uid 1001 seed
+USER seed
+COPY --from=prepare --chown=seed:seed /out ./
 
-# Run the seed script (which now includes migrations)
-CMD ["pnpm", "node", "dist/seed.js"]
+CMD ["node", "dist/seed.js"]

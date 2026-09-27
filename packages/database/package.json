@@ -18,13 +18,13 @@
   },
   "dependencies": {
     "@repo/types": "workspace:*",
+    "csv-parser": "^3.2.1",
     "pg": "^8.23.0"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^25.9.8",
     "@types/pg": "^8.23.1",
-    "csv-parser": "^3.2.1",
     "typescript": "6.0.2",
     "vitest": "^4.1.11"
   }
