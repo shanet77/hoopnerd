@@ -306,6 +306,9 @@ importers:
       '@repo/types':
         specifier: workspace:*
         version: link:../types
+      csv-parser:
+        specifier: ^3.2.1
+        version: 3.2.1
       pg:
         specifier: ^8.23.0
         version: 8.23.0
@@ -319,9 +322,6 @@ importers:
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
-      csv-parser:
-        specifier: ^3.2.1
-        version: 3.2.1
       typescript:
         specifier: 6.0.2
         version: 6.0.2
