@@ -1,33 +1,17 @@
 "use client";
 
-import { useState, FormEvent } from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Bot,
-  Brain,
-  CircleX,
-  Clock,
-  Hourglass,
-  Target,
-  Trophy,
-  Users,
-} from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Trophy } from "lucide-react";
 import { Basketball } from "../../../components/icons/Basketball";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardTitle } from "@repo/ui/card";
 import { Badge } from "@repo/ui/badge";
-import { FeedbackBanner } from "@repo/ui/feedback-banner";
 import { SocketProvider, useSocket } from "../../lib/socket";
 import { useGameRoom } from "../../lib/useGameRoom";
 import { Player } from "@repo/types";
 import ClientOnly from "../../../components/ClientOnly";
-import { PlayerGraph } from "../../../components/game/PlayerGraph";
-import { PlayerSearch } from "../../../components/game/PlayerSearch";
-import { MoveHistory } from "../../../components/game/MoveHistory";
-import { PlayerList } from "../../../components/game/PlayerList";
-import { GameStatusBanner } from "../../../components/game/GameStatusBanner";
+import { GameBoard } from "../../../components/game/GameBoard";
 
 export default function Room() {
   return (
@@ -68,22 +52,9 @@ function GamePage() {
     handleLeaveRoom,
   } = useGameRoom(socket, socketConnected, roomId, playerName);
 
-  const [connectedPlayer, setConnectedPlayer] = useState<Player | null>(null);
-  const apiHost = process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3001";
-
   const onLeave = () => {
     handleLeaveRoom();
     router.push("/");
-  };
-
-  const onSubmitMove = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!connectedPlayer) return;
-
-    const response = await handleSubmitMove(connectedPlayer);
-    if (response.success) {
-      setConnectedPlayer(null);
-    }
   };
 
   if (!socket) {
@@ -129,150 +100,17 @@ function GamePage() {
             onLeave={onLeave}
           />
         ) : roomState ? (
-          <>
-            <GameStatusBanner
-              roomState={roomState}
-              activePlayer={activePlayer}
-              isMyTurn={isMyTurn}
-              timeRemaining={timeRemaining}
-              isCpuOpponent={isCpuOpponent}
-            />
-
-            {gameMessage.includes("Invalid") ||
-            gameMessage.includes("not play with") ? (
-              <FeedbackBanner variant="error" icon={<CircleX className="h-5 w-5" />}>
-                {gameMessage}
-              </FeedbackBanner>
-            ) : null}
-
-            {gameMessage &&
-            !gameMessage.includes("Invalid") &&
-            (gameMessage.includes("turn") ||
-              gameMessage.includes("thinking")) ? (
-              <FeedbackBanner variant="info">{gameMessage}</FeedbackBanner>
-            ) : null}
-
-            <Card>
-              <CardContent className="py-4">
-                <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">
-                  Player Chain
-                </h2>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
-                  Build the longest chain of connected players.
-                </p>
-                {roomState.gameStarted && roomState.startingPlayer ? (
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border-2 border-gray-100 dark:border-gray-800">
-                    <PlayerGraph
-                      startingPlayer={roomState.startingPlayer}
-                      connections={roomState.connections}
-                    />
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <Hourglass className="block h-8 w-8 mx-auto mb-2" aria-hidden="true" />
-                    Waiting for the game to start...
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <PlayerList
-              players={roomState.players}
-              activePlayer={activePlayer}
-            />
-
-            {isMyTurn && roomState.gameStarted && (
-              <Card className="border-success/30">
-                <CardContent className="py-4">
-                  <div className="flex items-center gap-3 rounded-xl bg-success/10 border border-success/20 px-4 py-3 mb-4">
-                    <span className="grid place-items-center h-9 w-9 rounded-lg bg-success text-white shrink-0">
-                      <Target className="h-5 w-5" />
-                    </span>
-                    <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100">
-                      Make Your Move
-                    </h2>
-                  </div>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
-                    Connect a player to{" "}
-                    <strong>
-                      {roomState.lastConnectedPlayer?.name ||
-                        roomState.startingPlayer?.name}
-                    </strong>{" "}
-                    who shared a team
-                    {roomState.seasonYearMin !== undefined && roomState.seasonYearMax !== undefined
-                      ? ` during the ${roomState.seasonYearMin}–${roomState.seasonYearMax} seasons`
-                      : " in the same season"}
-                    .
-                  </p>
-                  <form onSubmit={onSubmitMove} className="space-y-4">
-                    <PlayerSearch
-                      apiHost={apiHost}
-                      selectedPlayer={connectedPlayer}
-                      onSelect={setConnectedPlayer}
-                    />
-                    <Button
-                      type="submit"
-                      disabled={!connectedPlayer}
-                      variant="success"
-                      className="w-full text-lg py-4"
-                    >
-                      {connectedPlayer ? (
-                        <span className="inline-flex items-center justify-center gap-2">
-                          Submit Move <ArrowRight className="h-5 w-5" />
-                        </span>
-                      ) : (
-                        "Select a Player"
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
-
-            {!isMyTurn && roomState.gameStarted && (
-              <Card
-                className={`${cpuThinking ? "bg-brand-50 dark:bg-brand-900/40 border-brand-200" : "bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600"}`}
-              >
-                <CardContent className="py-6 text-center">
-                  <div
-                    className={`flex justify-center mb-2 ${cpuThinking ? "animate-pulse" : ""}`}
-                  >
-                    {cpuThinking ? (
-                      <Brain className="h-8 w-8 text-brand-600 dark:text-brand-300" />
-                    ) : (
-                      <Clock className="h-8 w-8 text-gray-400 dark:text-gray-500" />
-                    )}
-                  </div>
-                  <p className="font-bold text-gray-600 dark:text-gray-300">
-                    {cpuThinking ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <Bot className="h-4 w-4" />
-                        CPU is thinking...
-                      </span>
-                    ) : (
-                      `Waiting for ${activePlayer?.name}'s move...`
-                    )}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {!roomState.gameStarted && (
-              <Card className="bg-warning-light/30 dark:bg-warning-dark/20 border-warning/30">
-                <CardContent className="py-6 text-center">
-                  <Users className="h-8 w-8 mx-auto mb-2 text-warning-dark dark:text-warning-light" />
-                  <p className="font-bold text-warning-dark dark:text-warning-light">
-                    Waiting for more players...
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Share the code to invite players.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            <MoveHistory moves={roomState.moves} />
-          </>
+          <GameBoard
+            roomState={roomState}
+            activePlayer={activePlayer}
+            isMyTurn={isMyTurn}
+            timeRemaining={timeRemaining}
+            cpuThinking={cpuThinking}
+            gameMessage={gameMessage}
+            isCpuOpponent={isCpuOpponent}
+            chainSubtitle="Build the longest chain of connected players."
+            onSubmitMove={handleSubmitMove}
+          />
         ) : (
           <Card className="text-center py-8">
             <CardContent>

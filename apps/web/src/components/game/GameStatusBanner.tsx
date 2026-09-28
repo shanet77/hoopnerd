@@ -12,7 +12,6 @@ interface GameStatusBannerProps {
   activePlayer: Player | null;
   isMyTurn: boolean;
   timeRemaining: number;
-  isCpuOpponent?: boolean;
 }
 
 export function GameStatusBanner({

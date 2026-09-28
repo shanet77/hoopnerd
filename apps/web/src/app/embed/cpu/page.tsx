@@ -1,36 +1,23 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Bot,
-  Brain,
-  CircleX,
-  Clock,
-  Hourglass,
-  Target,
-  Trophy,
-} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, CircleX, Trophy } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardTitle } from "@repo/ui/card";
 import { Badge } from "@repo/ui/badge";
-import { FeedbackBanner } from "@repo/ui/feedback-banner";
 import { Basketball } from "../../../components/icons/Basketball";
 import ClientOnly from "../../../components/ClientOnly";
-import { PlayerGraph } from "../../../components/game/PlayerGraph";
-import { PlayerSearch } from "../../../components/game/PlayerSearch";
-import { MoveHistory } from "../../../components/game/MoveHistory";
-import { PlayerList } from "../../../components/game/PlayerList";
-import { GameStatusBanner } from "../../../components/game/GameStatusBanner";
+import {
+  GameBoard,
+  describeSeasonWindow,
+} from "../../../components/game/GameBoard";
 import { SocketProvider, useSocket, createCpuGame } from "../../lib/socket";
 import { useGameRoom } from "../../lib/useGameRoom";
 import { useAvailableSeasons } from "../../lib/useAvailableSeasons";
 import { setPlayerSession } from "../../lib/playerSession";
 import { trackEvent } from "../../lib/analytics";
-import { Player } from "@repo/types";
 import {
   buildGameOverPayload,
   postGameOverToParent,
@@ -282,9 +269,7 @@ function EmbedRoom({
   onPlayAgain: () => void;
 }) {
   const { socket, isConnected: socketConnected } = useSocket();
-  const [connectedPlayer, setConnectedPlayer] = useState<Player | null>(null);
   const gameOverSentRef = useRef(false);
-  const apiHost = process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3001";
 
   const {
     activePlayer,
@@ -326,15 +311,6 @@ function EmbedRoom({
       }),
     );
   }, [winner, winReason, roomState?.moves.length, myPlayerId]);
-
-  const onSubmitMove = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!connectedPlayer) return;
-    const response = await handleSubmitMove(connectedPlayer);
-    if (response.success) {
-      setConnectedPlayer(null);
-    }
-  };
 
   const joinFailed =
     !roomState &&
@@ -408,134 +384,19 @@ function EmbedRoom({
         </Card>
       ) : (
         <>
-          <GameStatusBanner
+          <GameBoard
             roomState={roomState}
             activePlayer={activePlayer}
             isMyTurn={isMyTurn}
             timeRemaining={timeRemaining}
+            cpuThinking={cpuThinking}
+            gameMessage={gameMessage}
+            isCpuOpponent
+            chainSubtitle={`Connect players who shared a team${describeSeasonWindow(
+              roomState,
+            )}.`}
+            onSubmitMove={handleSubmitMove}
           />
-
-          {gameMessage.includes("Invalid") ||
-          gameMessage.includes("not play with") ? (
-            <FeedbackBanner
-              variant="error"
-              icon={<CircleX className="h-5 w-5" />}
-            >
-              {gameMessage}
-            </FeedbackBanner>
-          ) : null}
-
-          <Card>
-            <CardContent className="py-4">
-              <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">
-                Player Chain
-              </h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
-                Connect players who shared a team
-                {roomState.seasonYearMin !== undefined &&
-                roomState.seasonYearMax !== undefined
-                  ? ` during the ${roomState.seasonYearMin}\u2013${roomState.seasonYearMax} seasons`
-                  : " in the same season"}
-                .
-              </p>
-              {roomState.gameStarted && roomState.startingPlayer ? (
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border-2 border-gray-100 dark:border-gray-800">
-                  <PlayerGraph
-                    startingPlayer={roomState.startingPlayer}
-                    connections={roomState.connections}
-                  />
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  <Hourglass
-                    className="block h-8 w-8 mx-auto mb-2"
-                    aria-hidden="true"
-                  />
-                  Waiting for the game to start...
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <PlayerList players={roomState.players} activePlayer={activePlayer} />
-
-          {isMyTurn && roomState.gameStarted && (
-            <Card className="border-success/30">
-              <CardContent className="py-4">
-                <div className="flex items-center gap-3 rounded-xl bg-success/10 border border-success/20 px-4 py-3 mb-4">
-                  <span className="grid place-items-center h-9 w-9 rounded-lg bg-success text-white shrink-0">
-                    <Target className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100">
-                    Make Your Move
-                  </h2>
-                </div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
-                  Connect a player to{" "}
-                  <strong>
-                    {roomState.lastConnectedPlayer?.name ||
-                      roomState.startingPlayer?.name}
-                  </strong>
-                  .
-                </p>
-                <form onSubmit={onSubmitMove} className="space-y-4">
-                  <PlayerSearch
-                    apiHost={apiHost}
-                    selectedPlayer={connectedPlayer}
-                    onSelect={setConnectedPlayer}
-                  />
-                  <Button
-                    type="submit"
-                    disabled={!connectedPlayer}
-                    variant="success"
-                    className="w-full text-lg py-4"
-                  >
-                    {connectedPlayer ? (
-                      <span className="inline-flex items-center justify-center gap-2">
-                        Submit Move <ArrowRight className="h-5 w-5" />
-                      </span>
-                    ) : (
-                      "Select a Player"
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-
-          {!isMyTurn && roomState.gameStarted && (
-            <Card className="bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-              <CardContent className="py-6 text-center">
-                <div
-                  className={`flex justify-center mb-2 ${cpuThinking ? "animate-pulse" : ""}`}
-                >
-                  {cpuThinking ? (
-                    <Brain
-                      className="h-8 w-8 text-brand-600 dark:text-brand-300"
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <Clock
-                      className="h-8 w-8 text-gray-400 dark:text-gray-500"
-                      aria-hidden="true"
-                    />
-                  )}
-                </div>
-                <p className="font-bold text-gray-600 dark:text-gray-300">
-                  {cpuThinking ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <Bot className="h-4 w-4" aria-hidden="true" />
-                      CPU is thinking...
-                    </span>
-                  ) : (
-                    `Waiting for ${activePlayer?.name}'s move...`
-                  )}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          <MoveHistory moves={roomState.moves} />
 
           <Button
             variant="secondary"
