@@ -51,6 +51,9 @@ jobs:
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}"
           export PATH="$HOME/.local/node/bin:$PATH"
+          # corepack bundled with node 22.14 hardcodes bin/pnpm.cjs, which pnpm 12
+          # no longer ships (bin/pnpm.mjs only) — upgrade corepack first.
+          npm i -g corepack@latest
           corepack enable
           pnpm install --frozen-lockfile
 
