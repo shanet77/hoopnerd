@@ -26,9 +26,6 @@ export function SecondaryActions({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-        More ways to play
-      </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <LobbyActionCard
           title="Play with Friends"
