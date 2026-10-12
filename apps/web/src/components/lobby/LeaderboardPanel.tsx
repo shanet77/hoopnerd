@@ -97,10 +97,6 @@ export function LeaderboardPanel({ stats, statsError }: LeaderboardPanelProps) {
                 />
               </TabsContent>
             </Tabs>
-
-            <p className="text-center text-xs text-gray-400 dark:text-gray-500">
-              Updated {new Date(stats.updatedAt).toLocaleString()}
-            </p>
           </div>
         )}
       </CardContent>
