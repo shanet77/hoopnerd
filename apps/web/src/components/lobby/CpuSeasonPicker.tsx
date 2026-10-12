@@ -39,16 +39,9 @@ export function CpuSeasonPicker({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-          Season
-        </span>
-        {minYear !== undefined && maxYear !== undefined && (
-          <span className="text-xs text-gray-400 dark:text-gray-500">
-            {minYear}–{maxYear} available
-          </span>
-        )}
-      </div>
+      <span className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+        Season
+      </span>
 
       <div className="flex flex-wrap gap-1.5">
         {SEASON_PRESETS.map((preset) => {

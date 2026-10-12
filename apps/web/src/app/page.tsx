@@ -300,9 +300,6 @@ function LobbyPage() {
 											</span>
 										)}
 									</Button>
-									<p className="text-center text-xs text-gray-500 dark:text-gray-400">
-										Get matched with a random player
-									</p>
 								</div>
 
 								<div className="space-y-4 border-t-2 border-gray-100 dark:border-gray-700 pt-5">
