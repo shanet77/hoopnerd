@@ -33,9 +33,6 @@ export function LeaderboardPanel({ stats, statsError }: LeaderboardPanelProps) {
           <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100">
             Weekly Leaderboard
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Last 7 days • Top 5 only
-          </p>
         </div>
 
         {!stats && !statsError && (

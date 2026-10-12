@@ -256,12 +256,6 @@ function LobbyPage() {
 						</h1>
 						<ThemeToggle />
 					</div>
-					<p className="text-gray-500 dark:text-gray-400 font-medium">
-						Who played with who?
-					</p>
-					<p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-						Alpha • v{APP_VERSION}
-					</p>
 				</div>
 
 				<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
@@ -276,15 +270,6 @@ function LobbyPage() {
 							className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
 						>
 							<div className="space-y-6">
-								<div className="text-center space-y-1">
-									<h2 className="font-title text-2xl font-bold text-gray-800 dark:text-gray-100">
-										Ready to play?
-									</h2>
-									<p className="text-sm text-gray-500 dark:text-gray-400">
-										Enter your name and pick a matchup.
-									</p>
-								</div>
-
 								<InlineNamePrompt
 									value={playerName}
 									onChange={(value) => {
@@ -383,6 +368,10 @@ function LobbyPage() {
 						/>
 					</aside>
 				</div>
+
+				<p className="text-center text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+					v{APP_VERSION}
+				</p>
 			</div>
 		</main>
 	);

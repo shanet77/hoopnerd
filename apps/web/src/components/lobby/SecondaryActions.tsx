@@ -32,7 +32,6 @@ export function SecondaryActions({
       <div className="grid gap-3 sm:grid-cols-2">
         <LobbyActionCard
           title="Play with Friends"
-          description="Create a private room"
           icon={<Users className="h-5 w-5" />}
           size="compact"
         >
@@ -49,7 +48,6 @@ export function SecondaryActions({
 
         <LobbyActionCard
           title="Join with Code"
-          description="Enter a friend's code"
           icon={<KeyRound className="h-5 w-5" />}
           size="compact"
         >
