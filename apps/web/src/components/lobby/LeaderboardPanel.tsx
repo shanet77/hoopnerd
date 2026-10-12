@@ -74,8 +74,6 @@ export function LeaderboardPanel({ stats, statsError }: LeaderboardPanelProps) {
               </TabsList>
               <TabsContent value="players">
                 <LeaderboardList
-                  title="Players"
-                  badge="Top 5"
                   items={stats.players.slice(0, 5).map((p) => ({
                     label: p.name,
                     value: p.count,
@@ -84,8 +82,6 @@ export function LeaderboardPanel({ stats, statsError }: LeaderboardPanelProps) {
               </TabsContent>
               <TabsContent value="teams">
                 <LeaderboardList
-                  title="Teams"
-                  badge="Top 5"
                   items={stats.teams.slice(0, 5).map((t) => ({
                     label: t.name,
                     value: t.count,
@@ -94,8 +90,6 @@ export function LeaderboardPanel({ stats, statsError }: LeaderboardPanelProps) {
               </TabsContent>
               <TabsContent value="seasons">
                 <LeaderboardList
-                  title="Seasons"
-                  badge="Top 5"
                   items={stats.seasons.slice(0, 5).map((s) => ({
                     label: String(s.seasonYear),
                     value: s.count,

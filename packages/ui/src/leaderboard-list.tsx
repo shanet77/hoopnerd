@@ -1,5 +1,4 @@
 import React from "react";
-import { Badge } from "./badge";
 
 interface LeaderboardItem {
   label: string;
@@ -7,26 +6,18 @@ interface LeaderboardItem {
 }
 
 interface LeaderboardListProps {
-  title: string;
   items: LeaderboardItem[];
-  badge?: string;
   emptyText?: string;
 }
 
 export const LeaderboardList = ({
-  title,
   items,
-  badge,
   emptyText = "No data yet",
 }: LeaderboardListProps) => {
   return (
     <div className="rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-3">
-      <div className="flex items-center justify-between">
-        <p className="font-bold text-gray-800 dark:text-gray-100">{title}</p>
-        {badge && <Badge variant="success">{badge}</Badge>}
-      </div>
       {items.length ? (
-        <ol className="mt-3 space-y-2">
+        <ol className="space-y-2">
           {items.map((item, index) => (
             <li
               key={`${item.label}-${index}`}
@@ -47,7 +38,7 @@ export const LeaderboardList = ({
           ))}
         </ol>
       ) : (
-        <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">{emptyText}</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500">{emptyText}</p>
       )}
     </div>
   );
