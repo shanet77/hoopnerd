@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LoaderCircle, Zap, Bot } from "lucide-react";
+import { LoaderCircle, Zap, Bot, Flame } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
@@ -14,6 +14,7 @@ import {
 	createCpuGame,
 } from "./lib/socket";
 import { useLobbyStats } from "./lib/useLobbyStats";
+import { useSoloLeaderboard } from "./lib/useSoloLeaderboard";
 import { useAvailableSeasons } from "./lib/useAvailableSeasons";
 import { trackEvent } from "./lib/analytics";
 import {
@@ -55,6 +56,7 @@ function LobbyPage() {
 	const [isMatchmaking, setIsMatchmaking] = useState(false);
 	const [isCpuQueuing, setIsCpuQueuing] = useState(false);
 	const { stats, error: statsError } = useLobbyStats();
+	const { entries: soloEntries, error: soloError } = useSoloLeaderboard();
 	const { minYear, maxYear, loading: seasonsLoading } = useAvailableSeasons();
 	const [seasonYearMin, setSeasonYearMin] = useState<number | undefined>(
 		undefined,
@@ -225,6 +227,12 @@ function LobbyPage() {
 		}
 	};
 
+	const handleSoloStreak = () => {
+		if (!requireName()) return;
+		trackEvent("solo_streak_started", {});
+		router.push("/solo");
+	};
+
 	const handleJoinRoom = (roomId: string) => {
 		if (!roomId || !playerName) {
 			setFeedbackMessage("Please enter both a room ID and your name.");
@@ -300,6 +308,19 @@ function LobbyPage() {
 											</span>
 										)}
 									</Button>
+
+									<Button
+										onClick={handleSoloStreak}
+										disabled={actionsDisabled}
+										variant="outline"
+										size="lg"
+										className="w-full"
+									>
+										<span className="inline-flex items-center justify-center gap-2">
+											<Flame className="h-5 w-5 text-basketball" />
+											Solo Streak
+										</span>
+									</Button>
 								</div>
 
 								<div className="space-y-4 border-t-2 border-gray-100 dark:border-gray-700 pt-5">
@@ -362,6 +383,8 @@ function LobbyPage() {
 						<LeaderboardPanel
 							stats={stats}
 							statsError={statsError}
+							solo={soloEntries}
+							soloError={soloError}
 						/>
 					</aside>
 				</div>

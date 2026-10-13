@@ -78,5 +78,43 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
     }
   });
 
+  router.get("/api/solo/leaderboard", async (req: Request, res: Response) => {
+    const windowDays = parseWindowDays(req.query.windowDays);
+    const timezone = parseTimezone(req.query.tz);
+    const limit = parseLimit(req.query.limit, 10);
+
+    try {
+      res.json(
+        await repository.getSoloLeaderboard(windowDays, timezone, limit),
+      );
+    } catch (error) {
+      console.error("Solo leaderboard query error:", error);
+      res.status(500).json({ error: "Failed to fetch solo leaderboard" });
+    }
+  });
+
+  router.get("/api/solo/best", async (req: Request, res: Response) => {
+    const userId = typeof req.query.userId === "string" ? req.query.userId.trim() : "";
+    if (!/^[a-zA-Z0-9-]{8,64}$/.test(userId)) {
+      return res.status(400).json({
+        error: 'Query parameter "userId" is required and must be valid.',
+      });
+    }
+
+    try {
+      res.json({ userId, bestStreak: await repository.getSoloBest(userId) });
+    } catch (error) {
+      console.error("Solo best query error:", error);
+      res.status(500).json({ error: "Failed to fetch solo best" });
+    }
+  });
+
   return router;
 }
+
+const parseLimit = (value: unknown, fallback: number): number => {
+  const parsed =
+    typeof value === "string" ? Number.parseInt(value, 10) : Number.NaN;
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(Math.max(parsed, 1), 50);
+};

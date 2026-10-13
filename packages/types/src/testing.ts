@@ -1,4 +1,4 @@
-import type { GameRoomState, Player } from "./index";
+import type { GameRoomState, Player, SoloRunState } from "./index";
 
 export const buildTestPlayer = (overrides: Partial<Player> = {}): Player => ({
   id: overrides.id ?? 1,
@@ -24,4 +24,15 @@ export const buildTestRoom = (
   lastConnectedPlayer: overrides.lastConnectedPlayer ?? null,
   friendsOnly: overrides.friendsOnly ?? false,
   statsRecorded: overrides.statsRecorded ?? false,
+});
+
+export const buildTestSoloRun = (
+  runId: string = "SOLO1",
+  overrides: Partial<SoloRunState> = {},
+): SoloRunState => ({
+  ...buildTestRoom(runId, overrides),
+  gameStarted: overrides.gameStarted ?? true,
+  userId: overrides.userId ?? "user-1",
+  displayName: overrides.displayName ?? "Test Runner",
+  endReason: overrides.endReason,
 });

@@ -1,7 +1,27 @@
 import { Pool } from "pg";
 import fs from "fs";
 import path from "path";
-import type { Player, PlayerConnection, GameRoomState, StatsResponse } from "@repo/types";
+import type {
+  Player,
+  PlayerConnection,
+  GameRoomState,
+  StatsResponse,
+  SoloEndReason,
+  SoloLeaderboardEntry,
+} from "@repo/types";
+
+export interface SoloRunRecord {
+  userId: string;
+  displayName: string;
+  streakCount: number;
+  endReason: SoloEndReason;
+  startedAt: Date;
+}
+
+export interface SoloRunRecordResult {
+  bestStreak: number;
+  isNewBest: boolean;
+}
 
 export interface Repository {
   searchPlayers(query: string): Promise<Player[]>;
@@ -30,9 +50,22 @@ export interface Repository {
     seasonYearMin?: number,
     seasonYearMax?: number,
   ): Promise<Player[]>;
+  hasAnyValidMove(
+    playerId: number,
+    usedPlayerIds: number[],
+    seasonYearMin?: number,
+    seasonYearMax?: number,
+  ): Promise<boolean>;
   getSeasons(): Promise<number[]>;
   getStats(windowDays: number, timezone: string): Promise<StatsResponse>;
   recordGameStats(room: GameRoomState): Promise<void>;
+  recordSoloRun(run: SoloRunRecord): Promise<SoloRunRecordResult>;
+  getSoloLeaderboard(
+    windowDays: number,
+    timezone: string,
+    limit: number,
+  ): Promise<SoloLeaderboardEntry[]>;
+  getSoloBest(userId: string): Promise<number>;
 }
 
 // ---------------------------------------------------------------------------
@@ -322,6 +355,36 @@ export class PgRepository implements Repository {
     return result.rows;
   }
 
+  async hasAnyValidMove(
+    playerId: number,
+    usedPlayerIds: number[],
+    seasonYearMin?: number,
+    seasonYearMax?: number,
+  ): Promise<boolean> {
+    const params: (number | number[])[] = [playerId, usedPlayerIds];
+    let seasonClause = "";
+    if (seasonYearMin !== undefined && seasonYearMax !== undefined) {
+      seasonClause = "AND r1.season_year >= $3 AND r1.season_year <= $4";
+      params.push(seasonYearMin, seasonYearMax);
+    }
+
+    const result = await this.pool.query(
+      `
+      SELECT EXISTS (
+        SELECT 1
+        FROM rosters r1
+        JOIN rosters r2 ON r1.team_id = r2.team_id AND r1.season_year = r2.season_year
+        JOIN players p ON r2.player_id = p.id
+        WHERE r1.player_id = $1
+          AND p.id != ALL($2::int[])${seasonClause ? " " + seasonClause : ""}
+        LIMIT 1
+      ) AS has_move
+    `,
+      params,
+    );
+    return result.rows[0]?.has_move === true;
+  }
+
   async getSeasons(): Promise<number[]> {
     const result = await this.pool.query(
       `SELECT DISTINCT season_year FROM rosters ORDER BY season_year DESC`,
@@ -422,6 +485,91 @@ export class PgRepository implements Repository {
       rows.flat(),
     );
   }
+
+  async recordSoloRun(run: SoloRunRecord): Promise<SoloRunRecordResult> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      await client.query(
+        `
+        INSERT INTO solo_runs (user_id, display_name, streak_count, end_reason, started_at, ended_at)
+        VALUES ($1, $2, $3, $4, $5, NOW())
+      `,
+        [
+          run.userId,
+          run.displayName,
+          run.streakCount,
+          run.endReason,
+          run.startedAt,
+        ],
+      );
+
+      const best = await client.query(
+        `
+        WITH prev AS (
+          SELECT best_streak FROM solo_bests WHERE user_id = $1
+        ), upsert AS (
+          INSERT INTO solo_bests (user_id, display_name, best_streak)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (user_id) DO UPDATE
+            SET best_streak = GREATEST(solo_bests.best_streak, EXCLUDED.best_streak),
+                display_name = EXCLUDED.display_name,
+                updated_at = NOW()
+          RETURNING best_streak
+        )
+        SELECT upsert.best_streak, (SELECT best_streak FROM prev) AS previous FROM upsert
+      `,
+        [run.userId, run.displayName, run.streakCount],
+      );
+
+      await client.query("COMMIT");
+
+      const row = best.rows[0];
+      return {
+        bestStreak: row.best_streak,
+        isNewBest: row.previous === null || row.best_streak > row.previous,
+      };
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async getSoloLeaderboard(
+    windowDays: number,
+    timezone: string,
+    limit: number,
+  ): Promise<SoloLeaderboardEntry[]> {
+    const timeFilter = `
+      ended_at AT TIME ZONE $1 >= (NOW() AT TIME ZONE $1) - ($2 || ' days')::interval
+    `;
+    const result = await this.pool.query(
+      `
+      SELECT user_id AS "userId", display_name AS name, streak
+      FROM (
+        SELECT DISTINCT ON (user_id) user_id, display_name, streak_count AS streak
+        FROM solo_runs
+        WHERE ${timeFilter}
+        ORDER BY user_id, streak_count DESC, ended_at DESC
+      ) best
+      ORDER BY streak DESC, name ASC
+      LIMIT $3
+    `,
+      [timezone, windowDays, limit],
+    );
+    return result.rows;
+  }
+
+  async getSoloBest(userId: string): Promise<number> {
+    const result = await this.pool.query(
+      `SELECT best_streak FROM solo_bests WHERE user_id = $1`,
+      [userId],
+    );
+    return result.rows.length > 0 ? result.rows[0].best_streak : 0;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -444,6 +592,15 @@ export class InMemoryRepository implements Repository {
     streakCount: number | null;
     createdAt: Date;
   }> = [];
+  private soloRuns: Array<{
+    userId: string;
+    displayName: string;
+    streakCount: number;
+    endReason: SoloEndReason;
+    startedAt: Date;
+    endedAt: Date;
+  }> = [];
+  private soloBests = new Map<string, number>();
 
   seedPlayers(players: Player[]) {
     for (const p of players) this.players.set(p.id, p);
@@ -495,9 +652,7 @@ export class InMemoryRepository implements Repository {
 
   async getRandomPlayer(): Promise<Player | null> {
     const all = Array.from(this.players.values());
-    return all.length > 0
-      ? all[Math.floor(Math.random() * all.length)]
-      : null;
+    return all.length > 0 ? all[Math.floor(Math.random() * all.length)] : null;
   }
 
   async getRandomTopScorer(
@@ -510,7 +665,10 @@ export class InMemoryRepository implements Repository {
     }
     const rostered = Array.from(this.players.values()).filter((p) =>
       this.rosters.some(
-        (r) => r.playerId === p.id && r.seasonYear >= _seasonYearMin! && r.seasonYear <= _seasonYearMax!,
+        (r) =>
+          r.playerId === p.id &&
+          r.seasonYear >= _seasonYearMin! &&
+          r.seasonYear <= _seasonYearMax!,
       ),
     );
     return rostered.length > 0
@@ -532,7 +690,8 @@ export class InMemoryRepository implements Repository {
       (r) =>
         r.playerId === playerAId &&
         r.teammateId === playerBId &&
-        (seasonYearMin === undefined || seasonYearMax === undefined ||
+        (seasonYearMin === undefined ||
+          seasonYearMax === undefined ||
           (r.seasonYear >= seasonYearMin && r.seasonYear <= seasonYearMax)),
     );
   }
@@ -547,7 +706,8 @@ export class InMemoryRepository implements Repository {
       (r) =>
         r.playerId === playerAId &&
         r.teammateId === playerBId &&
-        (seasonYearMin === undefined || seasonYearMax === undefined ||
+        (seasonYearMin === undefined ||
+          seasonYearMax === undefined ||
           (r.seasonYear >= seasonYearMin && r.seasonYear <= seasonYearMax)),
     );
     if (!match) return null;
@@ -574,7 +734,8 @@ export class InMemoryRepository implements Repository {
       if (
         r.playerId === playerId &&
         !used.has(r.teammateId) &&
-        (seasonYearMin === undefined || seasonYearMax === undefined ||
+        (seasonYearMin === undefined ||
+          seasonYearMax === undefined ||
           (r.seasonYear >= seasonYearMin && r.seasonYear <= seasonYearMax))
       ) {
         teammateIds.add(r.teammateId);
@@ -586,20 +747,34 @@ export class InMemoryRepository implements Repository {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  async hasAnyValidMove(
+    playerId: number,
+    usedPlayerIds: number[],
+    seasonYearMin?: number,
+    seasonYearMax?: number,
+  ): Promise<boolean> {
+    const candidates = await this.getValidCandidates(
+      playerId,
+      usedPlayerIds,
+      seasonYearMin,
+      seasonYearMax,
+    );
+    return candidates.length > 0;
+  }
+
   async getSeasons(): Promise<number[]> {
     const years = new Set(this.rosters.map((r) => r.seasonYear));
     return Array.from(years).sort((a, b) => b - a);
   }
 
   async getStats(windowDays: number, timezone: string): Promise<StatsResponse> {
-    const cutoff = new Date(
-      Date.now() - windowDays * 24 * 60 * 60 * 1000,
-    );
-    const recent = this.statsEvents.filter(
-      (e) => e.createdAt >= cutoff,
-    );
+    const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+    const recent = this.statsEvents.filter((e) => e.createdAt >= cutoff);
 
-    const count = <T>(items: T[], key: (item: T) => string | null | undefined) => {
+    const count = <T>(
+      items: T[],
+      key: (item: T) => string | null | undefined,
+    ) => {
       const map = new Map<string, number>();
       for (const item of items) {
         const k = key(item);
@@ -618,19 +793,16 @@ export class InMemoryRepository implements Repository {
       players: count(recent, (e) =>
         e.eventType === "player" ? e.playerName : null,
       ),
-      teams: count(recent, (e) =>
-        e.eventType === "team" ? e.teamName : null,
-      ),
+      teams: count(recent, (e) => (e.eventType === "team" ? e.teamName : null)),
       seasons: count(recent, (e) =>
         e.eventType === "season" ? String(e.seasonYear) : null,
       ).map((s) => ({ seasonYear: Number(s.name), count: s.count })),
-      longestStreak:
-        Math.max(
-          0,
-          ...recent
-            .filter((e) => e.eventType === "streak")
-            .map((e) => e.streakCount ?? 0),
-        ),
+      longestStreak: Math.max(
+        0,
+        ...recent
+          .filter((e) => e.eventType === "streak")
+          .map((e) => e.streakCount ?? 0),
+      ),
     };
   }
 
@@ -672,5 +844,53 @@ export class InMemoryRepository implements Repository {
         createdAt: new Date(),
       });
     }
+  }
+
+  async recordSoloRun(run: SoloRunRecord): Promise<SoloRunRecordResult> {
+    this.soloRuns.push({
+      userId: run.userId,
+      displayName: run.displayName,
+      streakCount: run.streakCount,
+      endReason: run.endReason,
+      startedAt: run.startedAt,
+      endedAt: new Date(),
+    });
+    const previous = this.soloBests.get(run.userId);
+    const bestStreak =
+      previous === undefined
+        ? run.streakCount
+        : Math.max(previous, run.streakCount);
+    this.soloBests.set(run.userId, bestStreak);
+    return {
+      bestStreak,
+      isNewBest: previous === undefined || run.streakCount > previous,
+    };
+  }
+
+  async getSoloLeaderboard(
+    windowDays: number,
+    _timezone: string,
+    limit: number,
+  ): Promise<SoloLeaderboardEntry[]> {
+    const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+    const best = new Map<string, SoloLeaderboardEntry>();
+    for (const run of this.soloRuns) {
+      if (run.endedAt < cutoff) continue;
+      const current = best.get(run.userId);
+      if (!current || run.streakCount > current.streak) {
+        best.set(run.userId, {
+          userId: run.userId,
+          name: run.displayName,
+          streak: run.streakCount,
+        });
+      }
+    }
+    return Array.from(best.values())
+      .sort((a, b) => b.streak - a.streak || a.name.localeCompare(b.name))
+      .slice(0, limit);
+  }
+
+  async getSoloBest(userId: string): Promise<number> {
+    return this.soloBests.get(userId) ?? 0;
   }
 }

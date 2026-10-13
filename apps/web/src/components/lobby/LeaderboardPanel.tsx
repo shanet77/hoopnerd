@@ -3,7 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import { Flame } from "lucide-react";
-import { StatsResponse } from "@repo/types";
+import { SoloLeaderboardEntry, StatsResponse } from "@repo/types";
 import { Card, CardContent } from "@repo/ui/card";
 import { LeaderboardList } from "@repo/ui/leaderboard-list";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
@@ -11,9 +11,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 interface LeaderboardPanelProps {
   stats: StatsResponse | null;
   statsError: boolean;
+  solo?: SoloLeaderboardEntry[] | null;
+  soloError?: boolean;
 }
 
-export function LeaderboardPanel({ stats, statsError }: LeaderboardPanelProps) {
+export function LeaderboardPanel({
+  stats,
+  statsError,
+  solo,
+  soloError,
+}: LeaderboardPanelProps) {
   return (
     <Card
       hover
@@ -71,6 +78,7 @@ export function LeaderboardPanel({ stats, statsError }: LeaderboardPanelProps) {
                 <TabsTrigger value="players">Players</TabsTrigger>
                 <TabsTrigger value="teams">Teams</TabsTrigger>
                 <TabsTrigger value="seasons">Seasons</TabsTrigger>
+                {solo !== undefined && <TabsTrigger value="streaks">Streaks</TabsTrigger>}
               </TabsList>
               <TabsContent value="players">
                 <LeaderboardList
@@ -96,6 +104,32 @@ export function LeaderboardPanel({ stats, statsError }: LeaderboardPanelProps) {
                   }))}
                 />
               </TabsContent>
+              {solo !== undefined && (
+                <TabsContent value="streaks">
+                  {soloError ? (
+                    <p
+                      className="text-center text-amber-600 dark:text-amber-400"
+                      role="alert"
+                    >
+                      Streaks currently unavailable.
+                    </p>
+                  ) : !Array.isArray(solo) || solo.length === 0 ? (
+                    <p
+                      className="text-center text-gray-400 dark:text-gray-500"
+                      role="status"
+                    >
+                      No streaks yet this week — be the first!
+                    </p>
+                  ) : (
+                    <LeaderboardList
+                      items={solo.slice(0, 5).map((entry) => ({
+                        label: entry.name,
+                        value: entry.streak,
+                      }))}
+                    />
+                  )}
+                </TabsContent>
+              )}
             </Tabs>
           </div>
         )}

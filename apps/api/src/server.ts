@@ -6,6 +6,7 @@ import type { Repository } from "@repo/database";
 import { CpuEngine } from "./services/CpuEngine";
 import { buildAllowedOrigins, buildCorsConfig } from "./serverUtils";
 import { MatchEngine } from "./services/MatchEngine";
+import { SoloEngine } from "./services/SoloEngine";
 import { SocketMatchEventSink } from "./socket/MatchSocketAdapter";
 import { createSocketIOServer, setupSocketIO } from "./socket";
 import { createApiRouter } from "./routes/api";
@@ -49,7 +50,9 @@ export const createServer = (
     cpuEngine: enableCpuMode ? new CpuEngine({ repository }) : undefined,
   });
 
-  setupSocketIO(io, matchEngine, enableCpuMode);
+  const soloEngine = new SoloEngine({ repository });
+
+  setupSocketIO(io, matchEngine, enableCpuMode, soloEngine);
 
   return { app, server };
 };

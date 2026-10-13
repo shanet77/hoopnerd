@@ -15,6 +15,7 @@ function createTestApp(overrides: Partial<Repository> = {}) {
     validateMove: overrides.validateMock ?? vi.fn().mockResolvedValue(true),
     getConnectionDetails: overrides.getConnectionDetails ?? vi.fn().mockResolvedValue(null),
     getValidCandidates: overrides.getValidCandidates ?? vi.fn().mockResolvedValue([]),
+    hasAnyValidMove: overrides.hasAnyValidMove ?? vi.fn().mockResolvedValue(false),
     getSeasons: overrides.getSeasons ?? vi.fn().mockResolvedValue([]),
     getStats: overrides.getStats ?? vi.fn().mockResolvedValue({
       windowDays: 7,
@@ -26,12 +27,15 @@ function createTestApp(overrides: Partial<Repository> = {}) {
       longestStreak: 0,
     }),
     recordGameStats: overrides.recordGameStats ?? vi.fn().mockResolvedValue(undefined),
+    recordSoloRun: overrides.recordSoloRun ?? vi.fn().mockResolvedValue({ bestStreak: 0, isNewBest: false }),
+    getSoloLeaderboard: overrides.getSoloLeaderboard ?? vi.fn().mockResolvedValue([]),
+    getSoloBest: overrides.getSoloBest ?? vi.fn().mockResolvedValue(0),
   };
 
   const app = express();
   app.use(express.json());
   app.use(createApiRouter({ repository: fakeRepo }));
-  return { app, fakeRepo };
+  return { app, fakeRepo, base };
 }
 
 describe("API Routes — /api/players/search", () => {
@@ -271,6 +275,122 @@ describe("API Routes — /api/stats", () => {
       .expect(200)
       .then((res) => {
         expect(res.body.longestStreak).toBe(0);
+      });
+  });
+});
+
+describe("API Routes — /api/solo/leaderboard", () => {
+  it("returns entries from getSoloLeaderboard", async () => {
+    const entries = [
+      { userId: "u-1", name: "Shane", streak: 12 },
+      { userId: "u-2", name: "Ana", streak: 9 },
+    ];
+    const getSoloLeaderboard = vi.fn().mockResolvedValue(entries);
+    const { app } = createTestApp({ getSoloLeaderboard });
+
+    await supertest(app)
+      .get("/api/solo/leaderboard")
+      .expect(200)
+      .then((res) => {
+        expect(res.body).toEqual(entries);
+        expect(getSoloLeaderboard).toHaveBeenCalledWith(
+          7,
+          "America/New_York",
+          10,
+        );
+      });
+  });
+
+  it("clamps the limit between 1 and 50", async () => {
+    const getSoloLeaderboard = vi.fn().mockResolvedValue([]);
+    const { app } = createTestApp({ getSoloLeaderboard });
+
+    await supertest(app)
+      .get("/api/solo/leaderboard?limit=500")
+      .expect(200)
+      .then((res) => {
+        expect(res.body).toEqual([]);
+        expect(getSoloLeaderboard).toHaveBeenCalledWith(
+          7,
+          "America/New_York",
+          50,
+        );
+      });
+  });
+
+  it("falls back to the default limit on garbage input", async () => {
+    const getSoloLeaderboard = vi.fn().mockResolvedValue([]);
+    const { app } = createTestApp({ getSoloLeaderboard });
+
+    await supertest(app)
+      .get("/api/solo/leaderboard?limit=abc")
+      .expect(200)
+      .then(() => {
+        expect(getSoloLeaderboard).toHaveBeenCalledWith(
+          7,
+          "America/New_York",
+          10,
+        );
+      });
+  });
+
+  it("returns 500 when the query throws", async () => {
+    const getSoloLeaderboard = vi.fn().mockRejectedValue(new Error("db down"));
+    const { app } = createTestApp({ getSoloLeaderboard });
+
+    await supertest(app)
+      .get("/api/solo/leaderboard")
+      .expect(500)
+      .then((res) => {
+        expect(res.body.error).toBe("Failed to fetch solo leaderboard");
+      });
+  });
+});
+
+describe("API Routes — /api/solo/best", () => {
+  it("returns the personal best for a valid userId", async () => {
+    const getSoloBest = vi.fn().mockResolvedValue(17);
+    const { app } = createTestApp({ getSoloBest });
+
+    await supertest(app)
+      .get("/api/solo/best?userId=11111111-2222-3333-4444-555555555555")
+      .expect(200)
+      .then((res) => {
+        expect(res.body.bestStreak).toBe(17);
+      });
+  });
+
+  it("returns 400 when userId is missing", async () => {
+    const { app } = createTestApp();
+
+    await supertest(app)
+      .get("/api/solo/best")
+      .expect(400)
+      .then((res) => {
+        expect(res.body.error).toContain('"userId" is required');
+      });
+  });
+
+  it("returns 400 when userId is malformed", async () => {
+    const { app } = createTestApp();
+
+    await supertest(app)
+      .get("/api/solo/best?userId=short")
+      .expect(400)
+      .then((res) => {
+        expect(res.body.error).toContain('"userId" is required');
+      });
+  });
+
+  it("returns 500 when the query throws", async () => {
+    const getSoloBest = vi.fn().mockRejectedValue(new Error("db down"));
+    const { app } = createTestApp({ getSoloBest });
+
+    await supertest(app)
+      .get("/api/solo/best?userId=11111111-2222-3333-4444-555555555555")
+      .expect(500)
+      .then((res) => {
+        expect(res.body.error).toBe("Failed to fetch solo best");
       });
   });
 });

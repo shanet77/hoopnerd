@@ -48,6 +48,8 @@ export interface GameBoardProps {
   chainSubtitle: string;
   /** Submits the drafted move and reports whether it was accepted. */
   onSubmitMove: (player: Player) => Promise<{ success: boolean }>;
+  /** Replaces the default turn/timer banner (e.g. solo streak header). */
+  statusSlot?: React.ReactNode;
 }
 
 /**
@@ -68,6 +70,7 @@ export function GameBoard({
   isCpuOpponent,
   chainSubtitle,
   onSubmitMove,
+  statusSlot,
 }: GameBoardProps) {
   const [connectedPlayer, setConnectedPlayer] = useState<Player | null>(null);
   const apiHost = process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3001";
@@ -91,12 +94,14 @@ export function GameBoard({
 
   return (
     <>
-      <GameStatusBanner
-        roomState={roomState}
-        activePlayer={activePlayer}
-        isMyTurn={isMyTurn}
-        timeRemaining={timeRemaining}
-      />
+      {statusSlot ?? (
+        <GameStatusBanner
+          roomState={roomState}
+          activePlayer={activePlayer}
+          isMyTurn={isMyTurn}
+          timeRemaining={timeRemaining}
+        />
+      )}
 
       {isErrorMessage ? (
         <FeedbackBanner variant="error" icon={<CircleX className="h-5 w-5" />}>

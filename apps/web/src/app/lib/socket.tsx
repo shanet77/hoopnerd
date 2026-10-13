@@ -13,6 +13,14 @@ import {
   LeaveRoomRequest,
   CreateCpuGameRequest,
   CreateCpuGameResponse,
+  CreateSoloRunRequest,
+  CreateSoloRunResponse,
+  ResumeSoloRunRequest,
+  ResumeSoloRunResponse,
+  SubmitSoloMoveRequest,
+  SubmitSoloMoveResponse,
+  EndSoloRunRequest,
+  EndSoloRunResponse,
 } from "@repo/types";
 
 // Define a type for our socket context value
@@ -161,5 +169,77 @@ export const createCpuGame = (
 
     socket.once("cpu_game_created", onCreated);
     socket.emit("create_cpu_game", data);
+  });
+};
+
+export const createSoloRun = (
+  socket: Socket<WebSocketEvents, WebSocketEvents>,
+  data: CreateSoloRunRequest,
+) => {
+  return new Promise<CreateSoloRunResponse>((resolve, reject) => {
+    const onCreated = (response: CreateSoloRunResponse) => {
+      clearTimeout(timeout);
+      resolve(response);
+    };
+
+    const timeout = setTimeout(() => {
+      socket.off("solo_run_created", onCreated);
+      reject(new Error("create_solo_run timed out"));
+    }, 15000);
+
+    socket.once("solo_run_created", onCreated);
+    socket.emit("create_solo_run", data);
+  });
+};
+
+export const resumeSoloRun = (
+  socket: Socket<WebSocketEvents, WebSocketEvents>,
+  data: ResumeSoloRunRequest,
+) => {
+  return new Promise<ResumeSoloRunResponse>((resolve, reject) => {
+    const onResumed = (response: ResumeSoloRunResponse) => {
+      clearTimeout(timeout);
+      resolve(response);
+    };
+
+    const timeout = setTimeout(() => {
+      socket.off("solo_run_resumed", onResumed);
+      reject(new Error("resume_solo_run timed out"));
+    }, 10000);
+
+    socket.once("solo_run_resumed", onResumed);
+    socket.emit("resume_solo_run", data);
+  });
+};
+
+export const submitSoloMove = (
+  socket: Socket<WebSocketEvents, WebSocketEvents>,
+  data: SubmitSoloMoveRequest,
+) => {
+  return new Promise<SubmitSoloMoveResponse>((resolve) => {
+    socket.emit("submit_solo_move", data);
+    socket.once("solo_move_result", (response: SubmitSoloMoveResponse) => {
+      resolve(response);
+    });
+  });
+};
+
+export const endSoloRun = (
+  socket: Socket<WebSocketEvents, WebSocketEvents>,
+  data: EndSoloRunRequest,
+) => {
+  return new Promise<EndSoloRunResponse>((resolve, reject) => {
+    const onEnded = (response: EndSoloRunResponse) => {
+      clearTimeout(timeout);
+      resolve(response);
+    };
+
+    const timeout = setTimeout(() => {
+      socket.off("solo_run_ended", onEnded);
+      reject(new Error("end_solo_run timed out"));
+    }, 10000);
+
+    socket.once("solo_run_ended", onEnded);
+    socket.emit("end_solo_run", data);
   });
 };

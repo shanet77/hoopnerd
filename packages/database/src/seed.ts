@@ -74,6 +74,37 @@ async function ensureSchema() {
       ON stats_events (event_type, created_at DESC);
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS solo_runs (
+        id SERIAL PRIMARY KEY,
+        user_id UUID NOT NULL,
+        display_name VARCHAR(150) NOT NULL,
+        streak_count INTEGER NOT NULL,
+        end_reason VARCHAR(20) NOT NULL,
+        started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        ended_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS solo_runs_streak_idx
+      ON solo_runs (streak_count DESC);
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS solo_runs_user_idx
+      ON solo_runs (user_id, streak_count DESC);
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS solo_bests (
+        user_id UUID PRIMARY KEY,
+        display_name VARCHAR(150) NOT NULL,
+        best_streak INTEGER NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
     console.log('Database schema ensured successfully!');
   } catch (error) {
     console.error('Error during migration:', error);

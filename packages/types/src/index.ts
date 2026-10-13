@@ -99,6 +99,77 @@ export interface JoinMatchmakingResponse {
   playerId?: number;
 }
 
+export type SoloEndReason = "stuck" | "repeat" | "invalid" | "forfeit";
+
+export interface SoloRunState extends GameRoomState {
+  userId: string;
+  displayName: string;
+  endReason?: SoloEndReason;
+}
+
+export interface CreateSoloRunRequest {
+  userId: string;
+  displayName: string;
+  seasonYearMin?: number;
+  seasonYearMax?: number;
+}
+
+export interface CreateSoloRunResponse {
+  success: boolean;
+  message: string;
+  runState?: SoloRunState;
+  runToken?: string;
+}
+
+export interface ResumeSoloRunRequest {
+  runId: string;
+  runToken: string;
+}
+
+export interface ResumeSoloRunResponse {
+  success: boolean;
+  message: string;
+  runState?: SoloRunState;
+}
+
+export interface SubmitSoloMoveRequest {
+  runId: string;
+  runToken: string;
+  connectedPlayer: Player;
+}
+
+export interface SubmitSoloMoveResponse {
+  success: boolean;
+  message: string;
+  move?: PlayerMove;
+  connection?: PlayerConnection | null;
+  streak?: number;
+  ended?: boolean;
+  endReason?: SoloEndReason;
+  personalBest?: number;
+  isNewBest?: boolean;
+}
+
+export interface EndSoloRunRequest {
+  runId: string;
+  runToken: string;
+}
+
+export interface EndSoloRunResponse {
+  success: boolean;
+  message: string;
+  streak: number;
+  endReason?: SoloEndReason;
+  personalBest?: number;
+  isNewBest?: boolean;
+}
+
+export interface SoloLeaderboardEntry {
+  userId: string;
+  name: string;
+  streak: number;
+}
+
 export interface CreateCpuGameRequest {
   playerName: string;
   difficulty: CpuDifficulty;
@@ -126,6 +197,10 @@ export interface WebSocketEvents {
   join_matchmaking: (data: JoinMatchmakingRequest) => void;
   create_room: (friendsOnly?: boolean) => void;
   create_cpu_game: (data: CreateCpuGameRequest) => void;
+  create_solo_run: (data: CreateSoloRunRequest) => void;
+  resume_solo_run: (data: ResumeSoloRunRequest) => void;
+  submit_solo_move: (data: SubmitSoloMoveRequest) => void;
+  end_solo_run: (data: EndSoloRunRequest) => void;
   leave_room: (data: LeaveRoomRequest) => void;
   submit_move: (data: SubmitMoveRequest) => void;
 
@@ -134,6 +209,10 @@ export interface WebSocketEvents {
   matchmaking_result: (data: JoinMatchmakingResponse) => void;
   room_created: (data: CreateRoomResponse) => void;
   cpu_game_created: (data: CreateCpuGameResponse) => void;
+  solo_run_created: (data: CreateSoloRunResponse) => void;
+  solo_run_resumed: (data: ResumeSoloRunResponse) => void;
+  solo_move_result: (data: SubmitSoloMoveResponse) => void;
+  solo_run_ended: (data: EndSoloRunResponse) => void;
   move_submitted: (data: SubmitMoveResponse) => void;
   player_connected: (player: Player) => void;
   player_disconnected: (playerName: string) => void;

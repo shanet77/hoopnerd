@@ -1,10 +1,13 @@
-import { Server as SocketIOServer, Socket } from "socket.io";
+import { Server as SocketIOServer } from "socket.io";
 import { Server as HttpServer } from "http";
+import { Socket } from "socket.io";
 import { MatchEngine } from "../services/MatchEngine";
+import { SoloEngine } from "../services/SoloEngine";
 import { registerRoomHandlers } from "./handlers/room";
 import { registerMatchmakingHandlers } from "./handlers/matchmaking";
 import { registerGameHandlers } from "./handlers/game";
 import { registerCpuGameHandlers } from "./handlers/cpu";
+import { registerSoloGameHandlers } from "./handlers/solo";
 
 /**
  * Creates and configures a Socket.io server attached to the given HTTP server.
@@ -29,6 +32,7 @@ export function registerSocketHandlers(
   matchEngine: MatchEngine,
   socket: Socket,
   cpuEnabled = true,
+  soloEngine?: SoloEngine,
 ): void {
   console.log(`User connected: ${socket.id}`);
 
@@ -38,6 +42,9 @@ export function registerSocketHandlers(
   registerGameHandlers(socket, matchEngine);
   if (cpuEnabled) {
     registerCpuGameHandlers(socket, matchEngine);
+  }
+  if (soloEngine) {
+    registerSoloGameHandlers(socket, soloEngine);
   }
 
   // Global disconnect handler
@@ -54,8 +61,9 @@ export function setupSocketIO(
   io: SocketIOServer,
   matchEngine: MatchEngine,
   cpuEnabled = true,
+  soloEngine?: SoloEngine,
 ): void {
   io.on("connection", (socket: Socket) => {
-    registerSocketHandlers(io, matchEngine, socket, cpuEnabled);
+    registerSocketHandlers(io, matchEngine, socket, cpuEnabled, soloEngine);
   });
 }
