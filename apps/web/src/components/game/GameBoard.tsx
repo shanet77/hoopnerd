@@ -45,11 +45,15 @@ export interface GameBoardProps {
    */
   isCpuOpponent: boolean;
   /** Intro copy under the "Player Chain" heading; differs per surface. */
-  chainSubtitle: string;
+  chainSubtitle?: string;
   /** Submits the drafted move and reports whether it was accepted. */
   onSubmitMove: (player: Player) => Promise<{ success: boolean }>;
   /** Replaces the default turn/timer banner (e.g. solo streak header). */
   statusSlot?: React.ReactNode;
+  /** Hides the room roster; solo runs have no room players to list. */
+  showPlayerList?: boolean;
+  /** Hides the "Make Your Move" prompt line; solo surfaces show their own. */
+  showMovePrompt?: boolean;
 }
 
 /**
@@ -71,6 +75,8 @@ export function GameBoard({
   chainSubtitle,
   onSubmitMove,
   statusSlot,
+  showPlayerList = true,
+  showMovePrompt = true,
 }: GameBoardProps) {
   const [connectedPlayer, setConnectedPlayer] = useState<Player | null>(null);
   const apiHost = process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3001";
@@ -118,9 +124,11 @@ export function GameBoard({
           <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">
             Player Chain
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
-            {chainSubtitle}
-          </p>
+          {chainSubtitle ? (
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
+              {chainSubtitle}
+            </p>
+          ) : null}
           {roomState.gameStarted && roomState.startingPlayer ? (
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border-2 border-gray-100 dark:border-gray-800">
               <PlayerGraph
@@ -140,7 +148,9 @@ export function GameBoard({
         </CardContent>
       </Card>
 
-      <PlayerList players={roomState.players} activePlayer={activePlayer} />
+      {showPlayerList ? (
+        <PlayerList players={roomState.players} activePlayer={activePlayer} />
+      ) : null}
 
       {isMyTurn && roomState.gameStarted && (
         <Card className="border-success/30">
@@ -153,14 +163,16 @@ export function GameBoard({
                 Make Your Move
               </h2>
             </div>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
-              Connect a player to{" "}
-              <strong>
-                {roomState.lastConnectedPlayer?.name ||
-                  roomState.startingPlayer?.name}
-              </strong>{" "}
-              who shared a team{describeSeasonWindow(roomState)}.
-            </p>
+            {showMovePrompt ? (
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
+                Connect a player to{" "}
+                <strong>
+                  {roomState.lastConnectedPlayer?.name ||
+                    roomState.startingPlayer?.name}
+                </strong>{" "}
+                who shared a team{describeSeasonWindow(roomState)}.
+              </p>
+            ) : null}
             <form onSubmit={onSubmit} className="space-y-4">
               <PlayerSearch
                 apiHost={apiHost}

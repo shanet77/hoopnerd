@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Flame, Medal, Trophy } from "lucide-react";
-import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardTitle } from "@repo/ui/card";
 import { FeedbackBanner } from "@repo/ui/feedback-banner";
@@ -128,15 +127,8 @@ function SoloPage() {
               Leave
             </span>
           </Button>
-          <Badge variant={socketConnected ? "success" : "error"} size="sm">
-            {socketConnected ? "Online" : "Offline"}
-          </Badge>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-xl border-2 border-gray-200 dark:border-gray-700">
-              <Basketball
-                className="h-5 w-5 text-basketball"
-                aria-hidden="true"
-              />
               <span
                 className="font-bold text-gray-700 dark:text-gray-300"
                 aria-label={`Current streak ${streak}`}
@@ -175,7 +167,8 @@ function SoloPage() {
             cpuThinking={false}
             gameMessage={gameMessage}
             isCpuOpponent={false}
-            chainSubtitle="Keep the chain alive — every player must have shared a team-season with the previous one. No timer, but one wrong guess or repeat ends the run."
+            showPlayerList={false}
+            showMovePrompt={false}
             onSubmitMove={handleSubmitMove}
             statusSlot={
               <SoloStatusCard

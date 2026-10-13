@@ -260,4 +260,27 @@ describe("GameBoard feedback and copy", () => {
 
     expect(screen.queryByText(/waiting for the game to start/i)).toBeNull();
   });
+
+  it("omits the chain subtitle when none is supplied", () => {
+    renderBoard({ chainSubtitle: undefined });
+
+    expect(
+      screen.getByRole("heading", { name: "Player Chain" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Connect players who shared a team.")).toBeNull();
+  });
+
+  it("hides the room roster for solo runs", () => {
+    renderBoard({ showPlayerList: false });
+
+    expect(screen.queryByText("Players in Room")).toBeNull();
+    expect(screen.queryByText("No players yet...")).toBeNull();
+  });
+
+  it("hides the move prompt for solo runs", () => {
+    renderBoard({ showMovePrompt: false });
+
+    expect(screen.getByText("Make Your Move")).toBeInTheDocument();
+    expect(screen.queryByText(/connect a player to/i)).toBeNull();
+  });
 });
