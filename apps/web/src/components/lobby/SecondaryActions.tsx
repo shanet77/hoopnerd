@@ -4,7 +4,6 @@ import React, { FormEvent, useState } from "react";
 import { Users, KeyRound } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
-import { LobbyActionCard } from "./LobbyActionCard";
 
 interface SecondaryActionsProps {
   disabled: boolean;
@@ -25,50 +24,49 @@ export function SecondaryActions({
   };
 
   return (
-    <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <LobbyActionCard
-          title="Play with Friends"
-          icon={<Users className="h-5 w-5" />}
-          size="compact"
-        >
-          <Button
-            onClick={onCreateRoom}
-            disabled={disabled}
-            variant="secondary"
-            size="sm"
-            className="w-full"
-          >
-            Create Room
-          </Button>
-        </LobbyActionCard>
-
-        <LobbyActionCard
-          title="Join with Code"
-          icon={<KeyRound className="h-5 w-5" />}
-          size="compact"
-        >
-          <form onSubmit={handleJoinRoom} className="space-y-2">
-            <Input
-              id="roomId"
-              value={roomId}
-              onChange={(e) => setRoomId(e.target.value)}
-              placeholder="e.g., ABC123"
-              aria-label="Room code"
-              className="text-sm"
-            />
-            <Button
-              type="submit"
-              disabled={disabled || !roomId}
-              variant="secondary"
-              size="sm"
-              className="w-full"
-            >
-              Join Room
-            </Button>
-          </form>
-        </LobbyActionCard>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Users className="h-4 w-4 text-basketball" aria-hidden="true" />
+        <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+          Private Rooms
+        </h3>
       </div>
+
+      <Button
+        onClick={onCreateRoom}
+        disabled={disabled}
+        variant="secondary"
+        className="w-full"
+      >
+        <span className="inline-flex items-center justify-center gap-2">
+          <Users className="h-5 w-5" />
+          Create Room
+        </span>
+      </Button>
+
+      <form onSubmit={handleJoinRoom} className="flex gap-2">
+        <div className="flex-1">
+          <Input
+            id="roomId"
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+            placeholder="Room code, e.g. ABC123"
+            aria-label="Room code"
+            className="text-sm"
+          />
+        </div>
+        <Button
+          type="submit"
+          disabled={disabled || !roomId}
+          variant="secondary"
+          className="shrink-0"
+        >
+          <span className="inline-flex items-center justify-center gap-1.5">
+            <KeyRound className="h-4 w-4" />
+            Join Room
+          </span>
+        </Button>
+      </form>
     </div>
   );
 }

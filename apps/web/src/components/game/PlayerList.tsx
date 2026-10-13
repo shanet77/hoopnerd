@@ -1,9 +1,5 @@
-"use client";
-
 import React from "react";
-import { Target } from "lucide-react";
 import { Player } from "@repo/types";
-import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/card";
 
 interface PlayerListProps {
   players: Player[];
@@ -12,40 +8,39 @@ interface PlayerListProps {
 
 export function PlayerList({ players, activePlayer }: PlayerListProps) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle>Players in Room</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2">
-          {players.map((player, index) => (
-            <div
+    <div>
+      <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
+        Players in Room
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {players.map((player) => {
+          const isActive = player.name === activePlayer?.name;
+          return (
+            <span
               key={player.id}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 ${
-                player.name === activePlayer?.name
-                  ? "bg-basketball text-white border-basketball"
-                  : "bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-bold ${
+                isActive
+                  ? "bg-basketball text-white"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
               }`}
             >
-              <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm">
-                {index + 1}
-              </div>
-              <span className="font-bold">{player.name}</span>
+              {player.name}
               {player.isCpu && (
-                <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded-full font-medium">
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${
+                    isActive ? "bg-white/25" : "bg-gray-200 dark:bg-gray-700"
+                  }`}
+                >
                   CPU
                 </span>
               )}
-              {player.name === activePlayer?.name && (
-                <Target className="h-3.5 w-3.5" aria-label="Active player" />
-              )}
-            </div>
-          ))}
-        </div>
-        {players.length === 0 && (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-4">No players yet...</p>
-        )}
-      </CardContent>
-    </Card>
+            </span>
+          );
+        })}
+      </div>
+      {players.length === 0 && (
+        <p className="text-gray-500 dark:text-gray-400 text-sm py-2">No players yet...</p>
+      )}
+    </div>
   );
 }

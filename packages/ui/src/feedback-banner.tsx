@@ -7,10 +7,12 @@ interface FeedbackBannerProps {
 }
 
 const variantStyles = {
-  error: "bg-error-light border-error/30 text-error-dark",
-  warning: "bg-warning-light border-warning/30 text-warning-dark",
-  info: "bg-brand-100 dark:bg-brand-900/40 border-brand/30 text-brand-700 dark:text-brand-300",
-  success: "bg-success-light border-success/30 text-success-dark",
+  error: "bg-error-light dark:bg-error/20 text-error-dark dark:text-error-light",
+  warning:
+    "bg-warning-light dark:bg-warning/20 text-warning-dark dark:text-warning-light",
+  info: "bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300",
+  success:
+    "bg-success-light dark:bg-success/20 text-success-dark dark:text-success-light",
 };
 
 export const FeedbackBanner = ({
@@ -22,7 +24,7 @@ export const FeedbackBanner = ({
 
   return (
     <div
-      className={`p-3 border-2 rounded-xl ${variantStyles[variant]}`}
+      className={`px-4 py-3 rounded-md ${variantStyles[variant]}`}
       role={isAlert ? "alert" : "status"}
       aria-live="polite"
     >

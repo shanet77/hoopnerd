@@ -39,7 +39,7 @@ vi.mock("../../../components/ClientOnly", () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-// PlayerGraph reads the resolved theme to pick its canvas colors.
+// next-themes is mocked so no theme provider is needed in the test DOM.
 vi.mock("next-themes", () => ({
   useTheme: () => ({
     theme: "light",
@@ -198,16 +198,25 @@ describe("Room page game board", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders move history once moves exist", () => {
+  it("renders each move as a chain tile once moves exist", () => {
     useGameRoomMock.mockReturnValue(
       roomHook({
         roomState: makeRoomState({
           moves: [{ playerId: 1, playerName: "Tim", position: "SG" }],
+          connections: [
+            {
+              fromPlayer: { id: 99, name: "Michael Jordan", position: "SG" },
+              toPlayer: human,
+              teamName: "Bulls",
+              seasonYear: 1996,
+            },
+          ],
         }),
       }),
     );
     render(<Room />);
-    expect(screen.getByText("Move History")).toBeInTheDocument();
+    expect(screen.getAllByText("Tim").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Bulls · 1996/i)).toBeInTheDocument();
   });
 
   it("celebrates the winner", () => {

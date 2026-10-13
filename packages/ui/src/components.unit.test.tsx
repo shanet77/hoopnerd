@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { Badge } from "./badge";
 import { Button } from "./button";
-import { Card, CardContent, CardDescription, CardTitle } from "./card";
 import { Input } from "./input";
 
 describe("@repo/ui components", () => {
@@ -44,30 +43,9 @@ describe("@repo/ui components", () => {
     );
   });
 
-  it("renders card and badge sections", () => {
-    render(
-      <Card>
-        <CardTitle>Title</CardTitle>
-        <CardDescription>Description</CardDescription>
-        <CardContent>
-          <Badge variant="basketball">Hot</Badge>
-        </CardContent>
-      </Card>
-    );
+  it("renders the badge variants", () => {
+    render(<Badge variant="basketball">Hot</Badge>);
 
-    expect(screen.getByText("Title")).toBeInTheDocument();
-    expect(screen.getByText("Description")).toBeInTheDocument();
     expect(screen.getByText("Hot")).toHaveClass("bg-basketball");
-  });
-
-  it("renders a spotlight card with left accent border", () => {
-    const { container } = render(
-      <Card spotlight>
-        <CardTitle>Featured</CardTitle>
-      </Card>,
-    );
-
-    expect(container.firstChild).toHaveClass("border-l-basketball");
-    expect(screen.getByText("Featured")).toBeInTheDocument();
   });
 });

@@ -5,7 +5,6 @@ import { ArrowLeft, Trophy } from "lucide-react";
 import { Basketball } from "../../../components/icons/Basketball";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
-import { Card, CardContent, CardTitle } from "@repo/ui/card";
 import { Badge } from "@repo/ui/badge";
 import { SocketProvider, useSocket } from "../../lib/socket";
 import { useGameRoom } from "../../lib/useGameRoom";
@@ -63,17 +62,15 @@ function GamePage() {
         id="main-content"
         className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4"
       >
-        <Card className="max-w-md w-full text-center">
-          <CardContent className="py-12 space-y-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 dark:bg-brand-900/40 rounded-2xl">
-              <Basketball className="h-8 w-8 text-basketball animate-spin" />
-            </div>
-            <CardTitle>Connecting...</CardTitle>
-            <p className="text-gray-500 dark:text-gray-400" role="status" aria-live="polite">
-              Preparing your session.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="max-w-md w-full text-center space-y-3">
+          <Basketball className="h-10 w-10 text-basketball animate-spin mx-auto" aria-hidden="true" />
+          <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100">
+            Connecting...
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400" role="status" aria-live="polite">
+            Preparing your session.
+          </p>
+        </div>
       </main>
     );
   }
@@ -112,20 +109,18 @@ function GamePage() {
             onSubmitMove={handleSubmitMove}
           />
         ) : (
-          <Card className="text-center py-8">
-            <CardContent>
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 dark:bg-brand-900/40 rounded-2xl mb-4">
-                <Basketball className="h-8 w-8 text-basketball animate-spin" />
-              </div>
-              <CardTitle>Joining Room...</CardTitle>
-              <p className="text-gray-500 dark:text-gray-400 mt-2">Loading room details.</p>
-              {gameMessage && (
-                <p className="text-sm font-semibold text-warning-dark dark:text-warning-light mt-3">
-                  {gameMessage}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <div className="text-center py-10 space-y-3">
+            <Basketball className="h-10 w-10 text-basketball animate-spin mx-auto" aria-hidden="true" />
+            <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100">
+              Joining Room...
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400">Loading room details.</p>
+            {gameMessage && (
+              <p className="text-sm font-semibold text-warning-dark dark:text-warning-light">
+                {gameMessage}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </main>
@@ -179,7 +174,7 @@ function GameHeader({
       </Badge>
       <div className="flex items-center gap-2">
         <div
-          className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-xl border-2 border-gray-200 dark:border-gray-700"
+          className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-md"
           role="group"
           aria-label={`Room code ${roomId}`}
         >
@@ -215,15 +210,13 @@ function GameOverScreen({
 }) {
   return (
     <div className="space-y-6">
-      <Card className="text-center py-8 bg-warning-light/50 dark:bg-warning-dark/20 border-warning/30">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-warning rounded-full mx-auto mb-4 shadow-lg ring-4 ring-warning/30">
-          <Trophy className="h-10 w-10 text-white" />
-        </div>
-        <CardTitle className="text-3xl text-warning-dark dark:text-warning-light mb-2">
+      <div className="text-center py-10 space-y-3">
+        <Trophy className="h-14 w-14 text-warning mx-auto" aria-hidden="true" />
+        <h2 className="font-title text-3xl font-bold text-warning-dark dark:text-warning-light">
           {winner.name} Wins!
-        </CardTitle>
+        </h2>
         <p className="text-gray-600 dark:text-gray-300 font-medium">{winReason}</p>
-      </Card>
+      </div>
       <div className="flex gap-3">
         <Button variant="secondary" className="flex-1" onClick={onLeave}>
           Back to Lobby

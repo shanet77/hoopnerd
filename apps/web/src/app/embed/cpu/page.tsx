@@ -5,7 +5,6 @@ import { ArrowLeft, CircleX, Trophy } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
-import { Card, CardContent, CardTitle } from "@repo/ui/card";
 import { Badge } from "@repo/ui/badge";
 import { Basketball } from "../../../components/icons/Basketball";
 import ClientOnly from "../../../components/ClientOnly";
@@ -93,29 +92,29 @@ function EmbedGame() {
   if (phase === "failed") {
     return (
       <EmbedShell title="HoopNerd vs CPU">
-        <Card className="text-center py-8">
-          <CardContent className="space-y-4">
-            <CircleX
-              className="h-10 w-10 mx-auto text-error"
-              aria-hidden="true"
-            />
-            <CardTitle>Couldn&apos;t start the game</CardTitle>
-            <p className="text-gray-500 dark:text-gray-400">{failureMessage}</p>
-            <div className="flex flex-col gap-2">
-              <Button variant="basketball" size="lg" onClick={handleRetry}>
-                Try again
-              </Button>
-              <Link
-                href={FALLBACK_FULL_APP_PATH}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-bold text-brand-600 hover:text-brand-800"
-              >
-                Open HoopNerd in a new tab
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="text-center py-8 space-y-4">
+          <CircleX
+            className="h-10 w-10 mx-auto text-error"
+            aria-hidden="true"
+          />
+          <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100">
+            Couldn&apos;t start the game
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400">{failureMessage}</p>
+          <div className="flex flex-col gap-2">
+            <Button variant="basketball" size="lg" onClick={handleRetry}>
+              Try again
+            </Button>
+            <Link
+              href={FALLBACK_FULL_APP_PATH}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-bold text-brand-600 hover:text-brand-800"
+            >
+              Open HoopNerd in a new tab
+            </Link>
+          </div>
+        </div>
       </EmbedShell>
     );
   }
@@ -237,24 +236,22 @@ function EmbedCreator({
 
   return (
     <EmbedShell title="HoopNerd vs CPU">
-      <Card className="text-center py-10">
-        <CardContent className="space-y-4">
-          <Basketball
-            className="h-10 w-10 mx-auto text-basketball animate-spin"
-            aria-hidden="true"
-          />
-          <CardTitle>
-            {!socket ? "Connecting..." : "Starting your game..."}
-          </CardTitle>
-          <p
-            className="text-gray-500 dark:text-gray-400"
-            role="status"
-            aria-live="polite"
-          >
-            Warming up BronBot.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="text-center py-10 space-y-4">
+        <Basketball
+          className="h-10 w-10 mx-auto text-basketball animate-spin"
+          aria-hidden="true"
+        />
+        <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100">
+          {!socket ? "Connecting..." : "Starting your game..."}
+        </h2>
+        <p
+          className="text-gray-500 dark:text-gray-400"
+          role="status"
+          aria-live="polite"
+        >
+          Warming up BronBot.
+        </p>
+      </div>
     </EmbedShell>
   );
 }
@@ -320,29 +317,27 @@ function EmbedRoom({
   if (!roomState) {
     return (
       <EmbedShell title="HoopNerd vs CPU">
-        <Card className="text-center py-10">
-          <CardContent className="space-y-4">
-            <Basketball
-              className="h-10 w-10 mx-auto text-basketball animate-spin"
-              aria-hidden="true"
-            />
-            <CardTitle>
-              {joinFailed ? "Couldn't rejoin the game" : "Joining your game..."}
-            </CardTitle>
-            <p
-              className="text-gray-500 dark:text-gray-400"
-              role="status"
-              aria-live="polite"
-            >
-              {gameMessage || "Loading room details."}
-            </p>
-            {joinFailed && (
-              <Button variant="basketball" size="lg" onClick={handleNewGame}>
-                Start a new game
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+        <div className="text-center py-10 space-y-4">
+          <Basketball
+            className="h-10 w-10 mx-auto text-basketball animate-spin"
+            aria-hidden="true"
+          />
+          <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100">
+            {joinFailed ? "Couldn't rejoin the game" : "Joining your game..."}
+          </h2>
+          <p
+            className="text-gray-500 dark:text-gray-400"
+            role="status"
+            aria-live="polite"
+          >
+            {gameMessage || "Loading room details."}
+          </p>
+          {joinFailed && (
+            <Button variant="basketball" size="lg" onClick={handleNewGame}>
+              Start a new game
+            </Button>
+          )}
+        </div>
       </EmbedShell>
     );
   }
@@ -361,17 +356,15 @@ function EmbedRoom({
       </p>
 
       {winner ? (
-        <Card className="text-center py-8 bg-warning-light/50 dark:bg-warning-dark/20 border-warning/30">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-warning rounded-full mx-auto mb-4 shadow-lg ring-4 ring-warning/30">
-            <Trophy className="h-10 w-10 text-white" aria-hidden="true" />
-          </div>
-          <CardTitle className="text-3xl text-warning-dark dark:text-warning-light mb-2">
+        <div className="text-center py-10 space-y-3">
+          <Trophy className="h-14 w-14 text-warning mx-auto" aria-hidden="true" />
+          <h2 className="font-title text-3xl font-bold text-warning-dark dark:text-warning-light">
             {winner.name} Wins!
-          </CardTitle>
+          </h2>
           <p className="text-gray-600 dark:text-gray-300 font-medium">
             {winReason}
           </p>
-          <div className="flex gap-3 mt-6 px-6">
+          <div className="flex gap-3 pt-4">
             <Button
               variant="basketball"
               size="lg"
@@ -381,7 +374,7 @@ function EmbedRoom({
               Play again
             </Button>
           </div>
-        </Card>
+        </div>
       ) : (
         <>
           <GameBoard

@@ -16,7 +16,7 @@ export const TimerBar = ({
 
   return (
     <div
-      className="relative h-4 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
+      className="relative h-3 bg-gray-200 dark:bg-gray-700 rounded-sm overflow-hidden"
       role="progressbar"
       aria-label="Turn timer"
       aria-valuemin={0}
@@ -24,7 +24,7 @@ export const TimerBar = ({
       aria-valuenow={value}
     >
       <div
-        className={`absolute left-0 top-0 h-full rounded-full transition-all duration-1000 ${
+        className={`absolute left-0 top-0 h-full rounded-sm transition-all duration-1000 ${
           isUrgent ? "bg-error" : "bg-success"
         }`}
         style={{ width: `${percent}%` }}

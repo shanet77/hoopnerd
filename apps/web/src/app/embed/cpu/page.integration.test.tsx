@@ -41,7 +41,7 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-// PlayerGraph reads the resolved theme to pick its canvas colors.
+// next-themes is mocked so no theme provider is needed in the test DOM.
 vi.mock("next-themes", () => ({
   useTheme: () => ({
     theme: "light",
@@ -294,7 +294,7 @@ describe("Embed CPU game board", () => {
     );
   });
 
-  it("renders move history once moves exist", async () => {
+  it("renders each move as a chain tile once moves exist", async () => {
     useSocketMock.mockReturnValue({ socket: {}, isConnected: true });
     createCpuGameMock.mockResolvedValue({
       success: true,
@@ -306,15 +306,24 @@ describe("Embed CPU game board", () => {
       roomHook({
         roomState: makeRoomState({
           moves: [{ playerId: 1, playerName: "Tim", position: "SG" }],
+          connections: [
+            {
+              fromPlayer: { id: 99, name: "Michael Jordan", position: "SG" },
+              toPlayer: human,
+              teamName: "Bulls",
+              seasonYear: 1996,
+            },
+          ],
         }),
       }),
     );
 
     render(<EmbedCpuGame />);
 
-    await waitFor(() =>
-      expect(screen.getByText("Move History")).toBeInTheDocument(),
-    );
+    await waitFor(() => {
+      expect(screen.getAllByText("Tim").length).toBeGreaterThan(0);
+      expect(screen.getByText(/Bulls · 1996/i)).toBeInTheDocument();
+    });
   });
 
   it("celebrates the winner with a play-again action", async () => {

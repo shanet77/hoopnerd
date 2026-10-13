@@ -33,13 +33,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             aria-invalid={Boolean(error)}
             aria-describedby={error && errorId ? errorId : undefined}
             className={`
-              w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl
+              w-full px-4 py-3 bg-gray-100/60 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md
               text-gray-800 dark:text-gray-100 text-base transition-all duration-200
-              shadow-[inset_0_2px_4px_rgba(0,0,0,0.04)]
               placeholder:text-gray-400 dark:placeholder:text-gray-500
               focus:border-brand-400 dark:focus:border-brand-500 focus:bg-white dark:focus:bg-gray-900 focus:outline-none
               focus-visible:ring-4 focus-visible:ring-brand-300 dark:focus-visible:ring-brand-700 focus-visible:ring-offset-1
-              focus:shadow-[0_0_0_4px_rgba(68,125,166,0.16),inset_0_2px_4px_rgba(0,0,0,0.04)]
               disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed
               read-only:bg-gray-100 dark:read-only:bg-gray-800 read-only:text-gray-500 dark:read-only:text-gray-400 read-only:border-gray-300 dark:read-only:border-gray-600 read-only:cursor-pointer
               ${error ? "border-error focus:border-error focus:shadow-[0_0_0_4px_rgba(207,63,75,0.16)]" : ""}

@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { LoaderCircle, Zap, Bot, Flame } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
-import { Card } from "@repo/ui/card";
 import { FeedbackBanner } from "@repo/ui/feedback-banner";
 import {
 	SocketProvider,
@@ -254,144 +253,132 @@ function LobbyPage() {
 	return (
 		<main
 			id="main-content"
-			className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4"
+			className="min-h-screen bg-gray-50 dark:bg-gray-900 py-10 px-4"
 		>
-			<div className="max-w-5xl mx-auto space-y-6">
-				<div className="text-center space-y-2">
-					<div className="flex items-center justify-center gap-4">
-						<h1 className="font-title text-4xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
-							HoopNerd
-						</h1>
-						<ThemeToggle />
-					</div>
+			<div className="max-w-md mx-auto slide-up">
+				<div className="flex items-center justify-center gap-4 mb-8">
+					<h1 className="font-title text-4xl font-bold text-gray-800 dark:text-gray-100 tracking-tight uppercase">
+						HoopNerd
+					</h1>
+					<ThemeToggle />
 				</div>
 
-				<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
-					<div className="space-y-6 slide-up">
-						{feedbackMessage && (
-							<FeedbackBanner variant="warning">
-								{feedbackMessage}
-							</FeedbackBanner>
-						)}
+				{feedbackMessage && (
+					<FeedbackBanner variant="warning">
+						{feedbackMessage}
+					</FeedbackBanner>
+				)}
 
-						<Card
-							className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+				<div className="divide-y divide-gray-200 dark:divide-gray-700">
+					<section className="py-5 space-y-3">
+						<InlineNamePrompt
+							value={playerName}
+							onChange={(value) => {
+								setPlayerNameState(value);
+								if (feedbackMessage.includes("name")) {
+									setFeedbackMessage("");
+								}
+							}}
+						/>
+
+						<Button
+							onClick={handleJoinMatchmaking}
+							disabled={actionsDisabled || isMatchmaking}
+							variant="primary"
+							size="lg"
+							className="w-full"
 						>
-							<div className="space-y-6">
-								<InlineNamePrompt
-									value={playerName}
-									onChange={(value) => {
-										setPlayerNameState(value);
-										if (feedbackMessage.includes("name")) {
-											setFeedbackMessage("");
-										}
-									}}
-								/>
+							{isMatchmaking ? (
+								<span className="inline-flex items-center justify-center gap-2">
+									<LoaderCircle className="h-5 w-5 animate-spin" />
+									Searching...
+								</span>
+							) : (
+								<span className="inline-flex items-center justify-center gap-2">
+									<Zap className="h-5 w-5" />
+									Quick Play
+								</span>
+							)}
+						</Button>
 
-								<div className="space-y-2">
-									<Button
-										onClick={handleJoinMatchmaking}
-										disabled={actionsDisabled || isMatchmaking}
-										variant="primary"
-										size="lg"
-										className="w-full"
-									>
-										{isMatchmaking ? (
-											<span className="inline-flex items-center justify-center gap-2">
-												<LoaderCircle className="h-5 w-5 animate-spin" />
-												Searching...
-											</span>
-										) : (
-											<span className="inline-flex items-center justify-center gap-2">
-												<Zap className="h-5 w-5" />
-												Quick Play
-											</span>
-										)}
-									</Button>
+						<Button
+							onClick={handleSoloStreak}
+							disabled={actionsDisabled}
+							variant="outline"
+							size="lg"
+							className="w-full"
+						>
+							<span className="inline-flex items-center justify-center gap-2">
+								<Flame className="h-5 w-5 text-basketball" />
+								Solo Streak
+							</span>
+						</Button>
+					</section>
 
-									<Button
-										onClick={handleSoloStreak}
-										disabled={actionsDisabled}
-										variant="outline"
-										size="lg"
-										className="w-full"
-									>
-										<span className="inline-flex items-center justify-center gap-2">
-											<Flame className="h-5 w-5 text-basketball" />
-											Solo Streak
-										</span>
-									</Button>
-								</div>
+					<section className="py-5 space-y-4">
+						<div className="flex items-center gap-2">
+							<Bot className="h-4 w-4 text-basketball" aria-hidden="true" />
+							<h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+								Play vs CPU
+							</h3>
+						</div>
+						<CpuSeasonPicker
+							minYear={minYear}
+							maxYear={maxYear}
+							loading={seasonsLoading}
+							seasonYearMin={seasonYearMin}
+							seasonYearMax={seasonYearMax}
+							onChange={(min, max) => {
+								setSeasonYearMin(min);
+								setSeasonYearMax(max);
+							}}
+						/>
 
-								<div className="space-y-4 border-t-2 border-gray-100 dark:border-gray-700 pt-5">
-									<div className="flex items-center gap-2">
-										<Bot className="h-5 w-5 text-basketball" aria-hidden="true" />
-										<h3 className="font-title text-lg font-bold text-gray-800 dark:text-gray-100">
-											Play vs CPU
-										</h3>
-									</div>
-									<CpuSeasonPicker
-										minYear={minYear}
-										maxYear={maxYear}
-										loading={seasonsLoading}
-										seasonYearMin={seasonYearMin}
-										seasonYearMax={seasonYearMax}
-										onChange={(min, max) => {
-											setSeasonYearMin(min);
-											setSeasonYearMax(max);
-										}}
-									/>
+						<Button
+							onClick={handleCpuGame}
+							disabled={actionsDisabled || isCpuQueuing}
+							variant="basketball"
+							size="lg"
+							className="w-full"
+						>
+							{isCpuQueuing ? (
+								"Starting..."
+							) : (
+								<span className="inline-flex items-center justify-center gap-2">
+									<Bot className="h-5 w-5" />
+									Play vs CPU
+								</span>
+							)}
+						</Button>
+					</section>
 
-									<Button
-										onClick={handleCpuGame}
-										disabled={actionsDisabled || isCpuQueuing}
-										variant="basketball"
-										size="lg"
-										className="w-full"
-									>
-										{isCpuQueuing ? (
-											"Starting..."
-										) : (
-											<span className="inline-flex items-center justify-center gap-2">
-												<Bot className="h-5 w-5" />
-												Play vs CPU
-											</span>
-										)}
-									</Button>
-								</div>
-							</div>
-						</Card>
-
+					<section className="py-5">
 						<SecondaryActions
 							disabled={actionsDisabled}
 							onCreateRoom={() => handleCreateRoom(true)}
 							onJoinRoom={handleJoinRoom}
 						/>
+					</section>
 
-						<div className="text-center pt-4">
-							<p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-								How to play: Connect players who played together on the
-								same team in the same season.
-							</p>
-						</div>
-					</div>
-
-					<aside
-						className="slide-up"
-						style={{ animationDelay: "100ms" }}
-					>
+					<section className="py-5">
 						<LeaderboardPanel
 							stats={stats}
 							statsError={statsError}
 							solo={soloEntries}
 							soloError={soloError}
 						/>
-					</aside>
-				</div>
+					</section>
 
-				<p className="text-center text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-					v{APP_VERSION}
-				</p>
+					<section className="pt-5">
+						<p className="text-center text-xs text-gray-400 dark:text-gray-500 font-medium">
+							How to play: Connect players who played together on the
+							same team in the same season.
+						</p>
+						<p className="mt-4 text-center text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+							v{APP_VERSION}
+						</p>
+					</section>
+				</div>
 			</div>
 		</main>
 	);
