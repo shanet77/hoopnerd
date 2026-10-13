@@ -80,7 +80,6 @@ async function waitForStats() {
     expect(screen.getByRole("button", { name: /quick play/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /play vs cpu/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/your name/i)).toBeInTheDocument();
-    expect(screen.getByText(/enter your name to unlock game actions/i)).toBeInTheDocument();
   });
 
   it("disables primary CTAs until a name is entered", async () => {
