@@ -33,42 +33,23 @@ jobs:
           git fetch --depth=1 origin "${GITHUB_SHA}"
           git checkout --detach FETCH_HEAD
 
-      - name: Bootstrap Node.js 22
-        run: |
-          set -euo pipefail
-          cd "${GITHUB_WORKSPACE}"
-          if ! command -v node >/dev/null 2>&1; then
-            mkdir -p "$HOME/.local/node"
-            curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz -o /tmp/node.tar.xz
-            tar -xJf /tmp/node.tar.xz -C "$HOME/.local/node" --strip-components=1
-          fi
-          export PATH="$HOME/.local/node/bin:$PATH"
-          node --version
-          npm --version
-
       - name: Install dependencies
         run: |
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}"
-          export PATH="$HOME/.local/node/bin:$PATH"
-          # corepack bundled with node 22.14 hardcodes bin/pnpm.cjs, which pnpm 12
-          # no longer ships (bin/pnpm.mjs only) — upgrade corepack first.
-          npm i -g corepack@latest
-          corepack enable
+          node --version
           pnpm install --frozen-lockfile
 
       - name: Build workspace packages
         run: |
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}"
-          export PATH="$HOME/.local/node/bin:$PATH"
           pnpm -r --if-present run build
 
       - name: Test
         run: |
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}"
-          export PATH="$HOME/.local/node/bin:$PATH"
           pnpm -r --if-present run test
 
   build_images_prod:
@@ -93,10 +74,9 @@ jobs:
           else
             git remote set-url origin "${repo_url}"
           fi
-          # --force: tags are rewritten when history is, and a stale local tag
-          # would otherwise abort this step with "would clobber existing tag".
           git fetch --tags --force origin main
           git checkout --detach FETCH_HEAD
+          git clean -fdx
 
       - name: Resolve version
         id: resolve_version
@@ -118,17 +98,10 @@ jobs:
           echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "Resolved image tag: ${IMAGE_TAG}"
 
-      - name: Build and push images on dockernode
+      - name: Build and push images to zot
         if: ${{ !(github.event_name == 'workflow_dispatch' && github.event.inputs.image_tag != '') }}
         env:
-          DOCKERNODE_HOST: ${{ secrets.DOCKERNODE_HOST }}
-          DOCKERNODE_USER: ${{ secrets.DOCKERNODE_USER }}
-          DOCKERNODE_SSH_KEY: ${{ secrets.DOCKERNODE_SSH_KEY }}
-          DOCKERNODE_PATH: ${{ secrets.DOCKERNODE_PATH }}
-          REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
-          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-          REGISTRY_NAMESPACE: ${{ secrets.REGISTRY_NAMESPACE || vars.REGISTRY_NAMESPACE }}
+          IMAGE_BASE: ${{ secrets.IMAGE_BASE }}
           NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_API_HOST: ${{ vars.NEXT_PUBLIC_API_HOST }}
           NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${{ vars.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
@@ -137,66 +110,17 @@ jobs:
           GIT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          : "${DOCKERNODE_HOST:?DOCKERNODE_HOST is required}"
-          : "${DOCKERNODE_USER:?DOCKERNODE_USER is required}"
-          : "${DOCKERNODE_SSH_KEY:?DOCKERNODE_SSH_KEY is required}"
-          : "${DOCKERNODE_PATH:?DOCKERNODE_PATH is required}"
-          : "${REGISTRY_URL:?REGISTRY_URL is required}"
-          : "${REGISTRY_USERNAME:?REGISTRY_USERNAME is required}"
-          : "${REGISTRY_PASSWORD:?REGISTRY_PASSWORD is required}"
-          : "${REGISTRY_NAMESPACE:?REGISTRY_NAMESPACE is required}"
-          : "${VERSION:?VERSION is required}"
-
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          key_file=~/.ssh/dockernode_deploy_key
-          printf '%s\n' "${DOCKERNODE_SSH_KEY}" > "${key_file}"
-          chmod 600 "${key_file}"
-
-          REPO_HOST="${GITHUB_SERVER_URL#https://}"
-          REPO_URL="https://${REPO_HOST}/${GITHUB_REPOSITORY}.git"
-          REGISTRY_HOST="${REGISTRY_URL#https://}"
-          REGISTRY_HOST="${REGISTRY_HOST#http://}"
-          REGISTRY_HOST="${REGISTRY_HOST%%/*}"
-          REGISTRY_HOST="${REGISTRY_HOST%/}"
-          echo "Using registry host: ${REGISTRY_HOST}"
-          echo "Building version: ${VERSION}"
+          : "${IMAGE_BASE:?IMAGE_BASE secret is required (e.g. registry.example.com/namespace)}"
+          cd "${GITHUB_WORKSPACE}"
           BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          REGISTRY_PASSWORD_B64="$(printf '%s' "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')"
+          echo "Building version: ${VERSION}"
 
-          ssh -i "${key_file}" \
-            -o StrictHostKeyChecking=accept-new \
-            -o ConnectTimeout=30 \
-            -o ServerAliveInterval=15 \
-            -o ServerAliveCountMax=4 \
-            -o BatchMode=yes \
-            "${DOCKERNODE_USER}@${DOCKERNODE_HOST}" \
-            "export DOCKERNODE_PATH='${DOCKERNODE_PATH}' REPO_URL='${REPO_URL}' TARGET_SHA='${GITHUB_SHA}' IMAGE_TAG='${IMAGE_TAG}' VERSION='${VERSION}' BUILD_TIME='${BUILD_TIME}' GIT_SHA='${GIT_SHA}' REGISTRY_HOST='${REGISTRY_HOST}' REGISTRY_USERNAME='${REGISTRY_USERNAME}' REGISTRY_PASSWORD_B64='${REGISTRY_PASSWORD_B64}' REGISTRY_NAMESPACE='${REGISTRY_NAMESPACE}' NEXT_PUBLIC_API_URL='${NEXT_PUBLIC_API_URL}' NEXT_PUBLIC_API_HOST='${NEXT_PUBLIC_API_HOST}' NEXT_PUBLIC_UMAMI_WEBSITE_ID='${NEXT_PUBLIC_UMAMI_WEBSITE_ID}'; bash -s" \
-            <<'EOF_REMOTE'
-          set -euo pipefail
-
-          if [ ! -d "${DOCKERNODE_PATH}/.git" ]; then
-            mkdir -p "$(dirname "${DOCKERNODE_PATH}")"
-            git clone "${REPO_URL}" "${DOCKERNODE_PATH}"
-          fi
-
-          cd "${DOCKERNODE_PATH}"
-          git fetch --all --prune --force
-          git checkout --detach "${TARGET_SHA}"
-
-          REGISTRY_PASSWORD="$(printf '%s' "${REGISTRY_PASSWORD_B64}" | base64 -d)"
-          echo "Validating registry endpoint https://${REGISTRY_HOST}/v2/"
-          curl -fsS --connect-timeout 10 "https://${REGISTRY_HOST}/v2/" >/dev/null || true
-          echo "${REGISTRY_PASSWORD}" | podman login "${REGISTRY_HOST}" -u "${REGISTRY_USERNAME}" --password-stdin
-
-          echo "=== Building version: ${VERSION} ==="
-
-          API_IMAGE_SHA="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:${IMAGE_TAG}"
-          API_IMAGE_LATEST="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:main-latest"
-          API_IMAGE_VERSION="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-api:${VERSION}"
-          WEB_IMAGE_SHA="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-web:${IMAGE_TAG}"
-          WEB_IMAGE_LATEST="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-web:main-latest"
-          WEB_IMAGE_VERSION="${REGISTRY_HOST}/${REGISTRY_NAMESPACE}/hoopnerd-web:${VERSION}"
+          API_IMAGE_SHA="${IMAGE_BASE}/hoopnerd-api:${IMAGE_TAG}"
+          API_IMAGE_LATEST="${IMAGE_BASE}/hoopnerd-api:main-latest"
+          API_IMAGE_VERSION="${IMAGE_BASE}/hoopnerd-api:${VERSION}"
+          WEB_IMAGE_SHA="${IMAGE_BASE}/hoopnerd-web:${IMAGE_TAG}"
+          WEB_IMAGE_LATEST="${IMAGE_BASE}/hoopnerd-web:main-latest"
+          WEB_IMAGE_VERSION="${IMAGE_BASE}/hoopnerd-web:${VERSION}"
 
           podman build \
             --platform linux/amd64 \
@@ -226,7 +150,7 @@ jobs:
           podman push "${WEB_IMAGE_SHA}"
           podman push "${WEB_IMAGE_LATEST}"
           podman push "${WEB_IMAGE_VERSION}"
-          EOF_REMOTE
+          echo "=== pushed: ${API_IMAGE_SHA} + ${WEB_IMAGE_SHA} ==="
 
       - name: Skip build (redeploy existing tag)
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.image_tag != '' }}
@@ -257,9 +181,6 @@ jobs:
           else
             git remote set-url origin "${repo_url}"
           fi
-          # Fetch tags too — needed for version.sh to resolve semver
-          # --force: tags are rewritten when history is, and a stale local tag
-          # would otherwise abort this step with "would clobber existing tag".
           git fetch --tags --force origin main
           git checkout --detach FETCH_HEAD
 
@@ -297,7 +218,6 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           key_file=~/.ssh/prod_deploy_key
-          # Decode base64 if the key was stored encoded (starts with LS0t = "---" in b64)
           if printf '%s' "${DEPLOY_SSH_KEY}" | grep -q '^LS0t'; then
             printf '%s' "${DEPLOY_SSH_KEY}" | base64 -d > "${key_file}"
             printf '\n' >> "${key_file}"
@@ -306,7 +226,6 @@ jobs:
           fi
           chmod 600 "${key_file}"
 
-          # Fail loud if any required input is missing
           : "${DEPLOY_PATH:?DEPLOY_PATH is required}"
           : "${REGISTRY_URL:?REGISTRY_URL is required}"
           : "${REGISTRY_USERNAME:?REGISTRY_USERNAME is required}"
@@ -319,22 +238,13 @@ jobs:
 
           echo "Deploying version: ${APP_VERSION}"
 
-          # Base64-encode password to safely pass via shell export (matching build job)
           REGISTRY_PASSWORD_B64="$(printf '%s' "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')"
 
-          # Embed the deploy script as base64 and deliver it over SSH via a heredoc -- the
-          # exact same transport build_images_prod uses successfully. We deliberately do
-          # NOT use `ssh ... < scripts/deploy-quadlet.sh`, because on this runner that
-          # stdin file-redirect delivers an empty stdin to the remote `bash -s`, which
-          # exits 0 immediately and is reported as a 6-second "success" with zero work
-          # done (the bug we are fixing).
           DEPLOY_SCRIPT_B64="$(base64 < scripts/deploy-quadlet.sh | tr -d '\n')"
 
           DEPLOY_LOG="$(mktemp)"
           trap 'rm -f "${DEPLOY_LOG}"' EXIT
 
-          # Disable errexit around ssh so we always reach the sentinel check below,
-          # even if the remote returns non-zero.
           set +e
           ssh -i "${key_file}" \
             -o StrictHostKeyChecking=accept-new \
@@ -357,12 +267,8 @@ jobs:
           SSH_RC=$?
           set -e
 
-          # Always surface whatever the remote produced
           cat "${DEPLOY_LOG}"
 
-          # Sentinel guard: deploy-quadlet.sh prints "=== deploy-quadlet starting ==="
-          # as its very first action. If that line is absent, the remote never executed
-          # the script (silent no-op) -- refuse to report success.
           if ! grep -q '=== deploy-quadlet starting ===' "${DEPLOY_LOG}"; then
             echo "=== DEPLOY DID NOT RUN: sentinel line not found in remote output (ssh rc=${SSH_RC}) ===" >&2
             echo "The deploy script never executed on the VPS. See captured output above." >&2
@@ -400,13 +306,11 @@ jobs:
           VERSION="${{ steps.resolve_version.outputs.version }}"
           TAG_NAME="v${VERSION}"
 
-          # Check if this tag already exists (e.g., on retry)
           if git rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
             echo "Tag ${TAG_NAME} already exists — skipping"
             exit 0
           fi
 
-          # Authenticate git push using the auto-provisioned GITHUB_TOKEN
           REPO_URL_WITH_TOKEN="https://git:${GITHUB_TOKEN}@${GITHUB_SERVER_URL#https://}/${GITHUB_REPOSITORY}.git"
           git remote set-url origin "${REPO_URL_WITH_TOKEN}"
 
