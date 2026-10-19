@@ -1,30 +1,13 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { MatchEngine, MatchEvent, MatchEventSink } from "../MatchEngine";
+import { MatchEngine } from "../MatchEngine";
 import type { Player, GameRoomState } from "@repo/types";
-
-class RecordingSink implements MatchEventSink {
-  events: MatchEvent[] = [];
-  disconnected: string[] = [];
-
-  publish(event: MatchEvent): void {
-    this.events.push(event);
-  }
-
-  disconnectSocket(socketId: string): void {
-    this.disconnected.push(socketId);
-  }
-
-  of(type: MatchEvent["type"]): MatchEvent[] {
-    return this.events.filter((event) => event.type === type);
-  }
-
-  last(type: MatchEvent["type"]): MatchEvent | undefined {
-    const matches = this.of(type);
-    return matches[matches.length - 1];
-  }
-}
-
-type Mockify<T> = { [K in keyof T]: ReturnType<typeof vi.fn> };
+import {
+  createMockRepo,
+  createTestEngine,
+  makeStartedRoom,
+  RecordingSink,
+  type Mockify,
+} from "./harness";
 
 describe("MatchEngine", () => {
   let engine: MatchEngine;
@@ -35,24 +18,9 @@ describe("MatchEngine", () => {
     vi.useFakeTimers();
     sink = new RecordingSink();
 
-    mockRepo = {
-      getRandomTopScorer: vi.fn(),
-      validateMove: vi.fn().mockResolvedValue(true),
-      getConnectionDetails: vi.fn().mockResolvedValue(null),
-      recordGameStats: vi.fn().mockResolvedValue(undefined),
-      saveGameState: vi.fn().mockResolvedValue(undefined),
-      loadGameStates: vi.fn().mockResolvedValue([]),
-      deleteGameState: vi.fn().mockResolvedValue(undefined),
-    };
+    mockRepo = createMockRepo();
 
-    engine = new MatchEngine({
-      players: mockRepo as any,
-      stats: mockRepo as any,
-      gameStates: mockRepo as any,
-      sink,
-      turnTimeoutMs: 25000,
-      disconnectGraceMs: 10000,
-    });
+    engine = createTestEngine({ repo: mockRepo, sink });
   });
 
   afterEach(() => {
@@ -739,14 +707,10 @@ describe("MatchEngine", () => {
         name: "Starter",
         position: "C",
       });
-      const cpuMatchEngine = new MatchEngine({
-        players: mockRepo as any,
-        stats: mockRepo as any,
-        gameStates: mockRepo as any,
+      const cpuMatchEngine = createTestEngine({
+        repo: mockRepo,
         sink,
-        cpuEngine: cpuEngine as any,
-        turnTimeoutMs: 25000,
-        disconnectGraceMs: 10000,
+        cpuEngine,
       });
       // Math.random drives both starting index (>= .5 → CPU) and delay.
       vi.spyOn(Math, "random").mockReturnValue(0.9);
@@ -796,24 +760,6 @@ describe("MatchEngine", () => {
   });
 
   describe("persistence", () => {
-    const makeStartedRoom = (roomId: string): GameRoomState => ({
-      roomId,
-      players: [
-        { id: 1, name: "Player1", position: "G", socketId: "socket-1" },
-        { id: 2, name: "Player2", position: "F", socketId: "socket-2" },
-      ],
-      moves: [],
-      currentPlayerIndex: 0,
-      gameStarted: true,
-      gameCompleted: false,
-      winner: null,
-      startingPlayer: { id: 99, name: "Starting", position: "C" },
-      connections: [],
-      lastConnectedPlayer: { id: 99, name: "Starting", position: "C" },
-      friendsOnly: false,
-      statsRecorded: false,
-    });
-
     it("saves a room snapshot on create", async () => {
       engine.createRoom("SAVE1");
 

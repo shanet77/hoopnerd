@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Flame, Medal, Trophy } from "lucide-react";
+import { ArrowLeft, Flame, Medal } from "lucide-react";
 import { Button } from "@repo/ui/button";
-import { FeedbackBanner } from "@repo/ui/feedback-banner";
-import type { SoloEndReason } from "@repo/types";
 import { SocketProvider, useSocket } from "../lib/socket";
 import { useSoloRun } from "../lib/useSoloRun";
 import { getPlayerName, setPlayerName } from "../lib/playerSession";
@@ -14,13 +12,8 @@ import ClientOnly from "../../components/ClientOnly";
 import { InlineNamePrompt } from "../../components/lobby/InlineNamePrompt";
 import { GameBoard } from "../../components/game/GameBoard";
 import { Basketball } from "../../components/icons/Basketball";
-
-const END_REASON_COPY: Record<SoloEndReason, string> = {
-  stuck: "No players left to connect — dead end.",
-  repeat: "That player was already used in this chain.",
-  invalid: "Those two never played together — wrong connection.",
-  forfeit: "You banked your streak and walked away.",
-};
+import { SoloStatusCard } from "../../components/solo/SoloStatusCard";
+import { SoloEndScreen } from "../../components/solo/SoloEndScreen";
 
 export default function Solo() {
   return (
@@ -199,92 +192,5 @@ function SoloPage() {
         )}
       </div>
     </main>
-  );
-}
-
-function SoloStatusCard({
-  streak,
-  personalBest,
-  onEndRun,
-}: {
-  streak: number;
-  personalBest: number;
-  onEndRun: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-baseline gap-3">
-        <span
-          className="font-title text-3xl font-bold text-gray-800 dark:text-gray-100 tabular-nums"
-          aria-live="polite"
-        >
-          {streak}
-        </span>
-        <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-          streak
-        </span>
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-          Best: {personalBest}
-        </span>
-        <Button variant="outline" size="sm" onClick={onEndRun}>
-          End Run
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function SoloEndScreen({
-  endInfo,
-  personalBest,
-  onNewRun,
-  onLeave,
-}: {
-  endInfo: {
-    streak: number;
-    endReason?: SoloEndReason;
-    isNewBest: boolean;
-    message: string;
-  };
-  personalBest: number;
-  onNewRun: () => void;
-  onLeave: () => void;
-}) {
-  return (
-    <div className="space-y-6">
-      <div className="text-center py-10 space-y-3">
-        <Trophy className="h-14 w-14 text-warning mx-auto" aria-hidden="true" />
-        <h2 className="font-title text-3xl font-bold text-warning-dark dark:text-warning-light">
-          {endInfo.streak}-Player Streak
-        </h2>
-        <p className="text-gray-600 dark:text-gray-300 font-medium">
-          {endInfo.endReason
-            ? END_REASON_COPY[endInfo.endReason]
-            : endInfo.message}
-        </p>
-        {endInfo.isNewBest && (
-          <div className="pt-2">
-            <FeedbackBanner variant="success">
-              New personal best!
-            </FeedbackBanner>
-          </div>
-        )}
-        {!endInfo.isNewBest && (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Personal best: {personalBest}
-          </p>
-        )}
-      </div>
-      <div className="flex gap-3">
-        <Button variant="primary" className="flex-1" onClick={onNewRun}>
-          Play Again
-        </Button>
-        <Button variant="secondary" className="flex-1" onClick={onLeave}>
-          Back to Lobby
-        </Button>
-      </div>
-    </div>
   );
 }
