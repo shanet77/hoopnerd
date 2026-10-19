@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import supertest from "supertest";
 import express from "express";
 import { createApiRouter } from "../api";
@@ -7,12 +7,10 @@ import type {
   SoloRepository,
   StatsRepository,
 } from "@repo/database";
-import { InMemoryRepository } from "@repo/database";
 
 type ApiRepository = PlayersRepository & StatsRepository & SoloRepository;
 
 function createTestApp(overrides: Partial<ApiRepository> = {}) {
-  const base = new InMemoryRepository();
   const fakeRepo: ApiRepository = {
     searchPlayers: overrides.searchPlayers ?? vi.fn().mockResolvedValue([]),
     getRandomPlayer: overrides.getRandomPlayer ?? vi.fn().mockResolvedValue(null),
@@ -41,7 +39,7 @@ function createTestApp(overrides: Partial<ApiRepository> = {}) {
   const app = express();
   app.use(express.json());
   app.use(createApiRouter({ repository: fakeRepo }));
-  return { app, fakeRepo, base };
+  return { app, fakeRepo };
 }
 
 describe("API Routes — /api/players/search", () => {
