@@ -32,6 +32,10 @@ export { PgRepository } from "./PgRepository";
 export { InMemoryRepository } from "./InMemoryRepository";
 export type {
   Repository,
+  PlayersRepository,
+  GameStateRepository,
+  StatsRepository,
+  SoloRepository,
   SoloRunRecord,
   SoloRunRecordResult,
 } from "./repository";

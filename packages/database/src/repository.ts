@@ -22,7 +22,7 @@ export interface SoloRunRecordResult {
   isNewBest: boolean;
 }
 
-export interface Repository {
+export interface PlayersRepository {
   searchPlayers(query: string): Promise<Player[]>;
   getRandomPlayer(): Promise<Player | null>;
   getRandomTopScorer(
@@ -56,8 +56,9 @@ export interface Repository {
     seasonYearMax?: number,
   ): Promise<boolean>;
   getSeasons(): Promise<number[]>;
-  getStats(windowDays: number, timezone: string): Promise<StatsResponse>;
-  recordGameStats(room: GameRoomState): Promise<void>;
+}
+
+export interface GameStateRepository {
   saveGameState(
     kind: PersistedGameKind,
     id: string,
@@ -67,6 +68,14 @@ export interface Repository {
     kind: PersistedGameKind,
   ): Promise<PersistedGameRecord<T>[]>;
   deleteGameState(kind: PersistedGameKind, id: string): Promise<void>;
+}
+
+export interface StatsRepository {
+  getStats(windowDays: number, timezone: string): Promise<StatsResponse>;
+  recordGameStats(room: GameRoomState): Promise<void>;
+}
+
+export interface SoloRepository {
   recordSoloRun(run: SoloRunRecord): Promise<SoloRunRecordResult>;
   getSoloLeaderboard(
     windowDays: number,
@@ -75,3 +84,10 @@ export interface Repository {
   ): Promise<SoloLeaderboardEntry[]>;
   getSoloBest(userId: string): Promise<number>;
 }
+
+export interface Repository
+  extends
+    PlayersRepository,
+    GameStateRepository,
+    StatsRepository,
+    SoloRepository {}
