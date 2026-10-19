@@ -50,7 +50,9 @@ export interface MatchEventSink {
 }
 
 export interface MatchEngineDependencies {
-  repository: PlayersRepository & GameStateRepository & StatsRepository;
+  players: PlayersRepository;
+  stats: StatsRepository;
+  gameStates: GameStateRepository;
   sink: MatchEventSink;
   cpuEngine?: CpuEngine;
   turnTimeoutMs?: number;
@@ -93,7 +95,7 @@ export class MatchEngine {
     let records;
     try {
       records =
-        await this.deps.repository.loadGameStates<PersistedMatchGame>("match");
+        await this.deps.gameStates.loadGameStates<PersistedMatchGame>("match");
     } catch (error) {
       console.error("[MatchEngine] Failed to load persisted rooms:", error);
       return;
@@ -116,7 +118,7 @@ export class MatchEngine {
         (!!snapshot.cpuDifficulty && !this.deps.cpuEngine);
 
       if (unusable || staleLobby) {
-        await this.deps.repository.deleteGameState("match", record.id);
+        await this.deps.gameStates.deleteGameState("match", record.id);
         continue;
       }
 
@@ -166,13 +168,13 @@ export class MatchEngine {
     };
 
     return this.queuePersistence(roomId, () =>
-      this.deps.repository.saveGameState("match", roomId, snapshot),
+      this.deps.gameStates.saveGameState("match", roomId, snapshot),
     );
   }
 
   private deletePersisted(roomId: string): Promise<void> {
     return this.queuePersistence(roomId, () =>
-      this.deps.repository.deleteGameState("match", roomId),
+      this.deps.gameStates.deleteGameState("match", roomId),
     );
   }
 
@@ -340,7 +342,7 @@ export class MatchEngine {
 
     let startingPlayer: Player | null = null;
     try {
-      startingPlayer = await this.deps.repository.getRandomTopScorer(
+      startingPlayer = await this.deps.players.getRandomTopScorer(
         undefined,
         room.seasonYearMin,
         room.seasonYearMax,
@@ -409,7 +411,7 @@ export class MatchEngine {
     }
 
     if (room.lastConnectedPlayer) {
-      const isValidMove = await this.deps.repository.validateMove(
+      const isValidMove = await this.deps.players.validateMove(
         room.lastConnectedPlayer.id,
         connectedPlayer.id,
         room.seasonYearMin,
@@ -428,7 +430,7 @@ export class MatchEngine {
         );
       }
 
-      const connection = await this.deps.repository.getConnectionDetails(
+      const connection = await this.deps.players.getConnectionDetails(
         room.lastConnectedPlayer.id,
         connectedPlayer.id,
         room.seasonYearMin,
@@ -492,7 +494,7 @@ export class MatchEngine {
       roomId,
       payload: { winner, reason },
     });
-    recordGameStats(this.deps.repository, room)
+    recordGameStats(this.deps.stats, room)
       .catch((error) => {
         console.error("Error recording stats:", error);
       })

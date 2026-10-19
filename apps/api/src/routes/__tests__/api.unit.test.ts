@@ -11,7 +11,7 @@ import type {
 type ApiRepository = PlayersRepository & StatsRepository & SoloRepository;
 
 function createTestApp(overrides: Partial<ApiRepository> = {}) {
-  const fakeRepo: ApiRepository = {
+  const players: PlayersRepository = {
     searchPlayers: overrides.searchPlayers ?? vi.fn().mockResolvedValue([]),
     getRandomPlayer: overrides.getRandomPlayer ?? vi.fn().mockResolvedValue(null),
     getRandomTopScorer: overrides.getRandomTopScorer ?? vi.fn().mockResolvedValue(null),
@@ -21,6 +21,9 @@ function createTestApp(overrides: Partial<ApiRepository> = {}) {
     getValidCandidates: overrides.getValidCandidates ?? vi.fn().mockResolvedValue([]),
     hasAnyValidMove: overrides.hasAnyValidMove ?? vi.fn().mockResolvedValue(false),
     getSeasons: overrides.getSeasons ?? vi.fn().mockResolvedValue([]),
+  };
+
+  const stats: StatsRepository = {
     getStats: overrides.getStats ?? vi.fn().mockResolvedValue({
       windowDays: 7,
       timezone: "America/New_York",
@@ -31,6 +34,9 @@ function createTestApp(overrides: Partial<ApiRepository> = {}) {
       longestStreak: 0,
     }),
     recordGameStats: overrides.recordGameStats ?? vi.fn().mockResolvedValue(undefined),
+  };
+
+  const solo: SoloRepository = {
     recordSoloRun: overrides.recordSoloRun ?? vi.fn().mockResolvedValue({ bestStreak: 0, isNewBest: false }),
     getSoloLeaderboard: overrides.getSoloLeaderboard ?? vi.fn().mockResolvedValue([]),
     getSoloBest: overrides.getSoloBest ?? vi.fn().mockResolvedValue(0),
@@ -38,8 +44,8 @@ function createTestApp(overrides: Partial<ApiRepository> = {}) {
 
   const app = express();
   app.use(express.json());
-  app.use(createApiRouter({ repository: fakeRepo }));
-  return { app, fakeRepo };
+  app.use(createApiRouter({ players, stats, solo }));
+  return { app, players, stats, solo };
 }
 
 describe("API Routes — /api/players/search", () => {

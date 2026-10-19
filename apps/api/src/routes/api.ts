@@ -7,7 +7,9 @@ import type {
 import { parseTimezone, parseWindowDays } from "../serverUtils";
 
 type ApiRouterDependencies = {
-  repository: PlayersRepository & StatsRepository & SoloRepository;
+  players: PlayersRepository;
+  stats: StatsRepository;
+  solo: SoloRepository;
 };
 
 /**
@@ -15,7 +17,7 @@ type ApiRouterDependencies = {
  */
 export function createApiRouter(dependencies: ApiRouterDependencies): Router {
   const router = Router();
-  const { repository } = dependencies;
+  const { players, stats, solo } = dependencies;
 
   router.get("/api/players/search", async (req: Request, res: Response) => {
     const { q } = req.query;
@@ -32,7 +34,7 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
     }
 
     try {
-      res.json(await repository.searchPlayers(q));
+      res.json(await players.searchPlayers(q));
     } catch (error) {
       console.error("Database query error:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -41,7 +43,7 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
 
   router.get("/api/players/random", async (req: Request, res: Response) => {
     try {
-      const player = await repository.getRandomPlayer();
+      const player = await players.getRandomPlayer();
       res.json(player);
     } catch (error) {
       console.error("Database query error:", error);
@@ -63,7 +65,7 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
 
   router.get("/api/seasons", async (_req: Request, res: Response) => {
     try {
-      res.json(await repository.getSeasons());
+      res.json(await players.getSeasons());
     } catch (error) {
       console.error("Seasons query error:", error);
       res.status(500).json({ error: "Failed to fetch seasons" });
@@ -75,7 +77,7 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
     const timezone = parseTimezone(req.query.tz);
 
     try {
-      res.json(await repository.getStats(windowDays, timezone));
+      res.json(await stats.getStats(windowDays, timezone));
     } catch (error) {
       console.error("Stats query error:", error);
       res.status(500).json({ error: "Failed to fetch stats" });
@@ -88,9 +90,7 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
     const limit = parseLimit(req.query.limit, 10);
 
     try {
-      res.json(
-        await repository.getSoloLeaderboard(windowDays, timezone, limit),
-      );
+      res.json(await solo.getSoloLeaderboard(windowDays, timezone, limit));
     } catch (error) {
       console.error("Solo leaderboard query error:", error);
       res.status(500).json({ error: "Failed to fetch solo leaderboard" });
@@ -106,7 +106,7 @@ export function createApiRouter(dependencies: ApiRouterDependencies): Router {
     }
 
     try {
-      res.json({ userId, bestStreak: await repository.getSoloBest(userId) });
+      res.json({ userId, bestStreak: await solo.getSoloBest(userId) });
     } catch (error) {
       console.error("Solo best query error:", error);
       res.status(500).json({ error: "Failed to fetch solo best" });

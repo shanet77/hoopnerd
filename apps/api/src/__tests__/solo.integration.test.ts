@@ -6,7 +6,8 @@ import { io, Socket } from "socket.io-client";
 import type { Player } from "@repo/types";
 import { AddressInfo } from "net";
 import type { Express } from "express";
-import { InMemoryRepository } from "@repo/database";
+import { createInMemoryRepositories } from "@repo/database";
+import type { InMemoryRepositories } from "@repo/database";
 
 const USER_ID = "11111111-2222-3333-4444-555555555555";
 
@@ -79,16 +80,16 @@ describe("Solo streak mode (end-to-end)", () => {
   let server: HttpServer;
   let port: number;
   let client: Socket;
-  let repository: InMemoryRepository;
+  let repositories: InMemoryRepositories;
 
   beforeAll(async () => {
-    repository = new InMemoryRepository();
-    repository.seedPlayers(seededPlayers);
+    repositories = createInMemoryRepositories();
+    repositories.players.seedPlayers(seededPlayers);
     for (const [playerId, teammateId, seasonYear, teamName] of rosterEdges) {
-      repository.seedRoster(playerId, teammateId, seasonYear, 1, teamName);
+      repositories.players.seedRoster(playerId, teammateId, seasonYear, 1, teamName);
     }
 
-    const serverInstance = createServer({ repository });
+    const serverInstance = createServer({ repositories });
     app = serverInstance.app;
     server = serverInstance.server;
 

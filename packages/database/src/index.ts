@@ -28,10 +28,11 @@ const pool = process.env.DATABASE_URL
     });
 
 export { runMigrations } from "./migrate";
-export { PgRepository } from "./PgRepository";
-export { InMemoryRepository } from "./InMemoryRepository";
+export { createPgRepositories } from "./pg";
+export { createInMemoryRepositories } from "./inMemory";
+export type { InMemoryRepositories } from "./inMemory";
 export type {
-  Repository,
+  Repositories,
   PlayersRepository,
   GameStateRepository,
   StatsRepository,

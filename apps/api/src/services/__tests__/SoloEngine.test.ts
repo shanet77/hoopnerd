@@ -28,7 +28,9 @@ describe("SoloEngine", () => {
       deleteGameState: vi.fn().mockResolvedValue(undefined),
     };
     engine = new SoloEngine({
-      repository: mockRepo as any,
+      players: mockRepo as any,
+      gameStates: mockRepo as any,
+      solo: mockRepo as any,
       idleTtlMs: 2 * 60 * 60 * 1000,
       sweepIntervalMs: 1000,
     });
@@ -316,7 +318,9 @@ describe("SoloEngine", () => {
       ]);
 
       const restoredEngine = new SoloEngine({
-        repository: mockRepo as any,
+        players: mockRepo as any,
+        gameStates: mockRepo as any,
+        solo: mockRepo as any,
         idleTtlMs: 2 * 60 * 60 * 1000,
         sweepIntervalMs: 1000,
       });
@@ -345,7 +349,9 @@ describe("SoloEngine", () => {
       ]);
 
       const restoredEngine = new SoloEngine({
-        repository: mockRepo as any,
+        players: mockRepo as any,
+        gameStates: mockRepo as any,
+        solo: mockRepo as any,
         idleTtlMs: 2 * 60 * 60 * 1000,
         sweepIntervalMs: 1000,
       });

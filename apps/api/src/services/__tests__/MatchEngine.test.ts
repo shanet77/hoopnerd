@@ -46,7 +46,9 @@ describe("MatchEngine", () => {
     };
 
     engine = new MatchEngine({
-      repository: mockRepo as any,
+      players: mockRepo as any,
+      stats: mockRepo as any,
+      gameStates: mockRepo as any,
       sink,
       turnTimeoutMs: 25000,
       disconnectGraceMs: 10000,
@@ -738,7 +740,9 @@ describe("MatchEngine", () => {
         position: "C",
       });
       const cpuMatchEngine = new MatchEngine({
-        repository: mockRepo as any,
+        players: mockRepo as any,
+        stats: mockRepo as any,
+        gameStates: mockRepo as any,
         sink,
         cpuEngine: cpuEngine as any,
         turnTimeoutMs: 25000,

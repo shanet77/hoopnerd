@@ -85,9 +85,9 @@ export interface SoloRepository {
   getSoloBest(userId: string): Promise<number>;
 }
 
-export interface Repository
-  extends
-    PlayersRepository,
-    GameStateRepository,
-    StatsRepository,
-    SoloRepository {}
+export interface Repositories {
+  players: PlayersRepository;
+  stats: StatsRepository;
+  gameStates: GameStateRepository;
+  solo: SoloRepository;
+}

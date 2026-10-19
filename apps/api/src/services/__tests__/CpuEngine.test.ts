@@ -20,7 +20,7 @@ describe("CpuEngine", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    engine = new CpuEngine({ repository: mockRepo });
+    engine = new CpuEngine({ players: mockRepo });
   });
 
   describe("getValidCandidates", () => {

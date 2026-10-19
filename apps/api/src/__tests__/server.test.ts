@@ -19,7 +19,7 @@ import { io, Socket } from "socket.io-client";
 import { GameRoomState, Player } from "@repo/types";
 import { AddressInfo } from "net";
 import type { Express } from "express";
-import databasePool, { PgRepository } from "@repo/database";
+import databasePool from "@repo/database";
 
 // The CPU engine is exercised by its own unit tests; stub it here so the
 // integration tests stay deterministic and never make CPU turns.
@@ -39,8 +39,7 @@ vi.mock("@repo/database", async () => {
   return {
     __esModule: true,
     default: { query: vi.fn() },
-    PgRepository: actual.PgRepository,
-    InMemoryRepository: actual.InMemoryRepository,
+    createPgRepositories: actual.createPgRepositories,
   };
 });
 

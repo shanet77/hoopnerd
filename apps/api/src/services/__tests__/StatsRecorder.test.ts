@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { InMemoryRepository } from "@repo/database";
+import { createInMemoryRepositories } from "@repo/database";
+import type { InMemoryRepositories } from "@repo/database";
 import { recordGameStats } from "../StatsRecorder";
 import type { GameRoomState, PlayerConnection } from "@repo/types";
 
@@ -22,10 +23,10 @@ function makeRoom(overrides: Partial<GameRoomState> = {}): GameRoomState {
 }
 
 describe("recordGameStats", () => {
-  let repo: InMemoryRepository;
+  let repo: InMemoryRepositories["stats"];
 
   beforeEach(() => {
-    repo = new InMemoryRepository();
+    repo = createInMemoryRepositories().stats;
   });
 
   it("should not record if stats already recorded", async () => {

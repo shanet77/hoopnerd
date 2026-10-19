@@ -2,7 +2,7 @@ import type { CpuDifficulty, Player } from "@repo/types";
 import type { PlayersRepository } from "@repo/database";
 
 export interface CpuEngineDependencies {
-  repository: PlayersRepository;
+  players: PlayersRepository;
 }
 
 /**
@@ -61,8 +61,13 @@ export class CpuEngine {
     seasonYearMin?: number,
     seasonYearMax?: number,
   ): Promise<Player[]> {
-    const { repository } = this.deps;
-    return repository.getValidCandidates(playerId, usedPlayerIds, seasonYearMin, seasonYearMax);
+    const { players } = this.deps;
+    return players.getValidCandidates(
+      playerId,
+      usedPlayerIds,
+      seasonYearMin,
+      seasonYearMax,
+    );
   }
 
   /**

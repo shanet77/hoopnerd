@@ -1,8 +1,8 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import { Server as HttpServer } from "http";
-import databasePool, { PgRepository } from "@repo/database";
-import type { Repository } from "@repo/database";
+import databasePool, { createPgRepositories } from "@repo/database";
+import type { Repositories } from "@repo/database";
 import { CpuEngine } from "./services/CpuEngine";
 import { buildAllowedOrigins, buildCorsConfig } from "./serverUtils";
 import { MatchEngine } from "./services/MatchEngine";
@@ -12,7 +12,7 @@ import { createSocketIOServer, setupSocketIO } from "./socket";
 import { createApiRouter } from "./routes/api";
 
 type CreateServerDependencies = {
-  repository?: Repository;
+  repositories?: Repositories;
 };
 
 /**
@@ -28,7 +28,9 @@ export const createServer = (
 } => {
   const app = express();
   const server = new HttpServer(app);
-  const repository = dependencies.repository ?? new PgRepository(databasePool);
+  const repositories =
+    dependencies.repositories ?? createPgRepositories(databasePool);
+  const { players, stats, gameStates, solo } = repositories;
 
   const allowedOrigins = buildAllowedOrigins(
     process.env.NODE_ENV,
@@ -43,19 +45,21 @@ export const createServer = (
   app.use(cors(buildCorsConfig(allowedOrigins)));
   app.use(express.json());
 
-  app.use(createApiRouter({ repository }));
+  app.use(createApiRouter({ players, stats, solo }));
 
   const io = createSocketIOServer(server, allowedOrigins);
 
   // CPU mode (enabled by default, disable with ENABLE_CPU_MODE=false)
   const enableCpuMode = process.env.ENABLE_CPU_MODE !== "false";
   const matchEngine = new MatchEngine({
-    repository,
+    players,
+    stats,
+    gameStates,
     sink: new SocketMatchEventSink(io),
-    cpuEngine: enableCpuMode ? new CpuEngine({ repository }) : undefined,
+    cpuEngine: enableCpuMode ? new CpuEngine({ players }) : undefined,
   });
 
-  const soloEngine = new SoloEngine({ repository });
+  const soloEngine = new SoloEngine({ players, gameStates, solo });
 
   setupSocketIO(io, matchEngine, enableCpuMode, soloEngine);
 

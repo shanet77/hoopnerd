@@ -41,7 +41,9 @@ interface SoloRunEntry {
 }
 
 export interface SoloEngineDependencies {
-  repository: PlayersRepository & GameStateRepository & SoloRepository;
+  players: PlayersRepository;
+  gameStates: GameStateRepository;
+  solo: SoloRepository;
   idleTtlMs?: number;
   sweepIntervalMs?: number;
 }
@@ -69,7 +71,7 @@ export class SoloEngine {
     let records;
     try {
       records =
-        await this.deps.repository.loadGameStates<PersistedSoloGame>("solo");
+        await this.deps.gameStates.loadGameStates<PersistedSoloGame>("solo");
     } catch (error) {
       console.error("[SoloEngine] Failed to load persisted runs:", error);
       return;
@@ -90,7 +92,7 @@ export class SoloEngine {
         snapshot?.version !== 1 ||
         !snapshot.startedAt
       ) {
-        await this.deps.repository.deleteGameState("solo", record.id);
+        await this.deps.gameStates.deleteGameState("solo", record.id);
         continue;
       }
 
@@ -112,13 +114,13 @@ export class SoloEngine {
   ): Promise<SoloRunState | null> {
     let startingPlayer: Player | null = null;
     for (let i = 0; i < STARTING_PLAYER_ATTEMPTS; i++) {
-      const candidate = await this.deps.repository.getRandomTopScorer(
+      const candidate = await this.deps.players.getRandomTopScorer(
         undefined,
         seasonYearMin,
         seasonYearMax,
       );
       if (!candidate) break;
-      const hasMoves = await this.deps.repository.hasAnyValidMove(
+      const hasMoves = await this.deps.players.hasAnyValidMove(
         candidate.id,
         [candidate.id],
         seasonYearMin,
@@ -219,7 +221,7 @@ export class SoloEngine {
       }
 
       if (run.lastConnectedPlayer) {
-        const isValidMove = await this.deps.repository.validateMove(
+        const isValidMove = await this.deps.players.validateMove(
           run.lastConnectedPlayer.id,
           connectedPlayer.id,
           run.seasonYearMin,
@@ -235,7 +237,7 @@ export class SoloEngine {
           );
         }
 
-        const connection = await this.deps.repository.getConnectionDetails(
+        const connection = await this.deps.players.getConnectionDetails(
           run.lastConnectedPlayer.id,
           connectedPlayer.id,
           run.seasonYearMin,
@@ -256,7 +258,7 @@ export class SoloEngine {
       const streak = run.moves.length;
 
       const usedPlayerIds = this.collectUsedPlayerIds(run);
-      const canContinue = await this.deps.repository.hasAnyValidMove(
+      const canContinue = await this.deps.players.hasAnyValidMove(
         connectedPlayer.id,
         usedPlayerIds,
         run.seasonYearMin,
@@ -360,7 +362,7 @@ export class SoloEngine {
     entry.endRecorded = true;
 
     try {
-      const result = await this.deps.repository.recordSoloRun({
+      const result = await this.deps.solo.recordSoloRun({
         userId: run.userId,
         displayName: run.displayName,
         streakCount: streak,
@@ -407,13 +409,13 @@ export class SoloEngine {
     };
 
     return this.queuePersistence(runId, () =>
-      this.deps.repository.saveGameState("solo", runId, snapshot),
+      this.deps.gameStates.saveGameState("solo", runId, snapshot),
     );
   }
 
   private deleteRun(runId: string): Promise<void> {
     return this.queuePersistence(runId, () =>
-      this.deps.repository.deleteGameState("solo", runId),
+      this.deps.gameStates.deleteGameState("solo", runId),
     );
   }
 

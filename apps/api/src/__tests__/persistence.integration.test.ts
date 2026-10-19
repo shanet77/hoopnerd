@@ -4,7 +4,7 @@ process.env.TURN_TIMEOUT_MS = "60000";
 process.env.DISCONNECT_GRACE_MS = "60000";
 
 import { createServer } from "../server";
-import { InMemoryRepository } from "@repo/database";
+import { createInMemoryRepositories } from "@repo/database";
 import { Server as HttpServer } from "http";
 import { AddressInfo } from "net";
 import { io, Socket } from "socket.io-client";
@@ -23,14 +23,14 @@ const rosterEdges: Array<[number, number, number, string]> = [
   [2, 3, 2007, "San Antonio Spurs"],
 ];
 
-const createRepository = () => {
-  const repository = new InMemoryRepository();
-  repository.seedPlayers(players);
+const createRepositories = () => {
+  const repositories = createInMemoryRepositories();
+  repositories.players.seedPlayers(players);
   for (const [playerId, teammateId, seasonYear, teamName] of rosterEdges) {
-    repository.seedRoster(playerId, teammateId, seasonYear, 1, teamName);
-    repository.seedRoster(teammateId, playerId, seasonYear, 1, teamName);
+    repositories.players.seedRoster(playerId, teammateId, seasonYear, 1, teamName);
+    repositories.players.seedRoster(teammateId, playerId, seasonYear, 1, teamName);
   }
-  return repository;
+  return repositories;
 };
 
 const listen = (server: HttpServer): Promise<number> =>
@@ -99,8 +99,8 @@ describe("Active game persistence across API restarts", () => {
   });
 
   it("restores a started room and lets both players rejoin", async () => {
-    const repository = createRepository();
-    first = createServer({ repository });
+    const repositories = createRepositories();
+    first = createServer({ repositories });
     const firstPort = await listen(first.server);
 
     const alice = connect(firstPort);
@@ -153,7 +153,7 @@ describe("Active game persistence across API restarts", () => {
     first.soloEngine.stop();
     await close(first.server);
 
-    second = createServer({ repository });
+    second = createServer({ repositories });
     await second.matchEngine.restore();
     await second.soloEngine.restore();
     const secondPort = await listen(second.server);
