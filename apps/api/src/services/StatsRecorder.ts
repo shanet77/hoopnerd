@@ -1,8 +1,8 @@
 import type { GameRoomState } from "@repo/types";
-import type { Repository } from "@repo/database";
+import type { StatsRepository } from "@repo/database";
 
 export async function recordGameStats(
-  repo: Repository,
+  repo: StatsRepository,
   room: GameRoomState,
 ): Promise<void> {
   await repo.recordGameStats(room);

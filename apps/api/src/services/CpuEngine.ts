@@ -1,8 +1,8 @@
 import type { CpuDifficulty, Player } from "@repo/types";
-import type { Repository } from "@repo/database";
+import type { PlayersRepository } from "@repo/database";
 
 export interface CpuEngineDependencies {
-  repository: Repository;
+  repository: PlayersRepository;
 }
 
 /**

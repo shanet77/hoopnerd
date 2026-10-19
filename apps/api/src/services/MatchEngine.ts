@@ -4,7 +4,11 @@ import type {
   PersistedMatchGame,
   Player,
 } from "@repo/types";
-import type { Repository } from "@repo/database";
+import type {
+  GameStateRepository,
+  PlayersRepository,
+  StatsRepository,
+} from "@repo/database";
 import { CpuEngine } from "./CpuEngine";
 import { createGameRoom, hasPlayerBeenUsed } from "../serverUtils";
 import { generatePlayerId } from "../socketAuth";
@@ -46,7 +50,7 @@ export interface MatchEventSink {
 }
 
 export interface MatchEngineDependencies {
-  repository: Repository;
+  repository: PlayersRepository & GameStateRepository & StatsRepository;
   sink: MatchEventSink;
   cpuEngine?: CpuEngine;
   turnTimeoutMs?: number;

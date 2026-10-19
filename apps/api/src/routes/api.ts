@@ -1,9 +1,13 @@
 import { Router, Request, Response } from "express";
-import type { Repository } from "@repo/database";
+import type {
+  PlayersRepository,
+  SoloRepository,
+  StatsRepository,
+} from "@repo/database";
 import { parseTimezone, parseWindowDays } from "../serverUtils";
 
 type ApiRouterDependencies = {
-  repository: Repository;
+  repository: PlayersRepository & StatsRepository & SoloRepository;
 };
 
 /**

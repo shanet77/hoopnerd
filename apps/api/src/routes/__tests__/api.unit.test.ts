@@ -2,17 +2,23 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import supertest from "supertest";
 import express from "express";
 import { createApiRouter } from "../api";
-import type { Repository } from "@repo/database";
+import type {
+  PlayersRepository,
+  SoloRepository,
+  StatsRepository,
+} from "@repo/database";
 import { InMemoryRepository } from "@repo/database";
 
-function createTestApp(overrides: Partial<Repository> = {}) {
+type ApiRepository = PlayersRepository & StatsRepository & SoloRepository;
+
+function createTestApp(overrides: Partial<ApiRepository> = {}) {
   const base = new InMemoryRepository();
-  const fakeRepo: Repository = {
+  const fakeRepo: ApiRepository = {
     searchPlayers: overrides.searchPlayers ?? vi.fn().mockResolvedValue([]),
     getRandomPlayer: overrides.getRandomPlayer ?? vi.fn().mockResolvedValue(null),
     getRandomTopScorer: overrides.getRandomTopScorer ?? vi.fn().mockResolvedValue(null),
     getPlayerById: overrides.getPlayerById ?? vi.fn().mockResolvedValue(null),
-    validateMove: overrides.validateMock ?? vi.fn().mockResolvedValue(true),
+    validateMove: overrides.validateMove ?? vi.fn().mockResolvedValue(true),
     getConnectionDetails: overrides.getConnectionDetails ?? vi.fn().mockResolvedValue(null),
     getValidCandidates: overrides.getValidCandidates ?? vi.fn().mockResolvedValue([]),
     hasAnyValidMove: overrides.hasAnyValidMove ?? vi.fn().mockResolvedValue(false),

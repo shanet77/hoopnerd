@@ -4,7 +4,11 @@ import type {
   SoloEndReason,
   SoloRunState,
 } from "@repo/types";
-import type { Repository } from "@repo/database";
+import type {
+  GameStateRepository,
+  PlayersRepository,
+  SoloRepository,
+} from "@repo/database";
 import { hasPlayerBeenUsed } from "../serverUtils";
 
 export interface SoloMoveOutcome {
@@ -37,7 +41,7 @@ interface SoloRunEntry {
 }
 
 export interface SoloEngineDependencies {
-  repository: Repository;
+  repository: PlayersRepository & GameStateRepository & SoloRepository;
   idleTtlMs?: number;
   sweepIntervalMs?: number;
 }
