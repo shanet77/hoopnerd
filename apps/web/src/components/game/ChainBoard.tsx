@@ -1,6 +1,7 @@
 import React from "react";
 import { ArrowDown } from "lucide-react";
 import { Player, PlayerConnection } from "@repo/types";
+import { teamAccent } from "../../app/lib/teamColors";
 
 interface ChainBoardProps {
   startingPlayer: Player;
@@ -33,6 +34,8 @@ const buildRows = (
  * The chain as a flat column of tiles, Poeltl-style: the starting player is
  * a green tile, every connection is a solid tile captioned with the shared
  * team and season, and the tile the next move must connect from is orange.
+ * The connector arrow and team caption take the team's accent color so the
+ * chain can be scanned by color.
  */
 export function ChainBoard({ startingPlayer, connections }: ChainBoardProps) {
   const rows = buildRows(startingPlayer, connections);
@@ -43,10 +46,15 @@ export function ChainBoard({ startingPlayer, connections }: ChainBoardProps) {
       {rows.map((row, index) => {
         const isStart = index === 0;
         const isTarget = row === lastRow && connections.length > 0;
+        const accent = teamAccent(row.teamName);
+        const nextAccent = teamAccent(rows[index + 1]?.teamName);
         return (
           <li key={`${row.player.id}-${index}`} className="flex flex-col items-center w-full">
             {index > 0 && (
-              <p className="py-1 text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+              <p
+                className="py-1 text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
+                style={accent ? { color: accent } : undefined}
+              >
                 {row.teamName ?? "Shared team"}
                 {row.seasonYear ? ` · ${row.seasonYear}` : ""}
               </p>
@@ -77,6 +85,7 @@ export function ChainBoard({ startingPlayer, connections }: ChainBoardProps) {
             {index < rows.length - 1 && (
               <ArrowDown
                 className="h-4 w-4 my-1 text-gray-300 dark:text-gray-600"
+                style={nextAccent ? { color: nextAccent } : undefined}
                 aria-hidden="true"
               />
             )}
