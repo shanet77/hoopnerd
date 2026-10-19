@@ -58,7 +58,7 @@ vi.mock("../../lib/socket", () => ({
   createCpuGame: (...args: unknown[]) => createCpuGameMock(...args),
 }));
 
-vi.mock("../../lib/useGameRoom", () => ({
+vi.mock("../../lib/gameRoom/useGameRoom", () => ({
   useGameRoom: () => useGameRoomMock(),
 }));
 

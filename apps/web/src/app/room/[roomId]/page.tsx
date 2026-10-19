@@ -7,7 +7,7 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
 import { SocketProvider, useSocket } from "../../lib/socket";
-import { useGameRoom } from "../../lib/useGameRoom";
+import { useGameRoom } from "../../lib/gameRoom/useGameRoom";
 import { Player } from "@repo/types";
 import ClientOnly from "../../../components/ClientOnly";
 import { GameBoard } from "../../../components/game/GameBoard";

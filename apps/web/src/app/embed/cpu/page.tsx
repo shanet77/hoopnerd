@@ -13,7 +13,7 @@ import {
   describeSeasonWindow,
 } from "../../../components/game/GameBoard";
 import { SocketProvider, useSocket, createCpuGame } from "../../lib/socket";
-import { useGameRoom } from "../../lib/useGameRoom";
+import { useGameRoom } from "../../lib/gameRoom/useGameRoom";
 import { useAvailableSeasons } from "../../lib/useAvailableSeasons";
 import { setPlayerSession } from "../../lib/playerSession";
 import { trackEvent } from "../../lib/analytics";

@@ -30,7 +30,7 @@ vi.mock("../../lib/socket", () => ({
   leaveRoom: vi.fn(),
 }));
 
-vi.mock("../../lib/useGameRoom", () => ({
+vi.mock("../../lib/gameRoom/useGameRoom", () => ({
   useGameRoom: () => useGameRoomMock(),
 }));
 

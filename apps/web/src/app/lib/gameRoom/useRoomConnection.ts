@@ -1,71 +1,67 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Socket } from "socket.io-client";
-import {
-	Player,
-	GameRoomState,
-	JoinRoomRequest,
-	SubmitMoveRequest,
-} from "@repo/types";
-import { joinRoom, submitMove, leaveRoom } from "./socket";
-import { trackEvent } from "./analytics";
+import { Player, GameRoomState, JoinRoomRequest } from "@repo/types";
+import { joinRoom } from "../socket";
 import {
 	clearPlayerSession,
 	getPlayerSession,
 	setPlayerSession,
-} from "./playerSession";
+} from "../playerSession";
+import { useRoomAnalytics } from "./useRoomAnalytics";
 
-export function useGameRoom(
-	socket: Socket | null,
-	socketConnected: boolean,
-	roomId: string,
-	playerName: string,
-) {
+type RoomAnalytics = ReturnType<typeof useRoomAnalytics>;
+
+type RoomConnectionOptions = {
+	socket: Socket | null;
+	socketConnected: boolean;
+	roomId: string;
+	playerName: string;
+	setRoomState: (state: GameRoomState | null) => void;
+	setActivePlayer: (player: Player | null) => void;
+	setGameMessage: (message: string) => void;
+	setTimeRemaining: (seconds: number) => void;
+	setCpuThinking: (thinking: boolean) => void;
+	setWinner: (player: Player) => void;
+	setWinReason: (reason: string) => void;
+	analytics: RoomAnalytics;
+};
+
+export function useRoomConnection({
+	socket,
+	socketConnected,
+	roomId,
+	playerName,
+	setRoomState,
+	setActivePlayer,
+	setGameMessage,
+	setTimeRemaining,
+	setCpuThinking,
+	setWinner,
+	setWinReason,
+	analytics,
+}: RoomConnectionOptions) {
 	const existingSession = getPlayerSession(roomId, playerName);
 
-	const [activePlayer, setActivePlayer] = useState<Player | null>(null);
-	const [timeRemaining, setTimeRemaining] = useState<number>(25);
-	const [winner, setWinner] = useState<Player | null>(null);
-	const [winReason, setWinReason] = useState<string>("");
-	const [cpuThinking, setCpuThinking] = useState(false);
-
-	const [roomState, setRoomState] = useState<GameRoomState | null>(null);
-	const [gameMessage, setGameMessage] = useState<string>("");
-	const [isConnected, setIsConnected] = useState(false);
 	const [playerToken, setPlayerToken] = useState<string>(
 		existingSession?.token ?? "",
 	);
 	const [myPlayerId, setMyPlayerId] = useState<number | null>(
 		existingSession?.playerId ?? null,
 	);
+	const [isConnected, setIsConnected] = useState(false);
 
-	const hasTrackedJoinRef = useRef(false);
-	const latestMoveCountRef = useRef(0);
-
-	// Timer countdown
-	useEffect(() => {
-		let timer: NodeJS.Timeout;
-		if (roomState?.gameStarted && !roomState.gameCompleted) {
-			timer = setInterval(() => {
-				setTimeRemaining((prev) => (prev > 0 ? prev - 1 : 0));
-			}, 1000);
-		}
-		return () => clearInterval(timer);
-	}, [roomState?.gameStarted, roomState?.gameCompleted]);
-
-	// Track move count for analytics
-	useEffect(() => {
-		latestMoveCountRef.current = roomState?.moves.length || 0;
-	}, [roomState?.moves.length]);
-
-	// Reset join tracking when room/player changes
-	useEffect(() => {
-		hasTrackedJoinRef.current = false;
-	}, [roomId, playerName]);
-
-	// Determine if opponent is CPU
-	const isCpuOpponent = roomState?.players.some((p) => p.isCpu) ?? false;
+	const {
+		trackRoomJoined,
+		trackRoomRejoined,
+		trackRoomJoinFailed,
+		trackRoomJoinError,
+		trackRoomRejoinFailed,
+		trackRoomRejoinError,
+		trackGameStarted,
+		trackGameOver,
+	} = analytics;
 
 	// Socket event handlers
 	useEffect(() => {
@@ -92,10 +88,10 @@ export function useGameRoom(
 									],
 								);
 							}
-							trackEvent("room_rejoined", {
-								player_count: response.roomState?.players.length || 0,
-								game_started: response.roomState?.gameStarted || false,
-							});
+							trackRoomRejoined(
+								response.roomState?.players.length || 0,
+								response.roomState?.gameStarted || false,
+							);
 							if (response.playerToken) {
 								setPlayerToken(response.playerToken);
 							}
@@ -113,7 +109,7 @@ export function useGameRoom(
 							}
 						} else {
 							setGameMessage(`Failed to rejoin room: ${response.message}`);
-							trackEvent("room_rejoin_failed");
+							trackRoomRejoinFailed();
 						}
 					})
 					.catch((error) => {
@@ -121,7 +117,7 @@ export function useGameRoom(
 						setGameMessage(
 							"Failed to rejoin room. Please refresh and try again.",
 						);
-						trackEvent("room_rejoin_error");
+						trackRoomRejoinError();
 					});
 			}
 		};
@@ -143,10 +139,7 @@ export function useGameRoom(
 			setActivePlayer(state.players[state.currentPlayerIndex]);
 			setTimeRemaining(25);
 			setCpuThinking(false);
-			trackEvent("game_started", {
-				player_count: state.players.length,
-				friends_only: state.friendsOnly,
-			});
+			trackGameStarted(state.players.length, state.friendsOnly);
 		});
 
 		socket.on("turn_changed", (player: Player) => {
@@ -172,11 +165,9 @@ export function useGameRoom(
 				setWinReason(reason);
 				setCpuThinking(false);
 				setGameMessage(`Game Over! ${gameWinner.name} wins!`);
-				trackEvent("game_over", {
-					winner_is_me:
-						typeof myPlayerId === "number" && gameWinner.id === myPlayerId,
-					move_count: latestMoveCountRef.current,
-				});
+				trackGameOver(
+					typeof myPlayerId === "number" && gameWinner.id === myPlayerId,
+				);
 			},
 		);
 
@@ -243,16 +234,13 @@ export function useGameRoom(
 								playerId: response.playerId,
 							});
 						}
-						if (!hasTrackedJoinRef.current) {
-							trackEvent("room_joined", {
-								player_count: response.roomState?.players.length || 0,
-								game_started: response.roomState?.gameStarted || false,
-							});
-							hasTrackedJoinRef.current = true;
-						}
+						trackRoomJoined(
+							response.roomState?.players.length || 0,
+							response.roomState?.gameStarted || false,
+						);
 					} else {
 						setGameMessage(`Failed to join room: ${response.message}`);
-						trackEvent("room_join_failed");
+						trackRoomJoinFailed();
 						clearPlayerSession(roomId, playerName);
 						setPlayerToken("");
 						setMyPlayerId(null);
@@ -261,84 +249,16 @@ export function useGameRoom(
 				.catch((error) => {
 					console.error("Error joining room:", error);
 					setGameMessage("Failed to join room. Please refresh and try again.");
-					trackEvent("room_join_error");
+					trackRoomJoinError();
 				});
 		}
 	}, [socket, socketConnected, roomId, playerName, playerToken]);
 
-	const handleSubmitMove = useCallback(
-		async (connectedPlayer: Player) => {
-			if (!roomState || !socket) {
-				setGameMessage(
-					"Please select a player to connect and wait for socket connection",
-				);
-				return { success: false, message: "Not ready" };
-			}
-
-			if (!playerToken) {
-				setGameMessage("Missing player session token. Please rejoin the room.");
-				return { success: false, message: "No token" };
-			}
-
-			const moveData: SubmitMoveRequest = {
-				roomId: roomState.roomId,
-				connectedPlayer,
-				playerToken,
-			};
-
-			try {
-				const response = await submitMove(socket, moveData);
-
-				if (response.success) {
-					setGameMessage(response.message);
-					trackEvent("move_submitted", {
-						move_count:
-							response.roomState?.moves.length ||
-							latestMoveCountRef.current + 1,
-					});
-				} else {
-					setGameMessage(response.message);
-					trackEvent("move_rejected");
-				}
-				return response;
-			} catch (error) {
-				console.error("Error submitting move:", error);
-				setGameMessage("Error submitting move");
-				trackEvent("move_submit_error");
-				return { success: false, message: "Error" };
-			}
-		},
-		[roomState, socket, playerToken],
-	);
-
-	const handleLeaveRoom = useCallback(() => {
-		if (roomState && socket && playerToken) {
-			leaveRoom(socket, { roomId: roomState.roomId, playerToken });
-		}
-		trackEvent("room_left");
-		clearPlayerSession(roomId, playerName);
-		setPlayerToken("");
-		setMyPlayerId(null);
-	}, [roomState, socket, playerToken, roomId, playerName]);
-
-	const isMyTurn =
-		typeof myPlayerId === "number" && activePlayer?.id === myPlayerId;
-
 	return {
-		activePlayer,
-		timeRemaining,
-		winner,
-		winReason,
-		roomState,
-		gameMessage,
-		isConnected,
 		playerToken,
 		myPlayerId,
-		isMyTurn,
-		isCpuOpponent,
-		cpuThinking,
-		handleSubmitMove,
-		handleLeaveRoom,
-		setGameMessage,
+		isConnected,
+		setPlayerToken,
+		setMyPlayerId,
 	};
 }
