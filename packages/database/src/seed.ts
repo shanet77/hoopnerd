@@ -2,7 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as csv from 'csv-parser';
 import pool from './index';
-import { ingestTransactions } from './ingestTransactions';
+import { ingestTransactions, ingestOffseasonTransactions } from './ingestTransactions';
+import { splitTeamName } from './teamName';
 
 const waitForDatabase = async (retries = 10, delayMs = 3000) => {
   for (let attempt = 1; attempt <= retries; attempt += 1) {
@@ -131,41 +132,6 @@ async function ensureSchema() {
 const datasetsDir = path.resolve(__dirname, '../../../datasets');
 const { getTeamName } = require(path.join(datasetsDir, 'team_abbreviation_map.js'));
 
-const multiWordMascots = new Set(['Trail Blazers']);
-
-function splitTeamName(fullTeamName: string) {
-  if (!fullTeamName) {
-    return { city: '', teamName: '' };
-  }
-
-  const ofIndex = fullTeamName.indexOf(' of ');
-  if (ofIndex > -1) {
-    return {
-      teamName: fullTeamName.slice(0, ofIndex).trim(),
-      city: fullTeamName.slice(ofIndex + 4).trim(),
-    };
-  }
-
-  for (const mascot of multiWordMascots) {
-    if (fullTeamName.endsWith(mascot)) {
-      return {
-        city: fullTeamName.slice(0, -mascot.length).trim(),
-        teamName: mascot,
-      };
-    }
-  }
-
-  const parts = fullTeamName.trim().split(/\s+/);
-  if (parts.length === 1) {
-    return { city: fullTeamName, teamName: fullTeamName };
-  }
-
-  return {
-    city: parts.slice(0, -1).join(' '),
-    teamName: parts[parts.length - 1],
-  };
-}
-
 // Function to seed the database from the player season CSV
 async function seedDatabase() {
   try {
@@ -243,6 +209,9 @@ async function seedDatabase() {
 
     console.log('Starting transaction ingestion...');
     await ingestTransactions(2026);
+
+    console.log('Starting 2026 offseason ingestion...');
+    await ingestOffseasonTransactions(2027);
   } catch (error) {
     console.error('Error during seeding:', error);
     process.exit(1);

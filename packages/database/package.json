@@ -13,6 +13,7 @@
     "dev": "tsc -w",
     "seed": "pnpm run build && node dist/seed.js",
     "ingest:transactions": "pnpm run build && node dist/ingestTransactions.js --season 2026",
+    "ingest:offseason": "pnpm run build && node dist/ingestTransactions.js --offseason --season 2027",
     "migrate": "node src/migrate.ts",
     "test": "vitest run"
   },
