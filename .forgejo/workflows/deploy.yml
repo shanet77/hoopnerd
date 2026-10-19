@@ -14,8 +14,7 @@ on:
 
 jobs:
   test:
-    runs-on:
-      - linux-amd64
+    runs-on: node24
     steps:
       - name: Checkout repository
         run: |
@@ -37,6 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}"
+          corepack enable
           node --version
           pnpm install --frozen-lockfile
 

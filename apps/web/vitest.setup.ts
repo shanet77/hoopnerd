@@ -13,6 +13,15 @@ if (typeof globalThis.ResizeObserver === "undefined") {
   } as unknown as typeof globalThis.ResizeObserver;
 }
 
+const jsdomWindow = (globalThis as { jsdom?: { window: Window } }).jsdom?.window;
+if (jsdomWindow) {
+  Object.defineProperty(globalThis, "localStorage", {
+    value: jsdomWindow.localStorage,
+    configurable: true,
+    writable: true,
+  });
+}
+
 afterEach(() => {
   cleanup();
 });
