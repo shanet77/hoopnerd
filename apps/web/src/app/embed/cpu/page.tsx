@@ -1,16 +1,10 @@
 "use client";
 
-import { CircleX } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@repo/ui/button";
 import ClientOnly from "../../../components/ClientOnly";
-import {
-  EmbedShell,
-  FALLBACK_FULL_APP_PATH,
-} from "../../../components/embed/EmbedShell";
 import { EmbedCreator } from "../../../components/embed/EmbedCreator";
 import { EmbedRoom } from "../../../components/embed/EmbedRoom";
+import { EmbedFailure } from "../../../components/embed/EmbedFailure";
 import { SocketProvider } from "../../lib/socket";
 import { useEmbedGamePhase } from "./useEmbedGamePhase";
 
@@ -51,33 +45,7 @@ function EmbedGame() {
   } = useEmbedGamePhase();
 
   if (phase === "failed") {
-    return (
-      <EmbedShell title="HoopNerd vs CPU">
-        <div className="text-center py-8 space-y-4">
-          <CircleX
-            className="h-10 w-10 mx-auto text-error"
-            aria-hidden="true"
-          />
-          <h2 className="font-title text-xl font-bold text-gray-800 dark:text-gray-100">
-            Couldn&apos;t start the game
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400">{failureMessage}</p>
-          <div className="flex flex-col gap-2">
-            <Button variant="basketball" size="lg" onClick={handleRetry}>
-              Try again
-            </Button>
-            <Link
-              href={FALLBACK_FULL_APP_PATH}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-bold text-brand-600 hover:text-brand-800"
-            >
-              Open HoopNerd in a new tab
-            </Link>
-          </div>
-        </div>
-      </EmbedShell>
-    );
+    return <EmbedFailure message={failureMessage} onRetry={handleRetry} />;
   }
 
   if (phase === "playing" && roomId !== null) {
