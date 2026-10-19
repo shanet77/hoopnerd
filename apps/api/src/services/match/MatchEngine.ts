@@ -1,6 +1,7 @@
 import type { CpuDifficulty, GameRoomState, Player } from "@repo/types";
 import { SocketBindingManager, SocketBinding } from "../SocketBindingManager";
 import { recordGameStats } from "../StatsRecorder";
+import { IdleSweeper } from "../persistence/IdleSweeper";
 import { CpuOpponent } from "./CpuOpponent";
 import type { MatchEngineDependencies, MatchEvent, MoveOutcome } from "./events";
 import { MatchPersistence } from "./MatchPersistence";
@@ -28,7 +29,7 @@ export class MatchEngine {
   private readonly socketBindings: SocketBindingManager;
   private readonly turnTimeoutMs: number;
   private readonly lobbyIdleTtlMs: number;
-  private readonly sweeper: NodeJS.Timeout;
+  private readonly sweeper: IdleSweeper<GameRoomState>;
   private roomActivity = new Map<string, number>();
 
   constructor(private deps: MatchEngineDependencies) {
@@ -62,8 +63,14 @@ export class MatchEngine {
       deps.disconnectGraceMs,
     );
     const sweepIntervalMs = deps.sweepIntervalMs ?? DEFAULT_SWEEP_INTERVAL_MS;
-    this.sweeper = setInterval(() => this.evictIdleLobbies(), sweepIntervalMs);
-    this.sweeper.unref();
+    this.sweeper = new IdleSweeper({
+      intervalMs: sweepIntervalMs,
+      idleTtlMs: this.lobbyIdleTtlMs,
+      entries: () => this.registry.rooms(),
+      lastActivityAt: (roomId) => this.roomActivity.get(roomId) ?? 0,
+      isEvictable: (room) => !room.gameStarted,
+      onEvict: (roomId) => this.destroyRoom(roomId),
+    });
   }
 
   async restore(): Promise<void> {
@@ -103,7 +110,7 @@ export class MatchEngine {
   }
 
   stop(): void {
-    clearInterval(this.sweeper);
+    this.sweeper.stop();
     this.turnController.clearAll();
   }
 
@@ -372,17 +379,6 @@ export class MatchEngine {
     this.registry.deleteRoom(roomId);
     this.roomActivity.delete(roomId);
     void this.persistence.delete(roomId);
-  }
-
-  private evictIdleLobbies(): void {
-    const cutoff = Date.now() - this.lobbyIdleTtlMs;
-    for (const [roomId, room] of this.registry.rooms()) {
-      if (room.gameStarted) continue;
-      const lastActivity = this.roomActivity.get(roomId) ?? 0;
-      if (lastActivity < cutoff) {
-        this.destroyRoom(roomId);
-      }
-    }
   }
 
   private publish(event: MatchEvent): void {

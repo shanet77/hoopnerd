@@ -5,6 +5,7 @@ import type {
   PersistedMatchGame,
 } from "@repo/types";
 import type { GameStateRepository } from "@repo/database";
+import { SnapshotQueue } from "../persistence/SnapshotQueue";
 
 export interface SnapshotRestorePolicy {
   lobbyTtlMs: number;
@@ -41,7 +42,7 @@ export function isSnapshotRestorable(
 }
 
 export class MatchPersistence {
-  private persistQueue = new Map<string, Promise<void>>();
+  private readonly queue = new SnapshotQueue("MatchEngine", "room");
 
   constructor(private gameStates: GameStateRepository) {}
 
@@ -78,37 +79,14 @@ export class MatchPersistence {
       ...(cpuDifficulty ? { cpuDifficulty } : {}),
     };
 
-    return this.queuePersistence(roomId, () =>
+    return this.queue.run(roomId, () =>
       this.gameStates.saveGameState("match", roomId, snapshot),
     );
   }
 
   delete(roomId: string): Promise<void> {
-    return this.queuePersistence(roomId, () =>
+    return this.queue.run(roomId, () =>
       this.gameStates.deleteGameState("match", roomId),
     );
-  }
-
-  private queuePersistence(
-    roomId: string,
-    task: () => Promise<void>,
-  ): Promise<void> {
-    const previous = this.persistQueue.get(roomId) ?? Promise.resolve();
-    const run = previous
-      .catch(() => undefined)
-      .then(task)
-      .catch((error) => {
-        console.error(
-          `[MatchEngine] Failed to persist room ${roomId}:`,
-          error,
-        );
-      });
-    const next = run.finally(() => {
-      if (this.persistQueue.get(roomId) === next) {
-        this.persistQueue.delete(roomId);
-      }
-    });
-    this.persistQueue.set(roomId, next);
-    return next;
   }
 }
