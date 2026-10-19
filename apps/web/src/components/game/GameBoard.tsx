@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useMemo, type FormEvent } from "react";
 import { ArrowRight, Bot, Brain, CircleX, Hourglass, Users } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { FeedbackBanner } from "@repo/ui/feedback-banner";
@@ -9,6 +9,7 @@ import { GameStatusBanner } from "./GameStatusBanner";
 import { ChainBoard } from "./ChainBoard";
 import { PlayerList } from "./PlayerList";
 import { PlayerSearch } from "./PlayerSearch";
+import type { PlayerSearchFilter } from "../../app/lib/usePlayerSearch";
 
 /**
  * The season window clause shared by the chain intro and the move prompt.
@@ -80,6 +81,25 @@ export function GameBoard({
 }: GameBoardProps) {
   const [connectedPlayer, setConnectedPlayer] = useState<Player | null>(null);
   const apiHost = process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3001";
+
+  const usedPlayerIds = useMemo(() => {
+    const ids = new Set<number>();
+    if (roomState.startingPlayer) ids.add(roomState.startingPlayer.id);
+    for (const c of roomState.connections) {
+      ids.add(c.fromPlayer.id);
+      ids.add(c.toPlayer.id);
+    }
+    return Array.from(ids);
+  }, [roomState.connections, roomState.startingPlayer]);
+
+  const searchFilter: PlayerSearchFilter = useMemo(
+    () => ({
+      usedPlayerIds,
+      seasonYearMin: roomState.seasonYearMin,
+      seasonYearMax: roomState.seasonYearMax,
+    }),
+    [usedPlayerIds, roomState.seasonYearMin, roomState.seasonYearMax],
+  );
 
   const isErrorMessage =
     gameMessage.includes("Invalid") || gameMessage.includes("not play with");
@@ -171,6 +191,7 @@ export function GameBoard({
               apiHost={apiHost}
               selectedPlayer={connectedPlayer}
               onSelect={setConnectedPlayer}
+              searchFilter={searchFilter}
             />
             <Button
               type="submit"

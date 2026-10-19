@@ -4,25 +4,31 @@ import React, { useRef, useEffect, useCallback } from "react";
 import { CircleUser, Search } from "lucide-react";
 import { Player } from "@repo/types";
 import { Input } from "@repo/ui/input";
-import { usePlayerSearch } from "../../app/lib/usePlayerSearch";
+import {
+  usePlayerSearch,
+  type PlayerSearchFilter,
+} from "../../app/lib/usePlayerSearch";
 
 interface PlayerSearchProps {
   apiHost: string;
   selectedPlayer: Player | null;
   onSelect: (player: Player) => void;
+  /** Client-seitiger Filter: bereits verwendete Spieler + Saisonfenster. */
+  searchFilter: PlayerSearchFilter;
 }
 
 export function PlayerSearch({
   apiHost,
   selectedPlayer,
   onSelect,
+  searchFilter,
 }: PlayerSearchProps) {
   const {
     searchQuery,
     searchResults,
     handleSearchChange,
     clearSearch,
-  } = usePlayerSearch(apiHost);
+  } = usePlayerSearch(apiHost, searchFilter);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listboxRef = useRef<HTMLDivElement>(null);

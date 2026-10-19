@@ -18,6 +18,8 @@ export interface Player {
   position: string;
   socketId?: string;
   isCpu?: boolean;
+  /** Roster season years, populated only by player search results. */
+  seasons?: number[];
 }
 
 // WebSocket Event Types

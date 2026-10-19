@@ -140,10 +140,13 @@ export class PgRepository implements Repository {
 
   async searchPlayers(query: string): Promise<Player[]> {
     const sql = `
-      SELECT id, player_name AS name, position
-      FROM players
-      WHERE player_name ILIKE $1
-      ORDER BY player_name
+      SELECT p.id, p.player_name AS name, p.position,
+             array_agg(DISTINCT r.season_year) FILTER (WHERE r.season_year IS NOT NULL) AS seasons
+      FROM players p
+      LEFT JOIN rosters r ON r.player_id = p.id
+      WHERE p.player_name ILIKE $1
+      GROUP BY p.id, p.player_name, p.position
+      ORDER BY p.player_name
     `;
     const result = await this.pool.query(sql, [`%${query.trim()}%`]);
     return result.rows;
@@ -647,7 +650,17 @@ export class InMemoryRepository implements Repository {
     const q = query.trim().toLowerCase();
     return Array.from(this.players.values())
       .filter((p) => p.name.toLowerCase().includes(q))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((p) => ({
+        ...p,
+        seasons: Array.from(
+          new Set(
+            this.rosters
+              .filter((r) => r.playerId === p.id)
+              .map((r) => r.seasonYear),
+          ),
+        ),
+      }));
   }
 
   async getRandomPlayer(): Promise<Player | null> {
