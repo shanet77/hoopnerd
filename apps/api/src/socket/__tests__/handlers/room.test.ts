@@ -68,6 +68,7 @@ describe("Room Handlers", () => {
       removeSocketBinding: vi.fn(),
       removePlayer: vi.fn(),
       clearDisconnectGraceTimer: vi.fn(),
+      saveRoom: vi.fn().mockResolvedValue(undefined),
       start: vi.fn(),
     };
   });

@@ -12,6 +12,10 @@ A real-time, multiplayer basketball trivia game where players connect athletes b
 2. **Move Validation:** Must happen server-side. A move is valid if `Player B` played with `Player A` in any year.
 3. **No Auth:** Games are session-based. Multiplayer uses unique Room IDs in the URL.
 4. **No Coaches:** The current scope is strictly NBA players.
+5. **Persistence:** In-progress rooms and solo runs are snapshotted to Postgres
+   (`active_games`) and rehydrated on API startup, so a deploy or restart does
+   not end active games. Idle lobbies expire after `ROOM_IDLE_TTL_MS` (2h) and
+   idle solo runs after `SOLO_RUN_IDLE_TTL_MS` (2h).
 
 ## Database Schema
 CREATE TABLE teams (

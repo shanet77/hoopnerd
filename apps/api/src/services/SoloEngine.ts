@@ -1,4 +1,9 @@
-import type { Player, SoloEndReason, SoloRunState } from "@repo/types";
+import type {
+  PersistedSoloGame,
+  Player,
+  SoloEndReason,
+  SoloRunState,
+} from "@repo/types";
 import type { Repository } from "@repo/database";
 import { hasPlayerBeenUsed } from "../serverUtils";
 
@@ -43,6 +48,7 @@ const STARTING_PLAYER_ATTEMPTS = 5;
 
 export class SoloEngine {
   private runs = new Map<string, SoloRunEntry>();
+  private persistQueue = new Map<string, Promise<void>>();
   private readonly idleTtlMs: number;
   private readonly sweeper: NodeJS.Timeout;
 
@@ -53,6 +59,45 @@ export class SoloEngine {
     const sweepIntervalMs = deps.sweepIntervalMs ?? DEFAULT_SWEEP_INTERVAL_MS;
     this.sweeper = setInterval(() => this.evictIdleRuns(), sweepIntervalMs);
     this.sweeper.unref();
+  }
+
+  async restore(): Promise<void> {
+    let records;
+    try {
+      records =
+        await this.deps.repository.loadGameStates<PersistedSoloGame>("solo");
+    } catch (error) {
+      console.error("[SoloEngine] Failed to load persisted runs:", error);
+      return;
+    }
+
+    const now = Date.now();
+    for (const record of records) {
+      const snapshot = record.state;
+      const run = snapshot?.run;
+      const stale = run
+        ? now - snapshot.lastActivityAt > this.idleTtlMs
+        : true;
+
+      if (
+        !run ||
+        run.gameCompleted ||
+        stale ||
+        snapshot?.version !== 1 ||
+        !snapshot.startedAt
+      ) {
+        await this.deps.repository.deleteGameState("solo", record.id);
+        continue;
+      }
+
+      this.runs.set(record.id, {
+        run,
+        startedAt: new Date(snapshot.startedAt),
+        lastActivityAt: snapshot.lastActivityAt,
+        endRecorded: snapshot.endRecorded,
+        pending: false,
+      });
+    }
   }
 
   async create(
@@ -113,6 +158,7 @@ export class SoloEngine {
       pending: false,
     });
 
+    await this.saveRun(runId);
     return run;
   }
 
@@ -124,6 +170,7 @@ export class SoloEngine {
     const entry = this.runs.get(runId);
     if (!entry) return undefined;
     entry.lastActivityAt = Date.now();
+    void this.saveRun(runId);
     return entry.run;
   }
 
@@ -221,6 +268,7 @@ export class SoloEngine {
         );
       }
 
+      await this.saveRun(runId);
       return {
         success: true,
         message: `${connectedPlayer.name} connected! Streak: ${streak}.`,
@@ -296,6 +344,7 @@ export class SoloEngine {
     const streak = run.moves.length;
 
     if (entry.endRecorded) {
+      await this.deleteRun(run.roomId);
       return {
         success: moveAccepted,
         message,
@@ -314,6 +363,7 @@ export class SoloEngine {
         endReason: reason,
         startedAt: entry.startedAt,
       });
+      await this.deleteRun(run.roomId);
       return {
         success: moveAccepted,
         message,
@@ -325,6 +375,7 @@ export class SoloEngine {
       };
     } catch (error) {
       console.error(`[SoloEngine] Failed to record run ${run.roomId}:`, error);
+      await this.deleteRun(run.roomId);
       return {
         success: moveAccepted,
         message,
@@ -335,6 +386,51 @@ export class SoloEngine {
         isNewBest: false,
       };
     }
+  }
+
+  private saveRun(runId: string): Promise<void> {
+    const entry = this.runs.get(runId);
+    if (!entry) {
+      return this.deleteRun(runId);
+    }
+
+    const snapshot: PersistedSoloGame = {
+      version: 1,
+      run: entry.run,
+      startedAt: entry.startedAt.toISOString(),
+      lastActivityAt: entry.lastActivityAt,
+      endRecorded: entry.endRecorded,
+    };
+
+    return this.queuePersistence(runId, () =>
+      this.deps.repository.saveGameState("solo", runId, snapshot),
+    );
+  }
+
+  private deleteRun(runId: string): Promise<void> {
+    return this.queuePersistence(runId, () =>
+      this.deps.repository.deleteGameState("solo", runId),
+    );
+  }
+
+  private queuePersistence(
+    runId: string,
+    task: () => Promise<void>,
+  ): Promise<void> {
+    const previous = this.persistQueue.get(runId) ?? Promise.resolve();
+    const run = previous
+      .catch(() => undefined)
+      .then(task)
+      .catch((error) => {
+        console.error(`[SoloEngine] Failed to persist run ${runId}:`, error);
+      });
+    const next = run.finally(() => {
+      if (this.persistQueue.get(runId) === next) {
+        this.persistQueue.delete(runId);
+      }
+    });
+    this.persistQueue.set(runId, next);
+    return next;
   }
 
   private collectUsedPlayerIds(run: SoloRunState): number[] {
@@ -349,6 +445,7 @@ export class SoloEngine {
     for (const [runId, entry] of this.runs.entries()) {
       if (entry.lastActivityAt < cutoff) {
         this.runs.delete(runId);
+        void this.deleteRun(runId);
       }
     }
   }

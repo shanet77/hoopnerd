@@ -1,4 +1,9 @@
-import type { CpuDifficulty, GameRoomState, Player } from "@repo/types";
+import type {
+  CpuDifficulty,
+  GameRoomState,
+  PersistedMatchGame,
+  Player,
+} from "@repo/types";
 import type { Repository } from "@repo/database";
 import { CpuEngine } from "./CpuEngine";
 import { createGameRoom, hasPlayerBeenUsed } from "../serverUtils";
@@ -10,6 +15,8 @@ export type { SocketBinding } from "./SocketBindingManager";
 
 const CPU_THINKING_DELAY_MS = { min: 800, max: 2000 };
 const CPU_PLAYER_NAME = "BronBot";
+const DEFAULT_LOBBY_IDLE_TTL_MS = 2 * 60 * 60 * 1000;
+const DEFAULT_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
 
 export interface MoveOutcome {
   success: boolean;
@@ -44,6 +51,8 @@ export interface MatchEngineDependencies {
   cpuEngine?: CpuEngine;
   turnTimeoutMs?: number;
   disconnectGraceMs?: number;
+  lobbyTtlMs?: number;
+  sweepIntervalMs?: number;
 }
 
 export class MatchEngine {
@@ -55,15 +64,158 @@ export class MatchEngine {
   >();
   private socketBindings: SocketBindingManager;
   private readonly turnTimeoutMs: number;
+  private readonly lobbyIdleTtlMs: number;
+  private readonly sweeper: NodeJS.Timeout;
+  private roomActivity = new Map<string, number>();
+  private persistQueue = new Map<string, Promise<void>>();
 
   constructor(private deps: MatchEngineDependencies) {
     this.turnTimeoutMs =
       deps.turnTimeoutMs ?? (Number(process.env.TURN_TIMEOUT_MS) || 25000);
+    this.lobbyIdleTtlMs =
+      deps.lobbyTtlMs ??
+      (Number(process.env.ROOM_IDLE_TTL_MS) || DEFAULT_LOBBY_IDLE_TTL_MS);
     this.socketBindings = new SocketBindingManager(
       (socketId) => deps.sink.disconnectSocket(socketId),
       (roomId, playerId) => this.removePlayer(roomId, playerId, "disconnected"),
       deps.disconnectGraceMs,
     );
+    const sweepIntervalMs = deps.sweepIntervalMs ?? DEFAULT_SWEEP_INTERVAL_MS;
+    this.sweeper = setInterval(() => this.evictIdleLobbies(), sweepIntervalMs);
+    this.sweeper.unref();
+  }
+
+  async restore(): Promise<void> {
+    let records;
+    try {
+      records =
+        await this.deps.repository.loadGameStates<PersistedMatchGame>("match");
+    } catch (error) {
+      console.error("[MatchEngine] Failed to load persisted rooms:", error);
+      return;
+    }
+
+    const now = Date.now();
+    for (const record of records) {
+      const snapshot = record.state;
+      const room = snapshot?.room;
+      const staleLobby =
+        !!room &&
+        !room.gameStarted &&
+        now - record.updatedAt.getTime() > this.lobbyIdleTtlMs;
+      const unusable =
+        !snapshot ||
+        snapshot.version !== 1 ||
+        !room ||
+        room.gameCompleted ||
+        (room.gameStarted && room.players.length < 2) ||
+        (!!snapshot.cpuDifficulty && !this.deps.cpuEngine);
+
+      if (unusable || staleLobby) {
+        await this.deps.repository.deleteGameState("match", record.id);
+        continue;
+      }
+
+      const restoredRoom: GameRoomState = {
+        ...room,
+        players: room.players.map(({ socketId: _socketId, ...player }) => player),
+      };
+      this.gameRooms.set(record.id, restoredRoom);
+      this.roomActivity.set(record.id, record.updatedAt.getTime());
+
+      if (snapshot.cpuDifficulty) {
+        const cpuPlayer = restoredRoom.players.find((player) => player.isCpu);
+        if (cpuPlayer) {
+          this.cpuGames.set(record.id, {
+            cpuPlayer,
+            difficulty: snapshot.cpuDifficulty,
+          });
+        }
+      }
+
+      if (restoredRoom.gameStarted) {
+        this.startTurnTimer(record.id);
+      }
+    }
+  }
+
+  stop(): void {
+    clearInterval(this.sweeper);
+    for (const timer of this.roomTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.roomTimers.clear();
+  }
+
+  private persistRoom(roomId: string): Promise<void> {
+    const room = this.gameRooms.get(roomId);
+    if (!room) {
+      return this.deletePersisted(roomId);
+    }
+
+    this.roomActivity.set(roomId, Date.now());
+    const cpuGame = this.cpuGames.get(roomId);
+    const snapshot: PersistedMatchGame = {
+      version: 1,
+      room,
+      ...(cpuGame ? { cpuDifficulty: cpuGame.difficulty } : {}),
+    };
+
+    return this.queuePersistence(roomId, () =>
+      this.deps.repository.saveGameState("match", roomId, snapshot),
+    );
+  }
+
+  private deletePersisted(roomId: string): Promise<void> {
+    return this.queuePersistence(roomId, () =>
+      this.deps.repository.deleteGameState("match", roomId),
+    );
+  }
+
+  private queuePersistence(
+    roomId: string,
+    task: () => Promise<void>,
+  ): Promise<void> {
+    const previous = this.persistQueue.get(roomId) ?? Promise.resolve();
+    const run = previous
+      .catch(() => undefined)
+      .then(task)
+      .catch((error) => {
+        console.error(
+          `[MatchEngine] Failed to persist room ${roomId}:`,
+          error,
+        );
+      });
+    const next = run.finally(() => {
+      if (this.persistQueue.get(roomId) === next) {
+        this.persistQueue.delete(roomId);
+      }
+    });
+    this.persistQueue.set(roomId, next);
+    return next;
+  }
+
+  private destroyRoom(roomId: string): void {
+    const timer = this.roomTimers.get(roomId);
+    if (timer) {
+      clearTimeout(timer);
+      this.roomTimers.delete(roomId);
+    }
+    this.gameRooms.delete(roomId);
+    this.cpuGames.delete(roomId);
+    this.roomActivity.delete(roomId);
+    void this.deletePersisted(roomId);
+  }
+
+  private evictIdleLobbies(): void {
+    const cutoff = Date.now() - this.lobbyIdleTtlMs;
+    for (const [roomId, room] of this.gameRooms.entries()) {
+      if (room.gameStarted) continue;
+      const lastActivity = this.roomActivity.get(roomId) ?? 0;
+      if (lastActivity < cutoff) {
+        this.destroyRoom(roomId);
+      }
+    }
   }
 
   private publish(event: MatchEvent): void {
@@ -73,6 +225,7 @@ export class MatchEngine {
   createRoom(roomId: string, friendsOnly = false): GameRoomState {
     const room = createGameRoom(roomId, friendsOnly);
     this.gameRooms.set(roomId, room);
+    void this.persistRoom(roomId);
     return room;
   }
 
@@ -85,8 +238,13 @@ export class MatchEngine {
     if (!room) {
       room = createGameRoom(roomId);
       this.gameRooms.set(roomId, room);
+      void this.persistRoom(roomId);
     }
     return room;
+  }
+
+  async saveRoom(roomId: string): Promise<void> {
+    await this.persistRoom(roomId);
   }
 
   findAvailablePublicRoom(excludeName?: string): string | null {
@@ -162,6 +320,7 @@ export class MatchEngine {
 
     room.players = [humanPlayer, cpuPlayer];
     this.cpuGames.set(roomId, { cpuPlayer, difficulty });
+    void this.persistRoom(roomId);
 
     return { room, humanPlayer, cpuPlayer };
   }
@@ -201,6 +360,7 @@ export class MatchEngine {
 
     room.startingPlayer = startingPlayer;
     room.lastConnectedPlayer = startingPlayer;
+    await this.persistRoom(roomId);
     this.publish({ type: "game_started", roomId, payload: room });
     this.startTurnTimer(roomId);
     return true;
@@ -282,6 +442,7 @@ export class MatchEngine {
       position: connectedPlayer.position,
     });
     room.lastConnectedPlayer = connectedPlayer;
+    await this.persistRoom(roomId);
 
     const outcome: MoveOutcome = {
       success: true,
@@ -327,9 +488,11 @@ export class MatchEngine {
       roomId,
       payload: { winner, reason },
     });
-    recordGameStats(this.deps.repository, room).catch((error) => {
-      console.error("Error recording stats:", error);
-    });
+    recordGameStats(this.deps.repository, room)
+      .catch((error) => {
+        console.error("Error recording stats:", error);
+      })
+      .finally(() => this.deletePersisted(roomId));
   }
 
   removePlayer(
@@ -369,6 +532,12 @@ export class MatchEngine {
         ? room.currentPlayerIndex % room.players.length
         : 0;
     this.publish({ type: "room_updated", roomId, payload: room });
+
+    if (room.players.length === 0) {
+      this.destroyRoom(roomId);
+    } else if (!room.gameCompleted) {
+      void this.persistRoom(roomId);
+    }
   }
 
   private switchTurn(roomId: string): void {

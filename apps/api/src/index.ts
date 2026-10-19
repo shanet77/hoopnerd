@@ -4,9 +4,10 @@ import { createServer } from "./server";
 const port = process.env.PORT || 3001;
 
 runMigrations()
-  .then(() => {
+  .then(async () => {
     console.log("Migrations complete.");
-    const { server } = createServer();
+    const { server, matchEngine, soloEngine } = createServer();
+    await Promise.all([matchEngine.restore(), soloEngine.restore()]);
     server.listen(port, () => {
       console.log(`api running on ${port}`);
     });

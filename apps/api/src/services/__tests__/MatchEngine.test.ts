@@ -40,6 +40,9 @@ describe("MatchEngine", () => {
       validateMove: vi.fn().mockResolvedValue(true),
       getConnectionDetails: vi.fn().mockResolvedValue(null),
       recordGameStats: vi.fn().mockResolvedValue(undefined),
+      saveGameState: vi.fn().mockResolvedValue(undefined),
+      loadGameStates: vi.fn().mockResolvedValue([]),
+      deleteGameState: vi.fn().mockResolvedValue(undefined),
     };
 
     engine = new MatchEngine({
@@ -785,6 +788,95 @@ describe("MatchEngine", () => {
       expect(sink.last("game_over")?.payload.reason).toContain(
         "no valid moves",
       );
+    });
+  });
+
+  describe("persistence", () => {
+    const makeStartedRoom = (roomId: string): GameRoomState => ({
+      roomId,
+      players: [
+        { id: 1, name: "Player1", position: "G", socketId: "socket-1" },
+        { id: 2, name: "Player2", position: "F", socketId: "socket-2" },
+      ],
+      moves: [],
+      currentPlayerIndex: 0,
+      gameStarted: true,
+      gameCompleted: false,
+      winner: null,
+      startingPlayer: { id: 99, name: "Starting", position: "C" },
+      connections: [],
+      lastConnectedPlayer: { id: 99, name: "Starting", position: "C" },
+      friendsOnly: false,
+      statsRecorded: false,
+    });
+
+    it("saves a room snapshot on create", async () => {
+      engine.createRoom("SAVE1");
+
+      await engine.saveRoom("SAVE1");
+
+      expect(mockRepo.saveGameState).toHaveBeenCalledWith(
+        "match",
+        "SAVE1",
+        expect.objectContaining({
+          version: 1,
+          room: expect.objectContaining({ roomId: "SAVE1" }),
+        }),
+      );
+    });
+
+    it("restores a started room and restarts its turn timer", async () => {
+      mockRepo.loadGameStates.mockResolvedValue([
+        {
+          id: "RESTORE1",
+          state: { version: 1, room: makeStartedRoom("RESTORE1") },
+          updatedAt: new Date(),
+        },
+      ]);
+
+      await engine.restore();
+
+      const restored = engine.getRoom("RESTORE1");
+      expect(restored).toBeDefined();
+      expect(restored?.players.map((player) => player.socketId)).toEqual([
+        undefined,
+        undefined,
+      ]);
+
+      vi.advanceTimersByTime(25000);
+
+      expect(restored?.gameCompleted).toBe(true);
+      expect(sink.last("game_over")).toBeDefined();
+    });
+
+    it("drops completed rooms and stale lobbies on restore", async () => {
+      const completed = makeStartedRoom("DONE1");
+      completed.gameCompleted = true;
+      const staleLobby = makeStartedRoom("LOBBY1");
+      staleLobby.gameStarted = false;
+      staleLobby.players = [];
+      staleLobby.startingPlayer = null;
+      staleLobby.lastConnectedPlayer = null;
+
+      mockRepo.loadGameStates.mockResolvedValue([
+        {
+          id: "DONE1",
+          state: { version: 1, room: completed },
+          updatedAt: new Date(),
+        },
+        {
+          id: "LOBBY1",
+          state: { version: 1, room: staleLobby },
+          updatedAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+        },
+      ]);
+
+      await engine.restore();
+
+      expect(engine.getRoom("DONE1")).toBeUndefined();
+      expect(engine.getRoom("LOBBY1")).toBeUndefined();
+      expect(mockRepo.deleteGameState).toHaveBeenCalledWith("match", "DONE1");
+      expect(mockRepo.deleteGameState).toHaveBeenCalledWith("match", "LOBBY1");
     });
   });
 });

@@ -105,6 +105,22 @@ async function ensureSchema() {
       );
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS active_games (
+        id TEXT NOT NULL,
+        kind VARCHAR(10) NOT NULL,
+        state JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (id, kind)
+      );
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS active_games_kind_updated_at_idx
+      ON active_games (kind, updated_at);
+    `);
+
     console.log('Database schema ensured successfully!');
   } catch (error) {
     console.error('Error during migration:', error);

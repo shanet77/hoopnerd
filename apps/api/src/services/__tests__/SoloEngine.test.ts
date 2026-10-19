@@ -23,6 +23,9 @@ describe("SoloEngine", () => {
       recordSoloRun: vi
         .fn()
         .mockResolvedValue({ bestStreak: 0, isNewBest: true }),
+      saveGameState: vi.fn().mockResolvedValue(undefined),
+      loadGameStates: vi.fn().mockResolvedValue([]),
+      deleteGameState: vi.fn().mockResolvedValue(undefined),
     };
     engine = new SoloEngine({
       repository: mockRepo as any,
@@ -287,6 +290,84 @@ describe("SoloEngine", () => {
       vi.advanceTimersByTime(60 * 60 * 1000);
 
       expect(engine.resumeRun(run.roomId)).toBeDefined();
+    });
+  });
+
+  describe("persistence", () => {
+    it("persists a new run", async () => {
+      const run = (await createRun())!;
+
+      expect(mockRepo.saveGameState).toHaveBeenCalledWith(
+        "solo",
+        run.roomId,
+        expect.objectContaining({
+          version: 1,
+          run: expect.objectContaining({ roomId: run.roomId }),
+        }),
+      );
+    });
+
+    it("restores an active run", async () => {
+      const run = (await createRun())!;
+      const calls = mockRepo.saveGameState.mock.calls;
+      const snapshot = calls[calls.length - 1][2];
+      mockRepo.loadGameStates.mockResolvedValue([
+        { id: run.roomId, state: snapshot, updatedAt: new Date() },
+      ]);
+
+      const restoredEngine = new SoloEngine({
+        repository: mockRepo as any,
+        idleTtlMs: 2 * 60 * 60 * 1000,
+        sweepIntervalMs: 1000,
+      });
+      await restoredEngine.restore();
+
+      expect(restoredEngine.getRun(run.roomId)?.startingPlayer).toEqual(
+        starter,
+      );
+      restoredEngine.stop();
+    });
+
+    it("drops ended runs on restore", async () => {
+      const run = (await createRun())!;
+      mockRepo.loadGameStates.mockResolvedValue([
+        {
+          id: run.roomId,
+          state: {
+            version: 1,
+            run: { ...run, gameCompleted: true },
+            startedAt: new Date().toISOString(),
+            lastActivityAt: Date.now(),
+            endRecorded: true,
+          },
+          updatedAt: new Date(),
+        },
+      ]);
+
+      const restoredEngine = new SoloEngine({
+        repository: mockRepo as any,
+        idleTtlMs: 2 * 60 * 60 * 1000,
+        sweepIntervalMs: 1000,
+      });
+      await restoredEngine.restore();
+
+      expect(restoredEngine.getRun(run.roomId)).toBeUndefined();
+      expect(mockRepo.deleteGameState).toHaveBeenCalledWith(
+        "solo",
+        run.roomId,
+      );
+      restoredEngine.stop();
+    });
+
+    it("deletes the snapshot when a run ends", async () => {
+      const run = (await createRun())!;
+
+      await engine.endRun(run.roomId, "user-1");
+
+      expect(mockRepo.deleteGameState).toHaveBeenCalledWith(
+        "solo",
+        run.roomId,
+      );
     });
   });
 });

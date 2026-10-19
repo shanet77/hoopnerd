@@ -20,7 +20,12 @@ type CreateServerDependencies = {
  */
 export const createServer = (
   dependencies: CreateServerDependencies = {},
-): { app: Express; server: HttpServer } => {
+): {
+  app: Express;
+  server: HttpServer;
+  matchEngine: MatchEngine;
+  soloEngine: SoloEngine;
+} => {
   const app = express();
   const server = new HttpServer(app);
   const repository = dependencies.repository ?? new PgRepository(databasePool);
@@ -54,5 +59,5 @@ export const createServer = (
 
   setupSocketIO(io, matchEngine, enableCpuMode, soloEngine);
 
-  return { app, server };
+  return { app, server, matchEngine, soloEngine };
 };

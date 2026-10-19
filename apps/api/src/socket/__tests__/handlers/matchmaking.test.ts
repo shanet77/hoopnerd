@@ -53,6 +53,7 @@ describe("Matchmaking Handlers", () => {
       findAvailablePublicRoom: vi.fn(),
       getRoom: vi.fn(),
       bindSocket: vi.fn(),
+      saveRoom: vi.fn().mockResolvedValue(undefined),
       start: vi.fn(),
     };
   });

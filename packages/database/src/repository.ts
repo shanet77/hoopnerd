@@ -8,6 +8,8 @@ import type {
   StatsResponse,
   SoloEndReason,
   SoloLeaderboardEntry,
+  PersistedGameKind,
+  PersistedGameRecord,
 } from "@repo/types";
 
 export interface SoloRunRecord {
@@ -59,6 +61,15 @@ export interface Repository {
   getSeasons(): Promise<number[]>;
   getStats(windowDays: number, timezone: string): Promise<StatsResponse>;
   recordGameStats(room: GameRoomState): Promise<void>;
+  saveGameState(
+    kind: PersistedGameKind,
+    id: string,
+    state: unknown,
+  ): Promise<void>;
+  loadGameStates<T = unknown>(
+    kind: PersistedGameKind,
+  ): Promise<PersistedGameRecord<T>[]>;
+  deleteGameState(kind: PersistedGameKind, id: string): Promise<void>;
   recordSoloRun(run: SoloRunRecord): Promise<SoloRunRecordResult>;
   getSoloLeaderboard(
     windowDays: number,
@@ -489,6 +500,44 @@ export class PgRepository implements Repository {
     );
   }
 
+  async saveGameState(
+    kind: PersistedGameKind,
+    id: string,
+    state: unknown,
+  ): Promise<void> {
+    await this.pool.query(
+      `
+      INSERT INTO active_games (id, kind, state, updated_at)
+      VALUES ($1, $2, $3::jsonb, NOW())
+      ON CONFLICT (id, kind) DO UPDATE
+        SET state = EXCLUDED.state,
+            updated_at = NOW()
+    `,
+      [id, kind, JSON.stringify(state)],
+    );
+  }
+
+  async loadGameStates<T = unknown>(
+    kind: PersistedGameKind,
+  ): Promise<PersistedGameRecord<T>[]> {
+    const result = await this.pool.query(
+      `SELECT id, state, updated_at FROM active_games WHERE kind = $1`,
+      [kind],
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      state: row.state as T,
+      updatedAt: row.updated_at as Date,
+    }));
+  }
+
+  async deleteGameState(kind: PersistedGameKind, id: string): Promise<void> {
+    await this.pool.query(
+      `DELETE FROM active_games WHERE kind = $1 AND id = $2`,
+      [kind, id],
+    );
+  }
+
   async recordSoloRun(run: SoloRunRecord): Promise<SoloRunRecordResult> {
     const client = await this.pool.connect();
     try {
@@ -604,6 +653,10 @@ export class InMemoryRepository implements Repository {
     endedAt: Date;
   }> = [];
   private soloBests = new Map<string, number>();
+  private gameStates = new Map<
+    string,
+    { kind: PersistedGameKind; id: string; state: unknown; updatedAt: Date }
+  >();
 
   seedPlayers(players: Player[]) {
     for (const p of players) this.players.set(p.id, p);
@@ -857,6 +910,35 @@ export class InMemoryRepository implements Repository {
         createdAt: new Date(),
       });
     }
+  }
+
+  async saveGameState(
+    kind: PersistedGameKind,
+    id: string,
+    state: unknown,
+  ): Promise<void> {
+    this.gameStates.set(`${kind}:${id}`, {
+      kind,
+      id,
+      state,
+      updatedAt: new Date(),
+    });
+  }
+
+  async loadGameStates<T = unknown>(
+    kind: PersistedGameKind,
+  ): Promise<PersistedGameRecord<T>[]> {
+    return Array.from(this.gameStates.values())
+      .filter((entry) => entry.kind === kind)
+      .map((entry) => ({
+        id: entry.id,
+        state: entry.state as T,
+        updatedAt: entry.updatedAt,
+      }));
+  }
+
+  async deleteGameState(kind: PersistedGameKind, id: string): Promise<void> {
+    this.gameStates.delete(`${kind}:${id}`);
   }
 
   async recordSoloRun(run: SoloRunRecord): Promise<SoloRunRecordResult> {

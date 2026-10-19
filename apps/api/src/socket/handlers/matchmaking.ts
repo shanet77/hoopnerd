@@ -81,6 +81,7 @@ export function registerMatchmakingHandlers(
     };
     room.players.push(player);
     matchEngine.bindSocket(socket.id, selectedRoomId, player.id);
+    await matchEngine.saveRoom(selectedRoomId);
     const playerToken = issueSessionToken(selectedRoomId, player.id);
 
     socket.to(selectedRoomId).emit("player_connected", player);

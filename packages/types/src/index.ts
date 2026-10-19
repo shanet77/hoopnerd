@@ -109,6 +109,28 @@ export interface SoloRunState extends GameRoomState {
   endReason?: SoloEndReason;
 }
 
+export type PersistedGameKind = "match" | "solo";
+
+export interface PersistedMatchGame {
+  version: 1;
+  room: GameRoomState;
+  cpuDifficulty?: CpuDifficulty;
+}
+
+export interface PersistedSoloGame {
+  version: 1;
+  run: SoloRunState;
+  startedAt: string;
+  lastActivityAt: number;
+  endRecorded: boolean;
+}
+
+export interface PersistedGameRecord<T> {
+  id: string;
+  state: T;
+  updatedAt: Date;
+}
+
 export interface CreateSoloRunRequest {
   userId: string;
   displayName: string;

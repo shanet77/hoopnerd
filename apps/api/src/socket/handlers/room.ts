@@ -110,6 +110,7 @@ export function registerRoomHandlers(
       socketId: socket.id,
     };
     room.players.push(player);
+    await matchEngine.saveRoom(roomId);
     socket.to(roomId).emit("player_connected", player);
 
     matchEngine.bindSocket(socket.id, roomId, player.id);

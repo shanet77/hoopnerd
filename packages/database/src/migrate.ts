@@ -83,6 +83,22 @@ export async function runMigrations(): Promise<void> {
     );
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS active_games (
+      id TEXT NOT NULL,
+      kind VARCHAR(10) NOT NULL,
+      state JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (id, kind)
+    );
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS active_games_kind_updated_at_idx
+    ON active_games (kind, updated_at);
+  `);
+
   // Materialized view for player connection counts (used by CPU engine)
   await pool.query(`
     CREATE MATERIALIZED VIEW IF NOT EXISTS player_connection_counts AS
