@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import type { GameRoomState } from "@repo/types";
+import type { GameRoomState, Player } from "@repo/types";
 import { MatchEngine, MatchEvent, MatchEventSink } from "../MatchEngine";
 
 export class RecordingSink implements MatchEventSink {
@@ -52,6 +52,39 @@ export function createTestEngine(options: {
     turnTimeoutMs: 25000,
     disconnectGraceMs: 10000,
   });
+}
+
+export function makePlayer(overrides: Partial<Player> = {}): Player {
+  return { id: 1, name: "Player1", position: "G", ...overrides };
+}
+
+export const PREVIOUS_PLAYER: Player = {
+  id: 50,
+  name: "Previous",
+  position: "C",
+};
+
+export function setPreviousPlayer(room: GameRoomState): void {
+  room.lastConnectedPlayer = { ...PREVIOUS_PLAYER };
+}
+
+export function buildActiveRoom(
+  engine: MatchEngine,
+  roomId = "ROOM1",
+): GameRoomState {
+  engine.createRoom(roomId);
+  const room = engine.getRoom(roomId)!;
+  room.players.push(
+    makePlayer({ id: 1, name: "Player1", position: "G", socketId: "socket-1" }),
+  );
+  room.players.push(
+    makePlayer({ id: 2, name: "Player2", position: "F", socketId: "socket-2" }),
+  );
+  room.gameStarted = true;
+  room.startingPlayer = makePlayer({ id: 99, name: "Starting", position: "C" });
+  room.lastConnectedPlayer = room.startingPlayer;
+  room.currentPlayerIndex = 0;
+  return room;
 }
 
 export function makeStartedRoom(roomId: string): GameRoomState {
