@@ -31,8 +31,8 @@ quadlet/
   echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/99-podman-ports.conf
   ```
 - **Rootless podman** cannot access files owned by other users (even if group
-  permissions allow it). Static sites live in `/home/USER/sites/` owned by
-  the `<deploy-user>` user.
+  permissions allow it). Static sites live in `/srv/sites/` owned by
+  the deploy user.
 
 ## Dev (local development)
 
@@ -83,7 +83,7 @@ export REGISTRY_URL=<registry-host>
 export REGISTRY_USERNAME=<registry-user>
 export REGISTRY_PASSWORD_B64=$(printf 'password' | base64)
 export REGISTRY_NAMESPACE=<registry-namespace>
-export DEPLOY_PATH=/home/USER/project/hoopnerd
+export DEPLOY_PATH=$HOME/project/hoopnerd
 
 ./scripts/deploy-quadlet.sh
 ```
