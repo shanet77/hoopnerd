@@ -85,8 +85,8 @@ export function buildGameOverPayload(args: {
 }
 
 /**
- * Parent origins allowed to receive game-over messages. Defaults to the
- * personal site; override with NEXT_PUBLIC_EMBED_PARENT_ORIGINS
+ * Parent origins allowed to receive game-over messages. Defaults to a
+ * placeholder host; override with NEXT_PUBLIC_EMBED_PARENT_ORIGINS
  * (comma-separated) if the embed is ever framed elsewhere.
  *
  * When framed, the framing page's origin (from document.referrer) is

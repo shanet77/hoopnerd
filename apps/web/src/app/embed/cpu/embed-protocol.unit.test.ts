@@ -75,7 +75,7 @@ describe("game-over payload", () => {
 });
 
 describe("parent messaging", () => {
-  it("defaults to the personal-site origins", () => {
+  it("defaults to the placeholder origins", () => {
     expect(getEmbedParentOrigins()).toEqual([
       "https://www.example.com",
       "https://example.com",
